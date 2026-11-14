@@ -78,3 +78,7 @@ Set the app's environment variables (such as `NEXT_PUBLIC_APP_NAME`) in the Verc
 ## Project structure
 
 The folder layout, and what belongs in each folder, is in [AGENTS.md](AGENTS.md#structure). `AGENTS.md` and `CLAUDE.md` also hold the instructions for coding agents (the Next.js block is managed by `next dev`).
+
+## License
+
+[MIT](LICENSE)

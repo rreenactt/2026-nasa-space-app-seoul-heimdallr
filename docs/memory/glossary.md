@@ -19,7 +19,7 @@
 | 미확인 후보 | 어떤 목록과도 일치하지 않는 후보 | Unidentified |
 | 주목할 후보 | 평가 합의도가 높은 미확인 후보 | Notable candidate |
 | 추천 제외 | 평가가 낮아 추천 마커에서 뺀 상태. 삭제가 아니다 | - |
-| 평가 | 사용자의 3지선다 판정 | Moving / Not moving / Noise / artifact |
+| 평가 | 사용자의 3지선다 판정: "움직인다" / "안 움직인다" / "잡음·결함" | Moving / Not moving / Noise or artifact |
 | 합의도 | 평가 중 "움직인다" 비율. 과학적 확인이 아니다 | agreement |
 | 기능 A | 사전 분석 움직임 후보 추천 | - |
 | 기능 B | 사용자 평가 | - |

@@ -17,3 +17,5 @@
 | 9 | 2026-11-14 | 데이터 관리: 임의 좌표는 실시간 + 캐시, 후보·테스트 대상은 사전 저장, 원본 FITS는 저장 안 함 | 저장 비용 절약, IRSA 장애에도 데모 가능 | `PLAN.md` 9장 | 유효 |
 | 10 | 2026-11-14 | 팀 공통 AI 메모리는 레포(`AGENTS.md`, `docs/memory/`)에서 관리, 개인 지시·메모는 레포에 올리지 않음 | 팀원 모두 AI 사용(Claude Code, ChatGPT), 공통 맥락 공유 | `AGENTS.md` | 유효 |
 | 11 | 2026-11-14 | 웹은 Next.js 16 App Router 기반, `main` 푸시 시 Vercel 배포 | 레포 기본 구성(이순형 작성) | `AGENTS.md`, `README.md` | 유효 |
+| 12 | 2026-11-14 | 평가 선택지 이름 통일: "움직인다" / "안 움직인다" / "잡음·결함" (화면 문구 `Moving` / `Not moving` / `Noise or artifact`). Blink Arena도 같은 이름을 쓴다 | 문서마다 이름이 달라 코드·화면·집계에서 어긋날 위험 | `PLAN.md` 8장, `memory/glossary.md`, `analyses/blink-arena.md` | 유효 |
+| 13 | 2026-11-14 | 레포 라이선스는 MIT, 루트 `LICENSE`에 명시 | 제출 요건(공개 레포), 기획서 12장 | `LICENSE`, `PLAN.md` 12장 | 유효 |
