@@ -189,7 +189,7 @@ flowchart LR
 
 - **PC 브라우저만 대상으로 한다.** 모바일·좁은 화면은 범위 밖이다.
 - **분석 패널은 하늘 화면 위에 오버레이로 열린다.** 닫으면 하늘로 돌아간다. 별도 라우트를 만들지 않는다.
-- **URL 상태 (최소):** 패널을 열면 주소가 `/?ra=&dec=&fov=`로 바뀐다 (히스토리를 쌓지 않고 교체). 패널이 닫혀 있으면 주소는 지금 보는 하늘을 `/?view=ra,dec,fov`로 따라가고(움직임이 멈추고 0.5초 뒤), 이 주소로 들어오면 패널 없이 그 하늘이 열린다 ([결정 #33](decisions.md)). 이 주소로 들어오면 하늘이 그 지점으로 이동하고 패널이 열린다. 보기 모드·검출기(`mode`, `det`)는 다음 단계에 추가한다. Sky Time Machine이 먼저 쓰던 `?stm=ra,dec,fov`(fov는 분 단위 시야) 링크는 호환용으로 계속 열리며, 하늘도 그 지점으로 옮긴다. 새로 만드는 공유 링크는 `?ra=&dec=&fov=`만 쓴다.
+- **URL 상태 (최소):** 패널을 열면 주소가 `/?ra=&dec=&fov=`로 바뀐다 (히스토리를 쌓지 않고 교체). 패널이 닫혀 있으면 주소는 지금 보는 하늘을 `/?view=ra,dec,fov`로 따라가고(움직임이 멈추고 0.5초 뒤), 이 주소로 들어오면 패널 없이 그 하늘이 열린다 ([결정 #34](decisions.md)). 이 주소로 들어오면 하늘이 그 지점으로 이동하고 패널이 열린다. 보기 모드·검출기(`mode`, `det`)는 다음 단계에 추가한다. Sky Time Machine이 먼저 쓰던 `?stm=ra,dec,fov`(fov는 분 단위 시야) 링크는 호환용으로 계속 열리며, 하늘도 그 지점으로 옮긴다. 새로 만드는 공유 링크는 `?ra=&dec=&fov=`만 쓴다.
 - **패널은 기본 분석 자료를 다 받은 뒤에 보인다 ([결정 #31](decisions.md)).** 그동안 진행바에 현재 단계(관측 검색·파장 계획 → 이미지 읽기 → 방문 시점 Gaia)와 완료/전체 개수를 보인다. 블링크가 재생 중에 이미지를 기다리지 않게 하기 위해서다.
 - 패널 안에서는 왼쪽 이미지 뷰어를 고정하고 오른쪽만 스크롤한다. 어떤 결과를 보든 이미지가 옆에 있다.
 - **패널 상단에 데이터 출처를 표시한다.** 하늘 배경(CDS QR2 컬러 HiPS)과 달리 패널 이미지는 IRSA DR1/QR3 컷아웃임을 밝힌다 (예: `SPHEREx DR1 cutouts · background sky: QR2 color preview`).
@@ -210,7 +210,7 @@ flowchart LR
 
 ### 추가 분석 영역 (선택)
 
-- 분석마다 "Download data" 버튼이 있고, 누르면 그 분석이 열릴 때 보일 자료를 받는다. 한 번에 하나씩 받고 나머지는 대기열에서 기다린다 ([결정 #31](decisions.md)).
+- 분석마다 "Download data" 버튼이 있고, 누르면 그 분석이 열릴 때 보일 자료를 받는다. 여러 분석을 동시에 받을 수 있다 ([결정 #31](decisions.md)). 블링크와 추가 분석 5개를 한꺼번에 받아도 Barnard's Star에서 블링크 7초, Sky Time Machine을 뺀 4개 15초 안, Sky Time Machine 64초였다(2026-11-14, 한국 PC).
 - 받는 동안 진행바에 현재 단계, 받은 파일 수/전체, 남은 개수와 예상 시간(지금까지 속도 기준)을 보이고 취소할 수 있다. 다 받으면 "Open"으로 바로 연다. 받은 자료는 브라우저 메모리에만 둔다.
 - 조건(최소 SPHEREx 방문 횟수 등)이 맞지 않는 분석은 비활성화하고 이유를 보여준다.
 - 결과는 끝나는 순서대로 **한 줄 요약**으로 쌓이고, 클릭하면 그 자리에서 펼쳐진다. 한 번에 하나만 펼친다.
@@ -361,7 +361,7 @@ flowchart LR
 - **웹:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, TanStack Query (레포 기본 구성). `main` 푸시 시 Vercel 프로덕션 배포. 코딩 규칙은 루트 `AGENTS.md`
 - **3D:** Aladin Lite 3.8.2 하나를 TAN 투영으로 모든 시야에 쓴다 (아래 "3D 하늘 구현", [결정 #29](decisions.md)). Neighborhood in Motion은 three.js를 쓴다. 블링크는 canvas, 소리는 Web Audio
 - **천문 데이터 처리:** Python (astropy, astroquery 또는 PyVO, numpy, reproject). 실시간 처리를 별도 Python API(FastAPI 등)로 둘지, 사전 처리만 Python으로 하고 웹은 Next.js Route Handler로 둘지 **팀 결정 필요**
-- **평가 저장:** 익명 키-값 DB (Supabase, Firebase 등 무료 등급 · **팀 결정 필요**)
+- **평가 저장:** Neon Postgres + Prisma 7. 평가는 익명으로 저장한다 ([결정 #33](decisions.md)). 코드: `lib/db.ts`(클라이언트 하나), `data/`(쿼리), `prisma/models/`(모델). 로컬 개발은 `pnpm docker:db`의 Postgres
 - 무거운 처리는 미리 돌려 정적 파일로 두고, 웹은 보여주기만 한다. 평가만 서버에 저장한다.
 
 ### 3D 하늘 구현
@@ -553,7 +553,6 @@ flowchart LR
 - [ ] 하늘 타일을 우리 서버(Route Handler)를 거쳐 받을지: 로컬 실험에서 확대 후 선명해지는 시간이 중앙값 약 12초 → 약 5초. 공개 엔드포인트·Vercel 사용량·함수 리전은 배포 담당 확인 필요 (9장, [`experiments/2026-11-14-sky-tile-proxy/`](experiments/2026-11-14-sky-tile-proxy/README.md))
 - [ ] 실시간 처리 구조: 별도 Python API / Next.js Route Handler + 사전 처리 (9장)
   - 참고(rreenactt): 추가 분석 3개는 Next.js Route Handler만으로 FITS 읽기·WCS·재투영·측광을 TypeScript로 처리한다(Python 없음, 저장 없음).
-- [ ] 평가 DB 서비스 (9장)
 - [ ] 이미지·결과 저장소 서비스 (9장)
 - [ ] Comet Breath 화면 배치: 3I/ATLAS 특별 핀 여부 (6장)
 - [ ] 추가 분석 5개의 구현 우선순위 (6장, 11장)

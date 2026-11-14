@@ -3,13 +3,13 @@ import "server-only";
 import { gunzipSync } from "node:zlib";
 import { HTTPError, TimeoutError } from "ky";
 import { api } from "@/lib/ky";
-import { readHdus, readImage, headerNumber } from "@/app/_lib/comet/fits";
+import { headerNumber, parseHeader, readHdus, readImage } from "@/app/_lib/comet/fits";
 import { APERTURE_BAD_FLAGS, maskFor } from "@/app/_lib/comet/photometry";
 import { readRemoteCutout } from "@/app/_lib/comet/remote-fits";
 import { skyToPixel as tanSipSkyToPixel, wavelengthAt } from "@/app/_lib/comet/wcs";
 import { MISSIONS, PROCESSING_VERSION } from "@/app/_lib/sky/missions";
 import { coverageOf, finiteMedian, medianStack, reproject } from "@/app/_lib/sky/reproject";
-import { gridToSky, parseCelestialWcs, separationArcsec } from "@/app/_lib/sky/wcs";
+import { gridToSky, parseCelestialWcs, separationArcsec, skyToPixel } from "@/app/_lib/sky/wcs";
 import type { Epoch, EpochFrame, Exposure, GaiaStar, MissionId, MissionSearchResult, SkyGrid } from "@/app/_lib/sky/types";
 import { rangeFetcher, resolvePixelFile } from "../../comet/_server/irsa";
 import { gaiaQuery } from "./gaia";
@@ -145,9 +145,21 @@ function groupIntoEpochs(mission: MissionId, exposures: Exposure[], ra: number, 
   return epochs.sort((a, b) => a.timeStart - b.timeStart);
 }
 
+/**
+ * NEOWISE has thousands of exposures per point and one SIA2 query takes ~25 s; eight TIME slices queried at once
+ * return the same rows in ~5 s (measured 2026-11-14). Open-ended first/last slice; rows on a boundary are deduplicated.
+ */
+const TIME_SLICES: Record<string, number> = { neowiser: 8 };
+function sliceTimes(collection: string): string[] {
+  const k = TIME_SLICES[collection];
+  if (!k) return [""];
+  const a = 56600, b = 60550, step = (b - a) / k;
+  return Array.from({ length: k }, (_, i) => `&TIME=${encodeURIComponent(`${i === 0 ? 0 : a + i * step} ${i === k - 1 ? 99999 : a + (i + 1) * step}`)}`);
+}
+
 export async function searchMission(mission: MissionId, ra: number, dec: number, radiusDeg: number): Promise<MissionSearchResult> {
   const cfg = MISSIONS[mission];
-  const queryUrls = cfg.collections.map((c) => siaUrl(c, ra, dec, radiusDeg));
+  const queryUrls = cfg.collections.flatMap((c) => sliceTimes(c).map((t) => siaUrl(c, ra, dec, radiusDeg) + t));
   const texts = await Promise.all(queryUrls.map((u) => api.get(u, { timeout: 50_000 }).text()));
   const exposures = texts.flatMap((t) => parseCsv(t).map((r) => toExposure(mission, r)).filter((e): e is Exposure => e !== null));
   const unique = [...new Map(exposures.map((e) => [e.id, e])).values()];
@@ -159,6 +171,72 @@ export async function searchMission(mission: MissionId, ra: number, dec: number,
     epochs: groupIntoEpochs(mission, unique, ra, dec),
     exposureCount: unique.length,
   };
+}
+
+/**
+ * The same WISE/NEOWISE single-exposure frame in IRSA's AWS Open Data bucket (named in SIA2 `cloud_access`).
+ * IBE serves two requests at a time per client (measured 2026-11-14: a third gets 503 at once); S3 has no such
+ * limit, so these frames are read there with byte ranges and IBE is the fallback.
+ */
+const WISE_S3: [RegExp, string][] = [
+  [/^https:\/\/irsa\.ipac\.caltech\.edu\/ibe\/data\/wise\/neowiser\/p1bm_frm\//, "wise/neowiser/images/p1bm_frm/"],
+  [/^https:\/\/irsa\.ipac\.caltech\.edu\/ibe\/data\/wise\/allsky\/4band_p1bm_frm\//, "wise/allsky/images/4band_p1bm_frm/"],
+  [/^https:\/\/irsa\.ipac\.caltech\.edu\/ibe\/data\/wise\/cryo_3band\/3band_p1bm_frm\//, "wise/cryo-3band/images/3band_p1bm_frm/"],
+];
+function wiseS3Url(ibeUrl: string): string | null {
+  if (!/-int-1b\.fits$/.test(ibeUrl)) return null;
+  for (const [re, key] of WISE_S3) if (re.test(ibeUrl)) return `https://nasa-irsa-wise.s3.us-west-2.amazonaws.com/${ibeUrl.replace(re, key)}`;
+  return null;
+}
+
+/** Reads only the rows around the field from an uncompressed float32 frame on S3 (header, then one row range). */
+async function s3Frame(url: string, grid: SkyGrid): Promise<{ data: Float32Array; mjd: number | null }> {
+  const fetchRange = rangeFetcher(url);
+  let head: ReturnType<typeof parseHeader> = null;
+  for (let size = 2880 * 20; !head && size <= 2880 * 320; size *= 4) head = parseHeader(new Uint8Array(await fetchRange(0, size - 1)));
+  if (!head) throw new Error("FITS header END not found");
+  const h = head.header;
+  const W = Number(h.get("NAXIS1"));
+  const H = Number(h.get("NAXIS2"));
+  if (Number(h.get("BITPIX")) !== -32 || !W || !H) throw new Error("unexpected frame format");
+  const full = parseCelestialWcs(h);
+  const center = gridToSky(grid, (grid.n - 1) / 2, (grid.n - 1) / 2);
+  const p = skyToPixel(full, center.ra, center.dec);
+  if (!p) throw new UpstreamNotFound("field is not on this frame");
+  const pixArcsec = Math.sqrt(Math.abs(full.cd[0][0] * full.cd[1][1] - full.cd[0][1] * full.cd[1][0])) * 3600;
+  const half = Math.ceil((grid.fovArcmin * 60 * 0.75) / pixArcsec) + 3;
+  const y0 = Math.max(0, Math.floor(p.y) - half);
+  const y1 = Math.min(H - 1, Math.ceil(p.y) + half);
+  const x0 = Math.max(0, Math.floor(p.x) - half);
+  const x1 = Math.min(W - 1, Math.ceil(p.x) + half);
+  if (y0 > y1 || x0 > x1) throw new UpstreamNotFound("field is not on this frame");
+  const rowBytes = W * 4;
+  const view = new DataView(await fetchRange(head.length + y0 * rowBytes, head.length + (y1 + 1) * rowBytes - 1));
+  const w = x1 - x0 + 1;
+  const hh = y1 - y0 + 1;
+  const data = new Float32Array(w * hh);
+  for (let j = 0; j < hh; j++) for (let i = 0; i < w; i++) data[j * w + i] = view.getFloat32(j * rowBytes + (x0 + i) * 4, false);
+  const wcs = { ...full, crpix: [full.crpix[0] - x0, full.crpix[1] - y0] as [number, number] };
+  const resampled = reproject({ width: w, height: hh, data, wcs }, grid);
+  const num = (k: string) => {
+    const v = h.get(k);
+    return typeof v === "number" ? v : null;
+  };
+  normalise(resampled, num("MAGZP"));
+  return { data: resampled, mjd: num("MJD_OBS") };
+}
+
+/** WISE/NEOWISE from S3 when it has the frame; IBE cutout otherwise. */
+async function archiveFrame(url: string, grid: SkyGrid, deadline: number) {
+  const s3 = wiseS3Url(url);
+  if (s3) {
+    try {
+      return await s3Frame(s3, grid);
+    } catch (e) {
+      if (e instanceof UpstreamNotFound) throw e;
+    }
+  }
+  return ibeFrame(url, grid, deadline);
 }
 
 /** Cutout from IRSA IBE (gzip-aware) → resampled onto the grid, background-subtracted, zero-point normalised. */
@@ -182,16 +260,31 @@ async function ibeFrame(url: string, grid: SkyGrid, deadline: number): Promise<{
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** GET with up to two retries on 502/503/504 (IRSA throttling), backing off 1.5 s then 3 s. */
+/** IBE answers 503 to a third concurrent request from one client, so this process keeps at most two open. */
+const IBE_SLOTS = 2;
+let ibeOpen = 0;
+const ibeWaiting: (() => void)[] = [];
+async function withIbeSlot<T>(fn: () => Promise<T>): Promise<T> {
+  while (ibeOpen >= IBE_SLOTS) await new Promise<void>((r) => ibeWaiting.push(r));
+  ibeOpen++;
+  try {
+    return await fn();
+  } finally {
+    ibeOpen--;
+    ibeWaiting.shift()?.();
+  }
+}
+
+/** GET through an IBE slot; 502/503/504 (another client or instance holding IBE) retried after 0.4–1 s until the deadline. */
 async function getBytesWithRetry(url: string, deadline: number): Promise<ArrayBuffer> {
-  for (let attempt = 0; ; attempt++) {
+  for (;;) {
     try {
-      return await api.get(url, { timeout: Math.max(5_000, Math.min(30_000, deadline - Date.now())) }).arrayBuffer();
+      return await withIbeSlot(() => api.get(url, { timeout: Math.max(5_000, Math.min(30_000, deadline - Date.now())) }).arrayBuffer());
     } catch (e) {
       const status = e instanceof HTTPError ? e.response.status : 0;
-      // Retry throttling only while the request still fits in the route's time budget.
-      if (attempt >= 2 || ![502, 503, 504].includes(status) || Date.now() + 1500 * (attempt + 1) > deadline - 8_000) throw e;
-      await sleep(1500 * (attempt + 1));
+      const wait = 400 + Math.random() * 600;
+      if (![502, 503, 504].includes(status) || Date.now() + wait > deadline - 8_000) throw e;
+      await sleep(wait);
     }
   }
 }
@@ -241,7 +334,7 @@ export async function buildEpochFrame(epoch: Epoch, grid: SkyGrid): Promise<Epoc
   const pixelArcsec = Math.max(...epoch.exposures.map((e) => e.pixelScaleArcsec).filter(Number.isFinite));
   const deadline = Date.now() + 52_000;
 
-  // At most two exposures in flight: IRSA answers 503 when one client opens many cutouts at once.
+  // All exposures at once: S3 reads have no limit and IBE requests wait for a slot (withIbeSlot).
   let next = 0;
   const worker = async () => {
     while (next < epoch.exposures.length) {
@@ -249,7 +342,7 @@ export async function buildEpochFrame(epoch: Epoch, grid: SkyGrid): Promise<Epoc
       try {
         if (e.source.kind === "ibe") {
           if (Date.now() > deadline - 6_000) throw new Error("시간 예산 초과로 생략");
-          const f = await ibeFrame(e.source.url, grid, deadline);
+          const f = await archiveFrame(e.source.url, grid, deadline);
           if (coverageOf(f.data) === 0) throw new UpstreamNotFound("격자와 겹치는 영역 없음");
           frames.push(f.data);
           used.push({ id: e.id, url: e.source.url, mjd: f.mjd ?? (e.tStart + e.tEnd) / 2 });
@@ -264,7 +357,7 @@ export async function buildEpochFrame(epoch: Epoch, grid: SkyGrid): Promise<Epoc
       }
     }
   };
-  await Promise.all([worker(), worker()]);
+  await Promise.all(epoch.exposures.map(() => worker()));
   if (!frames.length) throw new UpstreamNotFound(`이 시점의 영상을 하나도 읽지 못했습니다: ${failed.map((f) => f.reason).join("; ")}`);
 
   const stacked = medianStack(frames);

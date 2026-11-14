@@ -77,7 +77,22 @@ interface ResolvedFile {
  * Asks IRSA DataLink for the same exposure/detector in the current release. The answer must list
  * a `#this` science image, so a missing file is reported rather than guessed.
  */
-export async function resolvePixelFile(obsId: string, detector: string): Promise<ResolvedFile> {
+/** DataLink answers already received (file locations only), so several analyses of one point ask once. */
+const resolved = new Map<string, Promise<ResolvedFile>>();
+
+export function resolvePixelFile(obsId: string, detector: string): Promise<ResolvedFile> {
+  const key = `${obsId}/${detector}`;
+  let p = resolved.get(key);
+  if (!p) {
+    if (resolved.size >= 1000) resolved.delete(resolved.keys().next().value!);
+    p = resolvePixelFileUncached(obsId, detector);
+    p.catch(() => resolved.delete(key));
+    resolved.set(key, p);
+  }
+  return p;
+}
+
+async function resolvePixelFileUncached(obsId: string, detector: string): Promise<ResolvedFile> {
   const datalinkUrl = `${DATALINK_URL}?ID=${encodeURIComponent(`ivo://irsa.ipac/${PIXEL_RELEASE}?${obsId}/${detector}`)}`;
   const rows = toRecords(parseVoTable(await api.get(datalinkUrl, { timeout: 30_000 }).text()));
   const self = rows.find((r) => r.semantics === "#this" && r.access_url);
@@ -95,12 +110,12 @@ export async function resolvePixelFile(obsId: string, detector: string): Promise
 }
 
 export function rangeFetcher(url: string): RangeFetcher {
-  return async (start, end) => {
+  return Object.assign(async (start: number, end: number) => {
     const response = await api.get(url, { headers: { Range: `bytes=${start}-${end}` }, timeout: 30_000 });
     // A server that ignores Range would send the whole 60+ MB file; refuse instead of downloading it.
     if (response.status !== 206) throw new Error(`Range request not honoured (${response.status})`);
     return response.arrayBuffer();
-  };
+  }, { url });
 }
 
 function toBase64(array: Float32Array | Int32Array): string {

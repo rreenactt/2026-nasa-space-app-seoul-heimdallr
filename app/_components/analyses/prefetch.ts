@@ -11,6 +11,9 @@ import { catalogQuery, nearestObject } from "../neighborhood/nim-state";
 import { GRID_N as STM_GRID_N } from "../sky-time-machine/stm-state";
 import { fetchEpochFrame, frameKey as stmFrameKey, searchQuery as stmSearchQuery, SKY_SESSION } from "../sky-time-machine/use-sky-data";
 
+/** Requests in flight per analysis (browsers open about six per host on HTTP/1.1; HTTP/2 takes all). */
+const PARALLEL = 8;
+
 export type AnalysisId = "sky-time-machine" | "fake-planet-lab" | "neighborhood-in-motion" | "sky-sonata" | "comet-breath";
 
 export interface Progress {
@@ -29,7 +32,10 @@ export interface PrefetchContext {
   signal: { cancelled: boolean };
 }
 
-/** Runs tasks with a small concurrency limit (IRSA answers 503 to bursts) and reports each finished task. */
+/**
+ * Runs tasks with a concurrency limit and reports each finished task. SPHEREx and WISE are read from S3 (no limit
+ * measured up to 80 at once); the server queues the few IBE requests (2MASS) itself.
+ */
 async function runTasks(tasks: (() => Promise<unknown>)[], limit: number, tick: (ok: boolean) => void, signal: { cancelled: boolean }) {
   let next = 0;
   const worker = async () => {
@@ -86,7 +92,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
     report();
     await runTasks(
       epochs.map((e) => () => qc.fetchQuery({ queryKey: stmFrameKey(e.id, grid), queryFn: () => fetchEpochFrame(e, grid), retry: false, ...SKY_SESSION })),
-      2,
+      PARALLEL,
       tick,
       signal,
     );
@@ -109,7 +115,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
     total += picks.length;
     step = "Reading SPHEREx images";
     report();
-    await runTasks(picks.map((e) => () => qc.fetchQuery(spherexFrameQuery(e, ra, dec))), 3, tick, signal);
+    await runTasks(picks.map((e) => () => qc.fetchQuery(spherexFrameQuery(e, ra, dec))), PARALLEL, tick, signal);
     return;
   }
 

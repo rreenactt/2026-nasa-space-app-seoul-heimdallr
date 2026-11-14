@@ -21,6 +21,7 @@ app/                     # Routes (App Router)
 ├── fonts/               # Pretendard official subset and Pretendard JP, one file per weight (loaded from app/shared.css)
 ├── globals.css          # shadcn/Tailwind base styles (managed by shadcn, do not edit)
 ├── shared.css           # Project styles: theme token overrides, extra tokens, utilities
+├── generated/prisma/    # Generated Prisma Client (`pnpm db:generate`, gitignored; import from `@/prisma/client`)
 ├── icon.svg             # Neutral placeholder site icon (replace with the service icon)
 └── layout.tsx           # Root layout · global providers
 components/
@@ -30,10 +31,18 @@ components/
 config/
 ├── env.ts               # Public environment variables (NEXT_PUBLIC_*)
 └── env.server.ts        # Server-only environment variables
+data/                    # Database access (the only place that imports lib/db.ts)
+prisma/
+├── schema.prisma        # Generator and datasource only
+├── models/              # Models and enums, one <domain>.prisma per domain
+└── migrations/          # `pnpm db:migrate` output (committed)
+prisma.config.ts         # Prisma CLI config (schema directory, DIRECT_URL)
+docker-compose.yaml      # Local development Postgres (`pnpm docker:db`)
 hooks/
 ├── use-mobile.ts        # From shadcn (sidebar), do not edit
 └── use-highlighted-code.ts # From shadcn (code-block), do not edit
 lib/
+├── db.ts                # The single Prisma Client (server-only, strips query values from errors)
 ├── highlighter.tsx      # Shiki code highlighter from shadcn (code-block), do not edit
 ├── ky.ts                # HTTP client
 ├── query-client.ts      # TanStack Query client
@@ -48,6 +57,7 @@ lib/
 - Do not lower `minimumReleaseAge` in `pnpm-workspace.yaml`. Only an urgent security fix may go into `minimumReleaseAgeExclude`, and it comes out once the version is 7 days old.
 - Verify changes with `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
 - Node is pinned in `.nvmrc` and `engines`; change both together.
+- Database: `pnpm docker:db` starts the local Postgres, `pnpm db:migrate` applies schema changes, `pnpm db:generate` regenerates the client (also runs on install).
 
 ## Rules
 
