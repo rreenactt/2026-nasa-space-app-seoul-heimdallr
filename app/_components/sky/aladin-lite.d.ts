@@ -31,6 +31,24 @@ declare module "aladin-lite" {
   export type MouseMoveEvent = { ra: number | null; dec: number | null; x: number; y: number };
   export type ClickEvent = { ra: number; dec: number; x: number; y: number; isDragging: boolean };
 
+  export type CatalogOptions = {
+    name?: string;
+    shape?: "square" | "circle" | "plus" | "cross" | "rhomb" | "triangle";
+    sourceSize?: number;
+    color?: string;
+    displayLabel?: boolean;
+    /** Key of the source data shown as the label; displayLabel needs it. */
+    labelColumn?: string;
+    labelColor?: string;
+    labelFont?: string;
+  };
+
+  export type Source = { ra: number; dec: number; data: Record<string, unknown> };
+
+  export type Catalog = {
+    addSources(sources: Source | Source[]): void;
+  };
+
   export type Aladin = {
     on(event: "mouseMove", callback: (event: MouseMoveEvent) => void): void;
     on(event: "click", callback: (event: ClickEvent) => void): void;
@@ -42,12 +60,17 @@ declare module "aladin-lite" {
     getFov(): [number, number];
     gotoRaDec(ra: number, dec: number): void;
     setFoV(fov: number): void;
+    addCatalog(catalog: Catalog): void;
+    /** Screen position [x, y] in CSS pixels, or undefined/null when the point is outside the view. */
+    world2pix(ra: number, dec: number): [number, number] | null | undefined;
   };
 
   const A: {
     /** Resolves once the WebAssembly core is ready; rejects without WebGL2. */
     init: Promise<void>;
     aladin(container: HTMLElement | string, options?: AladinOptions): Aladin;
+    catalog(options?: CatalogOptions): Catalog;
+    source(ra: number, dec: number, data?: Record<string, unknown>): Source;
   };
   export default A;
 }
