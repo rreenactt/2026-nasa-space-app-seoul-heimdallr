@@ -120,6 +120,7 @@ lib/
 ## 데이터 기준
 
 - SPHEREx: IRSA, **DR1 우선 (없으면 QR3)**. QR2 예제 경로를 그대로 쓰지 않는다.
+- 예외: 3D 하늘 배경(둘러보기)에만 CDS SPHEREx QR2 컬러 HiPS를 쓴다. 분석은 위 기준을 따른다.
 - 보조: Gaia DR3, JPL·MPC 소행성, 2MASS·AllWISE·NEOWISE, 3I/ATLAS 전용 영상
 - 테스트 대상: Barnard's Star, Epsilon Indi B, WISE 0855, RW Aurigae, R Draconis
 
