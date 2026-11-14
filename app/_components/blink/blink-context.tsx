@@ -1,10 +1,11 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/ky";
 import { skyToPixel, wavelengthAt } from "@/app/_lib/comet/wcs";
 import type { BlinkPlan, PlannedExposure, PlannedVisit } from "@/app/_lib/blink/types";
+import type { BrightNeighbor } from "@/app/_lib/fpl/types";
 import type { NativeFrame } from "@/app/_lib/fpl/checks";
 import { decodeBits } from "@/app/_lib/fpl/flags";
 import { medianStack, reproject } from "@/app/_lib/sky/reproject";
@@ -53,6 +54,11 @@ interface BlinkState {
   /** Visits with a usable frame, in time order. */
   usable: VisitFrame[];
   loadingFrames: boolean;
+  /** Gaia DR3 stars (G < 16) moved to each visit's date, by visit index. */
+  gaia: Map<number, BrightNeighbor[]>;
+  /** Everything the viewer needs: plan, every image, Gaia per visit. */
+  progress: { done: number; total: number; step: string };
+  ready: boolean;
 }
 
 function usePlan(ra: number, dec: number, detector: string | undefined) {
@@ -129,6 +135,50 @@ export function BlinkProvider({ selection, children }: { selection: SkySelection
     [plan.data, frames],
   );
 
+  // Gaia per visit, at the mean time of the frames planned for that visit (known before the images arrive).
+  const visitTimes = useMemo(
+    () =>
+      (plan.data?.visits ?? [])
+        .map((v) => {
+          const used = v.exposures.filter((e) => !e.excluded);
+          return used.length ? { index: v.index, mjd: used.reduce((s, e) => s + (e.tStart + e.tEnd) / 2, 0) / used.length } : null;
+        })
+        .filter((v): v is { index: number; mjd: number } => v !== null),
+    [plan.data],
+  );
+  const gaiaQs = useQueries({
+    queries: visitTimes.map((v) => ({
+      queryKey: ["blink", "gaia", ra.toFixed(5), dec.toFixed(5), v.mjd.toFixed(1)],
+      queryFn: () =>
+        api
+          .get("/api/fpl/neighbors", { searchParams: { ra, dec, radius: 130, maxG: 16, epoch: 2000 + (v.mjd - 51544.5) / 365.25 }, timeout: 65_000 })
+          .json<{ stars: BrightNeighbor[] }>(),
+      staleTime: Infinity,
+      gcTime: 30 * 60_000,
+      retry: false,
+    })),
+  });
+  const gaiaKey = gaiaQs.map((q) => (q.isPending ? "_" : "x")).join("");
+  const gaia = useMemo(
+    () => new Map(visitTimes.map((v, i) => [v.index, gaiaQs[i]?.data?.stars ?? []])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild when a Gaia answer arrives
+    [visitTimes, gaiaKey],
+  );
+
+  const planSettled = !plan.isPending;
+  const framesDone = frames.filter((f) => !f.loading).length;
+  const gaiaDone = gaiaQs.filter((q) => !q.isPending).length;
+  const total = 1 + frames.length + gaiaQs.length;
+  const done = (planSettled ? 1 : 0) + framesDone + gaiaDone;
+  const step = !planSettled
+    ? "Finding SPHEREx observations and matching wavelength"
+    : framesDone < frames.length
+      ? `Reading SPHEREx images (${framesDone}/${frames.length})`
+      : gaiaDone < gaiaQs.length
+        ? `Moving Gaia stars to each visit's date (${gaiaDone}/${gaiaQs.length})`
+        : "Done";
+  const ready = planSettled && (plan.isError || plan.data?.status === "no-observations" || (framesDone === frames.length && gaiaDone === gaiaQs.length));
+
   const value: BlinkState = {
     selection,
     grid,
@@ -139,6 +189,9 @@ export function BlinkProvider({ selection, children }: { selection: SkySelection
     visits,
     usable: visits.filter((v) => v.data),
     loadingFrames: frames.some((f) => f.loading),
+    gaia,
+    progress: { done, total, step },
+    ready,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

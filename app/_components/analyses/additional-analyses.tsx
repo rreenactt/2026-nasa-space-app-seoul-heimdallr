@@ -1,8 +1,11 @@
 "use client";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { DownloadIcon, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import type { SoundSettings } from "@/app/_lib/sonata/mapping";
 import { CometBreathDialog } from "../comet-breath/comet-breath-dialog";
 import { FakePlanetLabDialog } from "../fake-planet-lab/fake-planet-lab-dialog";
@@ -10,8 +13,9 @@ import { NeighborhoodDialog } from "../neighborhood/neighborhood-dialog";
 import type { SkySelection } from "../sky/sky-selection";
 import { SkySonataDialog } from "../sky-sonata/sky-sonata-dialog";
 import { SkyTimeMachineDialog } from "../sky-time-machine/sky-time-machine-dialog";
+import { prefetchAnalysis, type AnalysisId, type Progress as P } from "./prefetch";
 
-/** Opens one analysis right away (older `?stm=` / `?sonata=` links). */
+/** Opens one analysis right away (older `?stm=` / `?sonata=` links): it is downloaded first, then opened. */
 export type AutoOpenAnalysis =
   | { analysis: "sky-time-machine"; fovArcmin: number }
   | { analysis: "sky-sonata"; settings: Partial<SoundSettings> };
@@ -19,89 +23,148 @@ export type AutoOpenAnalysis =
 /** Test targets that are in the Neighborhood in Motion catalog (pin ids from sky/test-targets.ts). */
 const NEARBY_PINS = new Set(["barnard", "eps-ind-b", "wise0855"]);
 
-type Availability = { label: string; tone: "ready" | "limited" | "special" };
+type JobState =
+  | { status: "idle" }
+  | { status: "queued" }
+  | { status: "running"; progress: P; startedAt: number }
+  | { status: "done"; progress: P; seconds: number }
+  | { status: "error"; message: string };
 
-function Status({ a }: { a: Availability }) {
-  return (
-    <Badge variant={a.tone === "ready" ? "secondary" : "outline"} className="ml-auto shrink-0">
-      {a.label}
-    </Badge>
-  );
+function eta(progress: P, startedAt: number) {
+  if (progress.done === 0 || progress.done >= progress.total) return null;
+  const per = (Date.now() - startedAt) / progress.done;
+  return Math.max(1, Math.round((per * (progress.total - progress.done)) / 1000));
 }
 
 /**
- * The five additional analyses (PLAN.md chapter 6) as toggles in the analysis panel. Each opens on the panel's
- * point: name, RA/Dec (ICRS, degrees) and, for test targets, their source and epoch.
+ * The five additional analyses (PLAN.md chapter 6) beside the blink viewer. "Download data" fetches what an analysis
+ * shows when it opens (one analysis at a time, queued); the progress bar shows files done, files left and an
+ * estimate. When it is ready, "Open" shows it without loading. Each opens on the panel's point.
  */
 export function AdditionalAnalyses({ selection, autoOpen }: { selection: SkySelection; autoOpen?: AutoOpenAnalysis }) {
+  const qc = useQueryClient();
   const { ra, dec, target } = selection;
   const name = target?.name ?? "Selected point";
   const source = target ? `${target.source} (epoch ${target.epoch})` : "Point chosen on the sky";
   const nearby = target ? NEARBY_PINS.has(target.id) : false;
-  const isComet = /3I\/ATLAS/i.test(target?.name ?? "");
   const stmFov = autoOpen?.analysis === "sky-time-machine" ? autoOpen.fovArcmin : 8;
 
-  const items: {
-    id: string;
-    title: string;
-    summary: string;
-    availability: Availability;
-    details: string[];
-    open: React.ReactElement;
-  }[] = [
+  const [jobs, setJobs] = useState<Record<AnalysisId, JobState>>({
+    "sky-time-machine": { status: "idle" },
+    "fake-planet-lab": { status: "idle" },
+    "neighborhood-in-motion": { status: "idle" },
+    "sky-sonata": { status: "idle" },
+    "comet-breath": { status: "idle" },
+  });
+  const [, setNow] = useState(0);
+  const queue = useRef<AnalysisId[]>([]);
+  const busy = useRef(false);
+  const signal = useRef({ cancelled: false });
+  const set = (id: AnalysisId, s: JobState) => setJobs((j) => ({ ...j, [id]: s }));
+
+  const pump = useCallback(async () => {
+    if (busy.current) return;
+    const id = queue.current.shift();
+    if (!id) return;
+    busy.current = true;
+    signal.current = { cancelled: false };
+    const startedAt = Date.now();
+    let last: P = { done: 0, total: 1, step: "Starting", failed: 0 };
+    set(id, { status: "running", progress: last, startedAt });
+    try {
+      await prefetchAnalysis(id, {
+        qc,
+        ra,
+        dec,
+        stmFovArcmin: stmFov,
+        signal: signal.current,
+        onProgress: (p) => {
+          last = p;
+          set(id, { status: "running", progress: p, startedAt });
+        },
+      });
+      set(id, signal.current.cancelled ? { status: "idle" } : { status: "done", progress: last, seconds: Math.round((Date.now() - startedAt) / 1000) });
+    } catch (e) {
+      set(id, { status: "error", message: e instanceof Error ? e.message : "Download failed" });
+    } finally {
+      busy.current = false;
+      void pump();
+    }
+  }, [qc, ra, dec, stmFov]);
+
+  const enqueue = useCallback(
+    (id: AnalysisId) => {
+      if (queue.current.includes(id)) return;
+      queue.current.push(id);
+      set(id, { status: "queued" });
+      void pump();
+    },
+    [pump],
+  );
+  const cancel = (id: AnalysisId) => {
+    if (jobs[id].status === "queued") {
+      queue.current = queue.current.filter((q) => q !== id);
+      set(id, { status: "idle" });
+    } else if (jobs[id].status === "running") signal.current.cancelled = true;
+  };
+
+  // Older links: download that analysis now; it opens by itself when ready.
+  const started = useRef(false);
+  useEffect(() => {
+    if (autoOpen && !started.current) {
+      started.current = true;
+      enqueue(autoOpen.analysis);
+    }
+  }, [autoOpen, enqueue]);
+
+  // Refresh the remaining-time estimate every second while something downloads.
+  const anyRunning = Object.values(jobs).some((j) => j.status === "running");
+  useEffect(() => {
+    if (!anyRunning) return;
+    const t = setInterval(() => setNow((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [anyRunning]);
+  useEffect(() => () => void (signal.current.cancelled = true), []);
+
+  const auto = (id: AnalysisId) => autoOpen?.analysis === id;
+  const items: { id: AnalysisId; title: string; summary: string; badge: { label: string; ready: boolean }; note: string; open: (o: boolean) => React.ReactElement }[] = [
     {
       id: "sky-time-machine",
       title: "Sky Time Machine",
       summary: "The same patch of sky from 2MASS (≈2000), WISE/NEOWISE (2010–2024) and SPHEREx, in real observation order.",
-      availability: { label: "Any position", tone: "ready" },
-      details: [
-        `Opens an ${stmFov}′ field centred on this point; change it inside.`,
-        "Positions only: brightness is not compared across telescopes. Gaia predicted paths can be overlaid.",
-      ],
-      open: (
-        <SkyTimeMachineDialog
-          initialTarget={{ name, ra, dec, fovArcmin: stmFov, source }}
-          defaultOpen={autoOpen?.analysis === "sky-time-machine"}
-          trigger={<Button size="sm">Open Sky Time Machine here</Button>}
-        />
+      badge: { label: "Any position", ready: true },
+      note: `${stmFov}′ field on this point. The largest download (about 30 images); IRSA limits how fast it goes.`,
+      open: (o) => (
+        <SkyTimeMachineDialog initialTarget={{ name, ra, dec, fovArcmin: stmFov, source }} defaultOpen={o} trigger={<Button size="sm">Open</Button>} />
       ),
     },
     {
       id: "fake-planet-lab",
       title: "Fake Planet Lab",
       summary: "Is a dot real or a defect? Quality flags, uncertainty and other observations for any spot you click.",
-      availability: { label: "Any position", tone: "ready" },
-      details: ["Opens the SPHEREx exposures covering this point. Click a dot to run the checks; records can be downloaded."],
-      open: (
-        <FakePlanetLabDialog
-          initialTarget={{ name, ra, dec, note: target?.note ?? "" }}
-          trigger={<Button size="sm">Open Fake Planet Lab here</Button>}
-        />
-      ),
+      badge: { label: "Any position", ready: true },
+      note: "SPHEREx search and up to 3 exposures of this point.",
+      open: () => <FakePlanetLabDialog initialTarget={{ name, ra, dec, note: target?.note ?? "" }} trigger={<Button size="sm">Open</Button>} />,
     },
     {
       id: "neighborhood-in-motion",
       title: "Neighborhood in Motion",
-      summary: "Nearby stars and brown dwarfs in 3D from measured distance and motion, past and future paths, linked to SPHEREx.",
-      availability: nearby ? { label: "Object in the map", tone: "ready" } : { label: "Nearby objects only", tone: "limited" },
-      details: [
-        nearby
-          ? `${name} is in the map (within about 3.6 pc); it will be selected.`
-          : "Works for objects with a known parallax within about 3.6 pc. This point will be matched to the nearest one, and the map says if none is close.",
-      ],
-      open: <NeighborhoodDialog focus={{ ra, dec, name }} trigger={<Button size="sm">Open Neighborhood in Motion</Button>} />,
+      summary: "Nearby stars and brown dwarfs in 3D from measured distance and motion, linked to SPHEREx.",
+      badge: nearby ? { label: "Object in the map", ready: true } : { label: "Nearby objects only", ready: false },
+      note: nearby ? `${name} is in the map and will be selected.` : "This point is matched to the nearest object within about 3.6 pc; the map says if none is close.",
+      open: () => <NeighborhoodDialog focus={{ ra, dec, name }} trigger={<Button size="sm">Open</Button>} />,
     },
     {
       id: "sky-sonata",
       title: "Sky Sonata",
       summary: "Hear the sky: position becomes left/right and pitch, brightness becomes loudness. Keyboard-first.",
-      availability: { label: "Any position", tone: "ready" },
-      details: ["Opens SPHEREx observations of this point. Sound starts only after you press Start sound."],
-      open: (
+      badge: { label: "Any position", ready: true },
+      note: "SPHEREx search and two observations (A and B) of this point.",
+      open: (o) => (
         <SkySonataDialog
           shared={{ target: { name, ra, dec, note: target?.note ?? "" }, settings: autoOpen?.analysis === "sky-sonata" ? autoOpen.settings : undefined }}
-          defaultOpen={autoOpen?.analysis === "sky-sonata"}
-          trigger={<Button size="sm">Open Sky Sonata here</Button>}
+          defaultOpen={o}
+          trigger={<Button size="sm">Open</Button>}
         />
       ),
     },
@@ -109,36 +172,68 @@ export function AdditionalAnalyses({ selection, autoOpen }: { selection: SkySele
       id: "comet-breath",
       title: "Comet Breath · 3I/ATLAS",
       summary: "Water, CO₂ and CO from the interstellar comet 3I/ATLAS, before and after perihelion.",
-      availability: isComet ? { label: "This target", tone: "ready" } : { label: "3I/ATLAS only", tone: "special" },
-      details: [
-        "Uses the dedicated 3I/ATLAS dataset, not this point: the comet moves, so it cannot be found by fixed coordinates.",
-      ],
-      open: <CometBreathDialog trigger={<Button size="sm" variant="outline">Open Comet Breath</Button>} />,
+      badge: { label: "3I/ATLAS only", ready: false },
+      note: "Uses the dedicated 3I/ATLAS dataset, not this point (the comet moves, so fixed coordinates cannot find it).",
+      open: () => <CometBreathDialog trigger={<Button size="sm">Open</Button>} />,
     },
   ];
 
   return (
-    <Accordion defaultValue={autoOpen ? [autoOpen.analysis] : []} multiple className="rounded-md border">
-      {items.map((it) => (
-        <AccordionItem key={it.id} value={it.id} className="px-3">
-          <AccordionTrigger className="gap-2 py-2.5 text-sm">
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <span className="truncate font-medium">{it.title}</span>
-              <Status a={it.availability} />
-            </span>
-          </AccordionTrigger>
-          {/* keepMounted: collapsing a toggle must not close an analysis that is open. */}
-          <AccordionContent keepMounted className="grid gap-2 pb-3 text-xs">
-            <p>{it.summary}</p>
-            <ul className="list-disc pl-4 text-muted-foreground">
-              {it.details.map((d) => (
-                <li key={d}>{d}</li>
-              ))}
-            </ul>
-            <div>{it.open}</div>
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
+    <ul className="grid gap-2">
+      {items.map((it) => {
+        const j = jobs[it.id];
+        const p = j.status === "running" || j.status === "done" ? j.progress : null;
+        const left = j.status === "running" ? eta(j.progress, j.startedAt) : null;
+        return (
+          <li key={it.id} className="grid gap-2 rounded-md border p-3">
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate font-medium">{it.title}</span>
+              <Badge variant={it.badge.ready ? "secondary" : "outline"}>{it.badge.label}</Badge>
+            </div>
+            <details className="text-xs">
+              <summary className="cursor-pointer text-muted-foreground select-none">{it.summary}</summary>
+              <p className="mt-1 text-muted-foreground">{it.note}</p>
+            </details>
+
+            {j.status === "idle" && (
+              <Button size="sm" variant="secondary" className="w-fit" onClick={() => enqueue(it.id)}>
+                <DownloadIcon /> Download data
+              </Button>
+            )}
+            {j.status === "queued" && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                Waiting — one analysis downloads at a time.
+                <Button size="xs" variant="ghost" onClick={() => cancel(it.id)}><XIcon /> Cancel</Button>
+              </div>
+            )}
+            {j.status === "running" && p && (
+              <div className="grid gap-1">
+                <Progress value={(p.done / Math.max(1, p.total)) * 100} aria-label={`${it.title} download`} />
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground" aria-live="polite">
+                  <span>
+                    {p.step} · {p.done} / {p.total} done, {p.total - p.done} left{left != null ? ` · about ${left} s` : ""}
+                  </span>
+                  <Button size="xs" variant="ghost" onClick={() => cancel(it.id)}><XIcon /> Cancel</Button>
+                </div>
+              </div>
+            )}
+            {j.status === "done" && (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {it.open(auto(it.id))}
+                <span className="text-muted-foreground">
+                  Ready · {j.progress.done - j.progress.failed} files in {j.seconds} s{j.progress.failed ? ` · ${j.progress.failed} failed (shown inside)` : ""}
+                </span>
+              </div>
+            )}
+            {j.status === "error" && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-destructive">
+                {j.message}
+                <Button size="xs" variant="outline" onClick={() => enqueue(it.id)}>Try again</Button>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

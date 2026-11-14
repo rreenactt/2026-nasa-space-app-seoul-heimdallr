@@ -32,13 +32,15 @@ interface NimState {
   focusNote: string | null;
 }
 
+export const catalogQuery = () => ({
+  queryKey: ["nim", "catalog"] as const,
+  queryFn: () => api.get("/api/nim/neighbors", { timeout: 65_000 }).json<NeighborCatalog>(),
+  staleTime: Infinity,
+  gcTime: 30 * 60_000,
+});
+
 function useCatalog() {
-  return useQuery({
-    queryKey: ["nim", "catalog"],
-    queryFn: () => api.get("/api/nim/neighbors", { timeout: 65_000 }).json<NeighborCatalog>(),
-    staleTime: Infinity,
-    gcTime: 30 * 60_000,
-  });
+  return useQuery(catalogQuery());
 }
 
 const Ctx = createContext<NimState | null>(null);

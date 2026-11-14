@@ -28,13 +28,17 @@ function getJson<T>(url: string, searchParams: Record<string, string | number> |
   return api.get(url, { searchParams, timeout: timeoutMs }).json<T>();
 }
 
+export const observationsQuery = () => ({
+  queryKey: ["comet", "observations"] as const,
+  queryFn: () => getJson<ObservationIndex>("/api/comet/observations", undefined, 35_000),
+  ...SESSION_MEMORY,
+});
+
 export function useObservationIndex() {
-  return useQuery({
-    queryKey: ["comet", "observations"],
-    queryFn: () => getJson<ObservationIndex>("/api/comet/observations", undefined, 35_000),
-    ...SESSION_MEMORY,
-  });
+  return useQuery(observationsQuery());
 }
+
+export const SESSION_CACHE = SESSION_MEMORY;
 
 export interface FrameCenter {
   ra: number;

@@ -1,21 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
 import { PauseIcon, PlayIcon } from "lucide-react";
-import { api } from "@/lib/ky";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { BrightNeighbor } from "@/app/_lib/fpl/types";
 import { skyToGrid } from "@/app/_lib/sky/wcs";
 import { BLINK_FOV_ARCMIN, mjdDate, mjdMonth, useBlink, type VisitFrame } from "./blink-context";
 
 type Mode = "blink" | "difference" | "stack";
-const MJD_TO_YEAR = (mjd: number) => 2000 + (mjd - 51544.5) / 365.25;
 
 function percentile(values: number[], p: number) {
   if (!values.length) return 0;
@@ -69,7 +66,7 @@ function GridCanvas({ data, n, range, diverging }: { data: Float32Array | null; 
 }
 
 export function BlinkViewer() {
-  const { plan, usable, visits, grid, detector, setDetector, loadingFrames, frames } = useBlink();
+  const { plan, usable, visits, grid, detector, setDetector, loadingFrames, frames, gaia } = useBlink();
   const [mode, setMode] = useState<Mode>("blink");
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -108,19 +105,8 @@ export function BlinkViewer() {
   }, [usable, first]);
   const stackData = useMemo(() => (usable.length ? meanStack(usable.map((u) => u.data!)) : null), [usable]);
 
-  // Gaia DR3 stars (G < 16) moved to each visit's date (ESA Gaia Archive via /api/fpl/neighbors).
-  const gaia = useQueries({
-    queries: usable.map((u) => ({
-      queryKey: ["blink", "gaia", grid.ra.toFixed(5), grid.dec.toFixed(5), u.mid!.toFixed(1)],
-      queryFn: () =>
-        api
-          .get("/api/fpl/neighbors", { searchParams: { ra: grid.ra, dec: grid.dec, radius: 130, maxG: 16, epoch: MJD_TO_YEAR(u.mid!) }, timeout: 65_000 })
-          .json<{ stars: BrightNeighbor[] }>(),
-      enabled: showGaia,
-      staleTime: Infinity,
-    })),
-  });
-  const gaiaNow = mode === "stack" ? null : gaia[Math.min(idx, gaia.length - 1)]?.data?.stars;
+  // Gaia DR3 stars (G < 16) moved to the shown visit's date.
+  const gaiaNow = mode === "stack" || !current ? null : gaia.get(current.visit.index);
 
   if (plan.isPending) return <Status text="Finding observations → reading cutouts → matching wavelength → aligning…" spinner />;
   if (plan.isError) {
@@ -313,4 +299,28 @@ export function BlinkSummary() {
       </details>
     </div>
   );
+}
+
+/** Shown instead of the panel until every image the blink viewer needs has arrived. */
+export function BlinkLoading() {
+  const { progress } = useBlink();
+  const pct = Math.round((progress.done / Math.max(1, progress.total)) * 100);
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center" aria-live="polite">
+      <Spinner />
+      <div className="grid w-full max-w-md gap-2">
+        <Progress value={pct} aria-label="Loading the SPHEREx images for this point" />
+        <p className="text-sm">{progress.step}</p>
+        <p className="text-xs text-muted-foreground">
+          {progress.done} / {progress.total} done · {progress.total - progress.done} left. Everything is downloaded first so the blink plays without waiting.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Renders the panel once the blink data is complete. */
+export function BlinkGate({ children }: { children: React.ReactNode }) {
+  const { ready } = useBlink();
+  return ready ? <>{children}</> : <BlinkLoading />;
 }
