@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AdditionalAnalyses, type AutoOpenAnalysis } from "../analyses/additional-analyses";
-import { CUTOUT_ARCMIN, SKY_SURVEY } from "./constants";
+import { BlinkProvider } from "../blink/blink-context";
+import { BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
+import { SKY_SURVEY } from "./constants";
 import { formatDec, formatRa } from "./sky-coordinates";
 import type { SkySelection } from "./sky-selection";
 
@@ -51,15 +53,10 @@ function PanelBody({ selection, autoOpen }: { selection: SkySelection; autoOpen?
         </p>
       </DialogHeader>
 
+      <BlinkProvider selection={selection}>
       <div className="grid min-h-0 grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
-        <section className="flex min-h-0 items-center justify-center border-r p-6">
-          <div className="flex aspect-square h-full max-h-full max-w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center">
-            <p className="font-medium">Blink viewer not connected yet</p>
-            <p className="max-w-xs text-xs text-muted-foreground">
-              The SPHEREx cutouts ({CUTOUT_ARCMIN}′ × {CUTOUT_ARCMIN}′) for this point will play here, aligned on a
-              fixed sky grid.
-            </p>
-          </div>
+        <section className="flex min-h-0 items-stretch justify-center border-r p-4">
+          <BlinkViewer />
         </section>
 
         <ScrollArea className="min-h-0">
@@ -67,9 +64,7 @@ function PanelBody({ selection, autoOpen }: { selection: SkySelection; autoOpen?
             {target && <p className="text-sm">{target.note}</p>}
 
             <PanelSection title="Summary">
-              <p className="text-muted-foreground">
-                Not available yet: the SPHEREx observation lookup is not connected in this build.
-              </p>
+              <BlinkSummary />
             </PanelSection>
 
             <PanelSection title="Your assessment">
@@ -93,6 +88,7 @@ function PanelBody({ selection, autoOpen }: { selection: SkySelection; autoOpen?
           </div>
         </ScrollArea>
       </div>
+      </BlinkProvider>
     </>
   );
 }

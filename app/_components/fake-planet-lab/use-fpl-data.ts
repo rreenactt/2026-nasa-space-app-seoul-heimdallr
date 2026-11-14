@@ -18,13 +18,13 @@ export function useSpherexSearch(ra: number, dec: number) {
   });
 }
 
-export function useFrames(exposures: FplExposure[], ra: number, dec: number) {
+export function useFrames(exposures: FplExposure[], ra: number, dec: number, size = CUTOUT_PX) {
   return useQueries({
     queries: exposures.map((e) => ({
-      queryKey: ["fpl", "frame", e.key, ra.toFixed(5), dec.toFixed(5), CUTOUT_PX],
+      queryKey: ["fpl", "frame", e.key, ra.toFixed(5), dec.toFixed(5), size],
       queryFn: () =>
         api
-          .get("/api/fpl/frame", { searchParams: { obsId: e.obsId, detector: e.detector, ra, dec, size: CUTOUT_PX }, timeout: 65_000 })
+          .get("/api/fpl/frame", { searchParams: { obsId: e.obsId, detector: e.detector, ra, dec, size }, timeout: 65_000 })
           .json<FramePayload>(),
       retry: false,
       ...SESSION,
