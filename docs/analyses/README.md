@@ -4,7 +4,7 @@
 
 ## 목록
 
-| ID | 이름 | 출력 종류 | 최소 방문 | 적용 대상 | 화면 배치 | 난이도 | 상태 | 담당 |
+| ID | 이름 | 출력 종류 | 최소 SPHEREx 방문 | 적용 대상 | 화면 배치 | 난이도 | 상태 | 담당 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | [`sky-time-machine`](sky-time-machine.md) | Sky Time Machine | view, overlay | 1 | 모든 좌표 | 추가 분석 목록 | 중 | 확정 | |
 | [`fake-planet-lab`](fake-planet-lab.md) | Fake Planet Lab | overlay, text | 1 | 모든 좌표 | 추가 분석 목록 | 중 | 확정 | |

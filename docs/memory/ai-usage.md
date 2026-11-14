@@ -13,3 +13,4 @@
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-14 | ansirh | Claude | 챌린지 분석, 기획 문서·공통 메모리 초안 작성 | `docs/`, `AGENTS.md`, `CLAUDE.md` | 허한결 검토 |
 | 2026-11-14 | ansirh | Claude Code | 기획 문서 커밋, 문서 간 불일치 검토, 평가 선택지 이름 통일, MIT `LICENSE` 추가 | `docs/`, `LICENSE`, `README.md` | 허한결 지시, 검토 필요 |
+| 2026-11-14 | ansirh | Claude Code | SPHEREx 방문 1회 상태를 "추가 분석 필요"로 바꾸고 평가 허용, 방문 개념 조사·설명 | `docs/` | 허한결 지시, 검토 필요 |

@@ -19,3 +19,4 @@
 | 11 | 2026-11-14 | 웹은 Next.js 16 App Router 기반, `main` 푸시 시 Vercel 배포 | 레포 기본 구성(이순형 작성) | `AGENTS.md`, `README.md` | 유효 |
 | 12 | 2026-11-14 | 평가 선택지 이름 통일: "움직인다" / "안 움직인다" / "잡음·결함" (화면 문구 `Moving` / `Not moving` / `Noise or artifact`). Blink Arena도 같은 이름을 쓴다 | 문서마다 이름이 달라 코드·화면·집계에서 어긋날 위험 | `PLAN.md` 8장, `memory/glossary.md`, `analyses/blink-arena.md` | 유효 |
 | 13 | 2026-11-14 | 레포 라이선스는 MIT, 루트 `LICENSE`에 명시 | 제출 요건(공개 레포), 기획서 12장 | `LICENSE`, `PLAN.md` 12장 | 유효 |
+| 14 | 2026-11-14 | SPHEREx 방문 1회 지점은 "비교 불가"가 아니라 "추가 분석 필요" 상태로 표시하고, 평가를 받는다. "비교 불가"는 SPHEREx 방문 간 비교에만 쓴다. 분석의 실행 조건은 "최소 SPHEREx 방문 횟수"로 적는다 | 방문 1회여도 2MASS·WISE·Gaia 등 외부 데이터와 비교하는 추가 분석이 가능함 | `PLAN.md` 4·5·6·8장, `analyses/`, `memory/glossary.md` | 유효 |
