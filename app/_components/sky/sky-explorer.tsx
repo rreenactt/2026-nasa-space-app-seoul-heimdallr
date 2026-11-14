@@ -7,6 +7,7 @@ import { AnalysisPanel } from "./analysis-panel";
 import { INITIAL_VIEW, SKY_SURVEY, TARGET_FOV, ZOOM_IN_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";
 import { type EquatorialCoordinates, formatDec, formatRa, type SkyView } from "./sky-coordinates";
+import { SkySearchBox } from "./sky-search-box";
 import { type SkySelection, selectionUrl } from "./sky-selection";
 import { findTestTarget, type TestTarget } from "./test-targets";
 
@@ -59,6 +60,14 @@ export function SkyExplorer({ initialSelection }: { initialSelection: SkySelecti
     },
     [openPanel],
   );
+  // A searched point opens like a pin: in the zoom view at TARGET_FOV, with the panel on top.
+  const goToPoint = useCallback(
+    (point: EquatorialCoordinates) => {
+      switchTo("aladin", { ...point, fov: TARGET_FOV });
+      openPanel({ ...point, fov: TARGET_FOV, target: findTestTarget(point) });
+    },
+    [switchTo, openPanel],
+  );
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-black text-white">
@@ -73,6 +82,7 @@ export function SkyExplorer({ initialSelection }: { initialSelection: SkySelecti
           onError={setError}
         />
       )}
+      <SkySearchBox onTarget={selectTarget} onPoint={goToPoint} />
       <CursorReadout mode={mode} />
       {error && (
         <p role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md bg-red-950/80 px-3 py-2 text-sm">
