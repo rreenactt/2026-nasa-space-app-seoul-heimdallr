@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MAX_SPHERE_FOV } from "./constants";
+import { MAX_FOV } from "./constants";
 import type { EquatorialCoordinates } from "./sky-coordinates";
 import { findTestTarget, type TestTarget } from "./test-targets";
 
@@ -13,7 +13,7 @@ const selectionParams = z
   .object({
     ra: number().pipe(z.number().min(0).lt(360)),
     dec: number().pipe(z.number().min(-90).max(90)),
-    fov: number().pipe(z.number().positive().max(MAX_SPHERE_FOV)),
+    fov: number().pipe(z.number().positive().max(MAX_FOV)),
   })
   .strict();
 

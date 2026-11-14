@@ -26,3 +26,4 @@
 | 2026-11-14 | rreenactt | Claude Code | Sky Time Machine 구현: 2MASS·WISE·NEOWISE·SPHEREx SIA2 검색, 공통 격자 재투영, WISE 통과별 중앙값 합성, Gaia 정렬 검증 | `app/_components/sky-time-machine/`, `app/_lib/sky/`, `app/api/sky/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | rreenactt | Claude Code | Fake Planet Lab 구현: FLAGS 헤더 기반 비트 해석·레이어, 후보 점검 8종, 기록 JSON 내보내기 | `app/_components/fake-planet-lab/`, `app/_lib/fpl/`, `app/api/fpl/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | rreenactt | Claude Code | 추가 분석 3개 구현 기록, 결정 #26–28 제안, `PLAN.md` 4·14장 갱신 | `docs/` | 김재현 지시, 검토 필요 |
+| 2026-11-14 | ansirh | Claude Code | 3D 하늘을 Aladin Lite 하나(TAN 투영)로 통일해 둘러보기 ↔ 조준 전환 경계 제거, 별자리 선 캔버스 그리기, 결정 #29 기록 | `app/_components/sky/`, `docs/PLAN.md`, `docs/decisions.md` | 허한결 지시, 검토 필요 |

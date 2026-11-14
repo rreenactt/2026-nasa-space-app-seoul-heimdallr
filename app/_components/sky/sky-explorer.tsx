@@ -1,28 +1,22 @@
 "use client";
 
-import { cn } from "cn";
 import dynamic from "next/dynamic";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AnalysisPanel } from "./analysis-panel";
-import { INITIAL_VIEW, SKY_SURVEY, TARGET_FOV, ZOOM_IN_FOV } from "./constants";
+import { AIM_FOV, INITIAL_VIEW, SKY_SURVEY, TARGET_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";
-import { type EquatorialCoordinates, formatDec, formatRa, type SkyView } from "./sky-coordinates";
+import { type EquatorialCoordinates, formatDec, formatRa, type SkyView as SkyViewState } from "./sky-coordinates";
 import { SkySearchBox } from "./sky-search-box";
 import { type SkySelection, selectionUrl } from "./sky-selection";
+import type { Flight } from "./sky-view";
 import { findTestTarget, type TestTarget } from "./test-targets";
 
-// three.js and Aladin Lite touch browser APIs as soon as they load, so both render only on the client.
-// Aladin Lite (with its WebAssembly core) loads in its own chunk the first time the view zooms in.
-const CelestialSphere = dynamic(() => import("./celestial-sphere"), { ssr: false });
-const AladinView = dynamic(() => import("./aladin-view"), { ssr: false });
-
-type Mode = "sphere" | "aladin";
-
-const modeFor = (fov: number): Mode => (fov <= ZOOM_IN_FOV ? "aladin" : "sphere");
+// Aladin Lite touches browser APIs as soon as it loads, so the sky renders only on the client.
+const SkyView = dynamic(() => import("./sky-view"), { ssr: false });
 
 /**
- * The sky screen: a wide celestial sphere that hands off to Aladin Lite below ZOOM_IN_FOV and back above ZOOM_OUT_FOV.
- * Clicking a test target pin, or a point in the zoom view, opens the analysis panel and puts the point in the URL.
+ * The sky screen: one Aladin Lite view from 120° down to arcminutes. Clicking a test target pin, or a point once zoomed
+ * in to aim, opens the analysis panel and puts the point in the URL.
  */
 export function SkyExplorer({
   initialSelection,
@@ -31,22 +25,20 @@ export function SkyExplorer({
 }: {
   /** Opens the analysis panel at start (a shared `?ra=&dec=&fov=` link). */
   initialSelection: SkySelection | null;
-  /** Where the sky starts when it differs from the selection, such as an older `?stm=` link. */
-  initialView?: SkyView;
+  /** Where the sky starts, such as a shared link's point; the Galactic Center otherwise. */
+  initialView?: SkyViewState;
   /** Buttons for the additional analyses, shown under the search box until they move into the analysis panel. */
   analysisLinks?: React.ReactNode;
 }) {
-  const [view, setView] = useState<SkyView>(initialView ?? INITIAL_VIEW);
-  const [mode, setMode] = useState<Mode>(modeFor(view.fov));
+  const [startView] = useState<SkyViewState>(initialView ?? INITIAL_VIEW);
+  const [aiming, setAiming] = useState(startView.fov <= AIM_FOV);
+  const [flight, setFlight] = useState<Flight | null>(null);
   const [selection, setSelection] = useState<SkySelection | null>(initialSelection);
   const [error, setError] = useState<string | null>(null);
+  const flightId = useRef(0);
 
-  const switchTo = useCallback((nextMode: Mode, nextView: SkyView) => {
-    setView(nextView);
-    setMode(nextMode);
-  }, []);
-  const zoomIn = useCallback((next: SkyView) => switchTo("aladin", next), [switchTo]);
-  const zoomOut = useCallback((next: SkyView) => switchTo("sphere", next), [switchTo]);
+  // Only crossing AIM_FOV changes state, so zooming does not re-render the screen.
+  const onFovChange = useCallback((fov: number) => setAiming(fov <= AIM_FOV), []);
 
   // The URL follows the open panel without adding history entries (PLAN.md chapter 5).
   const openPanel = useCallback((next: SkySelection) => {
@@ -58,59 +50,47 @@ export function SkyExplorer({
     window.history.replaceState(null, "", "/");
   }, []);
 
-  const selectTarget = useCallback(
-    (target: TestTarget) => {
-      switchTo("aladin", { ra: target.ra, dec: target.dec, fov: TARGET_FOV });
-      openPanel({ ra: target.ra, dec: target.dec, fov: TARGET_FOV, target });
-    },
-    [switchTo, openPanel],
-  );
-  const selectPoint = useCallback(
-    (point: EquatorialCoordinates, fov: number, target?: TestTarget) => {
-      openPanel({ ...point, fov, target: target ?? findTestTarget(point) });
+  // A test target or a searched point: fly there and open the panel, which the flight shows through.
+  const goTo = useCallback(
+    (point: EquatorialCoordinates, target?: TestTarget) => {
+      flightId.current += 1;
+      setFlight({ ...point, fov: TARGET_FOV, id: flightId.current });
+      openPanel({ ...point, fov: TARGET_FOV, target: target ?? findTestTarget(point) });
     },
     [openPanel],
   );
-  // A searched point opens like a pin: in the zoom view at TARGET_FOV, with the panel on top.
-  const goToPoint = useCallback(
-    (point: EquatorialCoordinates) => {
-      switchTo("aladin", { ...point, fov: TARGET_FOV });
-      openPanel({ ...point, fov: TARGET_FOV, target: findTestTarget(point) });
+  const goToTarget = useCallback((target: TestTarget) => goTo(target, target), [goTo]);
+  const selectPoint = useCallback(
+    (point: EquatorialCoordinates, fov: number, target?: TestTarget) => {
+      if (target && fov > AIM_FOV) goTo(target, target);
+      else openPanel({ ...point, fov, target: target ?? findTestTarget(point) });
     },
-    [switchTo, openPanel],
+    [goTo, openPanel],
   );
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-black text-white">
-      {mode === "sphere" ? (
-        <CelestialSphere initialView={view} onCursorMove={setCursor} onZoomIn={zoomIn} onTargetSelect={selectTarget} />
-      ) : (
-        <AladinView
-          initialView={view}
-          onCursorMove={setCursor}
-          onZoomOut={zoomOut}
-          onSelect={selectPoint}
-          onError={setError}
-        />
-      )}
+      <SkyView
+        initialView={startView}
+        flight={flight}
+        onCursorMove={setCursor}
+        onFovChange={onFovChange}
+        onSelect={selectPoint}
+        onError={setError}
+      />
       {/* Top-left column: the search box, then the analysis buttons below it (and below any search message). */}
       <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2">
-        <SkySearchBox onTarget={selectTarget} onPoint={goToPoint} />
+        <SkySearchBox onTarget={goToTarget} onPoint={goTo} />
         {analysisLinks}
       </div>
-      <CursorReadout mode={mode} />
+      <CursorReadout aiming={aiming} />
       {error && (
         <p role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md bg-red-950/80 px-3 py-2 text-sm">
-          Zoom view unavailable: {error}
+          Sky view unavailable: {error}
         </p>
       )}
-      {/* In the zoom view the credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
-      <div
-        className={cn(
-          "pointer-events-none absolute right-4 max-w-md text-right text-xs leading-5",
-          mode === "aladin" ? "bottom-12" : "bottom-4",
-        )}
-      >
+      {/* The credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
+      <div className="pointer-events-none absolute right-4 bottom-12 max-w-md text-right text-xs leading-5">
         {SKY_SURVEY.notice && <p className="text-amber-300">{SKY_SURVEY.notice}</p>}
         <p className="text-white/60">{SKY_SURVEY.credit}</p>
       </div>
@@ -119,11 +99,11 @@ export function SkyExplorer({
   );
 }
 
-function CursorReadout({ mode }: { mode: Mode }) {
+function CursorReadout({ aiming }: { aiming: boolean }) {
   const cursor = useCursor();
   return (
     <div className="pointer-events-none absolute bottom-4 left-4 rounded-md bg-black/60 px-3 py-2 font-mono text-xs leading-5 text-white/80">
-      <div>{mode === "sphere" ? "Sky view · click a pin or zoom in" : "Zoom view · click to analyze"}</div>
+      <div>{aiming ? "Aiming · click to analyze" : "Click a pin or zoom in to aim"}</div>
       <div>RA {cursor ? formatRa(cursor.ra) : "—"}</div>
       <div>Dec {cursor ? formatDec(cursor.dec) : "—"}</div>
     </div>
