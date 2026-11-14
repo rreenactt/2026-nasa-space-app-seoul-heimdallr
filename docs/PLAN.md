@@ -356,36 +356,39 @@ flowchart LR
 ```
 
 - **웹:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, TanStack Query (레포 기본 구성). `main` 푸시 시 Vercel 프로덕션 배포. 코딩 규칙은 루트 `AGENTS.md`
-- **3D:** three.js(React Three Fiber) + Aladin Lite 하이브리드를 추천한다 (아래 "3D 하늘 구현", **팀 결정 필요**). Neighborhood in Motion도 같은 three.js를 쓴다. 블링크는 canvas, 소리는 Web Audio
+- **3D:** three.js(React Three Fiber) + Aladin Lite 3.8.2 하이브리드로 한다 (아래 "3D 하늘 구현", [결정 #24](decisions.md)). Neighborhood in Motion도 같은 three.js를 쓴다. 블링크는 canvas, 소리는 Web Audio
 - **천문 데이터 처리:** Python (astropy, astroquery 또는 PyVO, numpy, reproject). 실시간 처리를 별도 Python API(FastAPI 등)로 둘지, 사전 처리만 Python으로 하고 웹은 Next.js Route Handler로 둘지 **팀 결정 필요**
 - **평가 저장:** 익명 키-값 DB (Supabase, Firebase 등 무료 등급 · **팀 결정 필요**)
 - 무거운 처리는 미리 돌려 정적 파일로 두고, 웹은 보여주기만 한다. 평가만 서버에 저장한다.
 
-### 3D 하늘 구현 (추천안)
+### 3D 하늘 구현
 
 3D 하늘은 처음부터 만들지 않고, 공개된 SPHEREx 하늘 타일과 오픈소스 뷰어를 조합한다. 시야에 따라 두 단계로 나눈다.
 
 | 단계 | 시야 | 구현 | 배경 이미지 | 하는 일 |
 | --- | --- | --- | --- | --- |
-| 둘러보기 | 넓음 | three.js 1인칭 천구 (카메라를 구 중심에 둠) | CDS `CDS/P/SPHEREx/QR2/color` HiPS를 hips2fits로 받은 360° 등장방형(CAR) 이미지 1장 | 커서 RA/Dec 표시, 별자리 선, 테스트 대상·후보 핀 |
+| 둘러보기 | 넓음 | three.js 1인칭 천구 (카메라를 구 중심에 둠) | CDS `CDS/P/SPHEREx/QR2/color` HiPS의 360° 등장방형(CAR) 이미지 1장 (CDS 장애 중에는 2MASS 컬러로 대체, 아래 참고) | 커서 RA/Dec 표시, 별자리 선, 테스트 대상·후보 핀 |
 | 조준 | 약 5° 이하 | Aladin Lite v3 (SIN 투영) | 같은 SPHEREx 컬러 HiPS 타일 (order 7) | 조준선, 클릭 → 분석 패널 |
 
 - **배경은 둘러보기용이다.** CDS 컬러 HiPS는 QR2 기준이라, 분석은 4장대로 IRSA DR1/QR3 컷아웃으로 한다. IRSA의 DR1 HiPS 큐브는 타일 1개가 약 300MB인 FITS라 브라우저 배경으로 쓸 수 없다.
-- **구 안쪽에서 보므로 좌우가 뒤집힌다.** RA가 왼쪽으로 증가하도록 hips2fits의 경도 반전 옵션을 쓰거나 텍스처를 좌우 반전한다.
+- **구 안쪽에서 보므로 좌우가 뒤집힌다.** 배경 이미지는 열 x가 RA = 360(x+0.5)/폭 − 180으로 오른쪽으로 증가하게 만든다. three.js 구의 UV 배치와 맞아서 안쪽에서 보면 RA가 왼쪽으로 증가한다.
+- **배경 이미지는 `scripts/sky-background/build_background.py`로 만든다.** HiPS의 `Norder3/Allsky` 미리보기(정적 파일 1개)를 받아 CAR로 재표본화한다. hips2fits 같은 원격 서비스가 필요 없어 CDS 장애와 무관하고, HiPS 주소만 바꾸면 SPHEREx 컬러로도 같은 방법으로 만든다. 지금은 4096×2048(약 1.2MB).
 - **좌표계는 ICRS 적도 좌표(RA/Dec, 도 단위)로 통일한다.** three.js, Aladin Lite, IRSA가 모두 같은 기준을 쓴다.
 - **시야 전환은 자동 양방향이다.** 천구에서 약 5° 이하로 확대하면 같은 시선 방향(RA/Dec)과 시야를 Aladin Lite에 넘기고, Aladin Lite에서 약 6°보다 넓게 축소하면 천구로 돌아온다. 두 경계 사이의 여유는 경계에서 화면이 깜빡이는 것을 막는다.
 - **알려진 소행성은 조준 화면에 표시하지 않는다.** 배경 모자이크는 여러 시점이 섞여 있어 시점 하나로 위치를 계산할 수 없다. 분석 패널에서 각 프레임의 관측 시점으로 조회해 겹쳐 보인다 (절대 원칙 6).
 - **Next.js에서는 클라이언트에서만 불러온다.** three.js·Aladin Lite를 쓰는 모듈 맨 위에 `import "client-only"`를 두고 (`AGENTS.md` 규칙), Client Component 안에서 `next/dynamic`(`ssr: false`)으로 불러온다. Aladin Lite는 처음 확대할 때 불러오는 별도 청크로 둔다.
 - **배경 이미지는 `public/sky/`에 둔다.** 몇 장뿐이고 거의 바뀌지 않으므로 오브젝트 스토리지 규칙(9장 데이터 관리)의 예외로 한다. PC만 대상이므로 8192×4096 1장을 기본으로 하고, GPU 텍스처 한도가 낮으면 4096×2048 판을 쓴다.
-- **확인 필요:** hips2fits로 전천 CAR 이미지를 받는 요청은 아직 시험하지 않았다. Aladin Lite의 마우스 이동·클릭 이벤트 이름은 문서에서 확인한다 (화면 좌표 → RA/Dec 변환 `pix2world`는 확인됨).
+- **Aladin Lite 이벤트 (3.8.2 소스로 확인):** `mouseMove` → `{ra, dec, x, y}` (투영 밖이면 ra·dec가 null), `click` → `{ra, dec, x, y, isDragging}` (ICRS), `zoomChanged` → 가로 시야(도). 화면 좌표 → RA/Dec 변환은 `pix2world`.
+- **Aladin Lite의 `log` 옵션은 끈다.** 기본값이 켜져 있어 CDS에 사용 통계를 보낸다.
+- **CDS 장애 중에는 2MASS 컬러로 대체한다 ([결정 #25](decisions.md)).** CDS가 2026-11-09부터 사이버 보안 사고로 Aladin 하늘 이미지·hips2fits·SIMBAD를 막았고, SPHEREx 컬러 HiPS는 다른 기관 미러에도 없다. 그동안 배경과 조준 화면 모두 IRSA가 미러한 2MASS 컬러 HiPS(`https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color`)를 쓰고, 화면에 "SPHEREx가 아닌 임시 배경"임을 표시한다 (절대 원칙 4). 설정은 `app/_components/sky/constants.ts`의 `SKY_SURVEY` 한 줄이다. CDS가 복구되면 SPHEREx 컬러 배경을 스크립트로 만들고 `SKY_SURVEY`를 되돌린다.
 - **일정상 안전장치:** three.js 단계가 늦어지면 Aladin Lite만으로 "둘러보기 + 클릭"을 제공하고 제출한다.
 
 | 도구 | 용도 | 라이선스 |
 | --- | --- | --- |
 | three.js, React Three Fiber | 1인칭 천구, Neighborhood in Motion | MIT |
-| Aladin Lite v3 (npm `aladin-lite`, 수정 없이 사용) | 조준 단계 HiPS 표시 | LGPL-3.0 (별도 청크로 불러오고 README·References에 라이선스와 소스 링크 표기). npm `latest`가 베타(3.9.x)라 안정판(3.8.x)과 둘 중 선택 필요 |
+| Aladin Lite 3.8.2 (npm `aladin-lite`, 안정판으로 버전 고정, 수정 없이 사용) | 조준 단계 HiPS 표시 | LGPL-3.0 (별도 청크로 불러오고 README·References에 라이선스와 소스 링크 표기) |
 | d3-celestial 데이터 파일 | 별자리 선·경계 | BSD-3 (데이터의 원 출처도 References에 적는다) |
-| CDS hips2fits | 360° 배경 이미지 생성 | CDS 감사 문구 필요 |
+| HiPS Allsky 미리보기 | 360° 배경 이미지 생성 (`scripts/sky-background/`) | HiPS 제공자 감사 문구 필요 (2MASS: University of Massachusetts & IPAC/Caltech) |
 
 검토 후 쓰지 않기로 한 것: Stellarium Web Engine (AGPL-3.0이라 MIT 레포와 충돌 소지, 소스 빌드 필요), WorldWide Telescope 엔진 (MIT지만 공식 래퍼가 Vue용이라 React 연결 비용이 큼).
 
@@ -493,6 +496,7 @@ flowchart LR
 | 추가 분석 5개를 모두 구현하기 어려움 | 6장 공통 규칙대로 틀을 먼저 구현하고, 난이도 낮은 기법부터 추가. 미구현 기법은 "준비 중"으로 표시해 설계를 보여줌 |
 | DR1이 클라우드 전용이라 컷아웃 서비스로 받을 수 없을 가능성 | 착수 직후 DR1 컷아웃 가능 여부 확인, 안 되면 QR3 컷아웃 또는 S3 직접 읽기로 전환 |
 | 3D 배경 이미지(CDS SPHEREx 컬러 HiPS)가 QR2 기준 | 배경은 둘러보기용으로만 쓰고, 분석 패널은 DR1/QR3 컷아웃임을 화면에 표시 |
+| CDS(alasky) 장애로 SPHEREx 컬러 HiPS를 못 받음 (2026-11-09부터 실제 발생, 복구 시점 미정) | 배경·조준 화면 모두 IRSA 미러 2MASS 컬러로 대체하고 화면에 임시임을 표시 ([결정 #25](decisions.md)). 데모 전 CDS 상태를 확인해 복구됐으면 SPHEREx로 되돌림 |
 | 대회 전 작성 코드 사용 금지 규정 | 11/14 09:00 이후 작업만 커밋 |
 
 ---
@@ -536,8 +540,7 @@ flowchart LR
 - [ ] 기본 검출기 자동 선택 방식 확정 (4장)
 - [ ] 파장 일치 허용치 (4장, 실제 자료로 결정)
 - [ ] DR1 컷아웃 가능 여부 확인, 안 되면 QR3 또는 S3 직접 읽기 (4장, 11장)
-- [ ] 3D 구현: three.js + Aladin Lite 하이브리드 추천안 확정 여부 (9장)
-- [ ] hips2fits로 SPHEREx 컬러 360° 배경 이미지 받기 시험 (9장)
+- [ ] CDS 복구 후 SPHEREx 컬러 배경 생성(`scripts/sky-background/`)과 `SKY_SURVEY` 되돌리기 (9장, [결정 #25](decisions.md))
 - [ ] 실시간 처리 구조: 별도 Python API / Next.js Route Handler + 사전 처리 (9장)
 - [ ] 평가 DB 서비스 (9장)
 - [ ] 이미지·결과 저장소 서비스 (9장)
