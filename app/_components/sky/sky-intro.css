@@ -1,0 +1,176 @@
+/* Intro (decision #37), built to Figma "Sky screen · Directions" → "I · Intro 1–4". The Figma frames are 640px wide
+   and stand for the full viewport, so 1 frame px = 100vw / 640 = 0.15625vw. Easing cubic-bezier(.2,.2,0,1) (NASA
+   Eyes on the Solar System). Phase times are the Figma times × --intro-tempo (set from TEMPO in sky-intro.tsx);
+   the flickers themselves keep their natural speed. */
+
+/* Frame 1 (0.0–0.4 s): a 1px line, 280 frame px long at 70%, with an 80px bright core glowing 12px at 90%
+   (Anduril's loader line, no colour). It strikes like a lamp, then goes out as the letters take over. */
+.sky-intro-line {
+  width: 43.75vw;
+  height: 1px;
+  background: rgb(240 240 250 / 0.7);
+  transform: translate(-50%, -50%) scaleX(0.3);
+  opacity: 0;
+  animation:
+    sky-intro-strike 0.4s steps(1, end) forwards,
+    sky-intro-extend calc(0.4s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1) forwards,
+    sky-intro-line-out calc(0.3s * var(--intro-tempo, 1)) ease-out calc(0.45s * var(--intro-tempo, 1)) forwards;
+}
+.sky-intro-core {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 12.5vw;
+  height: 1px;
+  transform: translateX(-50%);
+  background: rgb(240 240 250);
+  box-shadow: 0 0 12px rgb(240 240 250 / 0.9);
+}
+@keyframes sky-intro-strike {
+  0% { opacity: 0; }
+  15% { opacity: 0.7; }
+  25% { opacity: 0.15; }
+  40% { opacity: 0.9; }
+  50% { opacity: 0.4; }
+  65%, 100% { opacity: 1; }
+}
+@keyframes sky-intro-extend {
+  to { transform: translate(-50%, -50%) scaleX(1); }
+}
+@keyframes sky-intro-line-out {
+  to { opacity: 0; transform: translate(-50%, -50%) scaleX(1.15); }
+}
+
+/* Frame 1 shows only the line; the unlit letters come in with frame 2. */
+.sky-intro-type {
+  opacity: 0;
+  animation: sky-intro-type-in calc(0.25s * var(--intro-tempo, 1)) ease-out calc(0.4s * var(--intro-tempo, 1)) forwards;
+}
+@keyframes sky-intro-type-in {
+  to { opacity: 1; }
+}
+
+/* Frame 2 (0.4–1.2 s): Michroma at 40 frame px, 12px between letters (0.3em). Unlit letters at 8%. */
+.sky-intro-word {
+  font-size: clamp(30px, 6.25vw, 112px);
+  line-height: 1.4;
+  letter-spacing: 0.3em;
+  margin-right: -0.3em;
+  transform-origin: center;
+  transition:
+    transform calc(0.9s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1),
+    letter-spacing calc(0.9s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1),
+    margin-right calc(0.9s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1),
+    opacity calc(0.9s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1);
+}
+.sky-intro-letter {
+  color: rgb(240 240 250 / 0.08);
+}
+/* Each letter switches on with an uneven flicker (three patterns so neighbours never match), lit with a stronger
+   glow; the glow settles to the frame-3 values after 1.4 s (× tempo). Delays come from the component. */
+.sky-intro-flicker-0 {
+  animation:
+    sky-intro-flicker-0 0.34s linear forwards,
+    sky-intro-settle calc(0.6s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1) forwards;
+}
+.sky-intro-flicker-1 {
+  animation:
+    sky-intro-flicker-1 0.3s linear forwards,
+    sky-intro-settle calc(0.6s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1) forwards;
+}
+.sky-intro-flicker-2 {
+  animation:
+    sky-intro-flicker-2 0.38s linear forwards,
+    sky-intro-settle calc(0.6s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1) forwards;
+}
+@keyframes sky-intro-flicker-0 {
+  0%, 11% { color: rgb(240 240 250 / 0.08); text-shadow: none; }
+  12%, 21% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+  22%, 39% { color: rgb(240 240 250 / 0.2); text-shadow: none; }
+  40%, 47% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+  48%, 59% { color: rgb(240 240 250 / 0.35); text-shadow: none; }
+  60%, 100% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+}
+@keyframes sky-intro-flicker-1 {
+  0%, 19% { color: rgb(240 240 250 / 0.08); text-shadow: none; }
+  20%, 29% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+  30%, 54% { color: rgb(240 240 250 / 0.12); text-shadow: none; }
+  55%, 100% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+}
+@keyframes sky-intro-flicker-2 {
+  0%, 7% { color: rgb(240 240 250 / 0.08); text-shadow: none; }
+  8%, 13% { color: rgb(240 240 250 / 0.7); text-shadow: none; }
+  14%, 31% { color: rgb(240 240 250 / 0.1); text-shadow: none; }
+  32%, 37% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+  38%, 51% { color: rgb(240 240 250 / 0.25); text-shadow: none; }
+  52%, 57% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+  58%, 69% { color: rgb(240 240 250 / 0.5); text-shadow: none; }
+  70%, 100% { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+}
+/* Frame 3 glow: 28px at 45% paper and 80px at 27% pale blue (#bfd4ff). */
+@keyframes sky-intro-settle {
+  from { color: rgb(240 240 250); text-shadow: var(--intro-glow-hot); }
+  to { color: rgb(240 240 250); text-shadow: var(--intro-glow); }
+}
+.sky-intro {
+  --intro-glow: 0 0 28px rgb(240 240 250 / 0.45), 0 0 80px rgb(191 212 255 / 0.27);
+  --intro-glow-hot: 0 0 20px rgb(240 240 250 / 0.75), 0 0 56px rgb(240 240 250 / 0.4), 0 0 96px rgb(191 212 255 / 0.35);
+}
+
+/* Frame 3 (1.2–2.0 s): one line of purpose, Host Grotesk 14 frame px in ash, 9px under the letters. */
+.sky-intro-purpose {
+  margin-top: 1.4vw;
+  font-size: clamp(13px, 2.19vw, 24px);
+  opacity: 0;
+  transform: translateY(6px);
+  animation: sky-intro-purpose calc(0.8s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1) calc(1.2s * var(--intro-tempo, 1)) forwards;
+}
+@keyframes sky-intro-purpose {
+  to { opacity: 1; transform: none; }
+}
+
+/* "Skip intro", Host Grotesk 11 frame px in smoke, bottom right; kept clear of the Aladin Lite logo. */
+.sky-intro-skip {
+  right: max(5vw, 88px);
+  bottom: max(1.4vw, 20px);
+  font-size: clamp(12px, 1.72vw, 15px);
+  transition: color 0.3s;
+}
+
+/* Frame 4 (2.0–3.2 s): the black lifts, the name flies into the header slot (transform set by the component), the
+   purpose line leaves, and the sky settles from 1.04 to 1. */
+.sky-intro-black {
+  transition: opacity calc(1.2s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1);
+}
+.sky-intro[data-phase="reveal"] .sky-intro-black {
+  opacity: 0;
+}
+.sky-intro[data-phase="reveal"] .sky-intro-purpose {
+  opacity: 0;
+  transition: opacity calc(0.4s * var(--intro-tempo, 1)) ease-out;
+  animation: none;
+}
+.sky-intro[data-phase="reveal"] .sky-intro-word {
+  letter-spacing: 0.22em;
+  margin-right: -0.22em;
+  opacity: 0.7;
+}
+.sky-intro[data-phase="reveal"] .sky-intro-letter {
+  text-shadow: none;
+  transition: text-shadow calc(1.2s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1);
+}
+
+/* While the intro runs, the header wordmark waits for the flying name, and the sky starts slightly enlarged. */
+html[data-intro] [data-wordmark] {
+  opacity: 0;
+}
+[data-sky-surface] {
+  transition: transform calc(1.2s * var(--intro-tempo, 1)) cubic-bezier(0.2, 0.2, 0, 1);
+}
+html[data-intro="on"] [data-sky-surface] {
+  transform: scale(1.04);
+}
+
+@keyframes sky-intro-out {
+  to { opacity: 0; visibility: hidden; }
+}

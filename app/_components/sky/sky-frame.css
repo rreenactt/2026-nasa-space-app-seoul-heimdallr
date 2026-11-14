@@ -1,0 +1,7 @@
+/* Keep the Aladin Lite logo visible inside the frame's bottom-right corner (credit required). */
+.aladin-logo-container {
+  transition: transform 0.5s cubic-bezier(0.2, 0.2, 0, 1);
+}
+[data-sky-framed="true"] .aladin-logo-container {
+  transform: translate(-12px, -12px);
+}
