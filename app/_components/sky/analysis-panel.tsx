@@ -10,9 +10,8 @@ import { BlinkProvider } from "../blink/blink-context";
 import { BlinkGate, BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
 import { SKY_SURVEY } from "./constants";
 import { formatDec, formatRa } from "./sky-coordinates";
+import { RatingBadge, RatingSection } from "./rating-section";
 import type { SkySelection } from "./sky-selection";
-
-const RATINGS = ["Moving", "Not moving", "Noise or artifact"];
 
 type AnalysisPanelProps = {
   selection: SkySelection | null;
@@ -25,7 +24,7 @@ type AnalysisPanelProps = {
 
 /**
  * Overlay over the sky for one point (PLAN.md chapter 5): images on the left, summary, rating and additional analyses
- * on the right. This is the shell; each part says plainly that it is not connected yet instead of showing made-up data.
+ * on the right. A part that is not connected yet says so plainly instead of showing made-up data.
  */
 export function AnalysisPanel({ selection, onClose, autoOpen, next }: AnalysisPanelProps) {
   return (
@@ -55,6 +54,7 @@ function PanelBody({
       <DialogHeader className="border-b px-6 pt-5 pb-4">
         <div className="flex items-center gap-3 pr-8">
           <DialogTitle className="text-lg">{target?.name ?? "Selected point"}</DialogTitle>
+          <RatingBadge point={selection} />
           {next && (
             <Button variant="outline" size="sm" className="ml-auto" onClick={next.go}>
               Next: {next.name}
@@ -91,17 +91,7 @@ function PanelBody({
             </PanelSection>
 
             <PanelSection title="Your assessment">
-              <div className="flex flex-wrap gap-2">
-                {RATINGS.map((rating) => (
-                  <Button key={rating} variant="outline" size="sm" disabled>
-                    {rating}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Rating is not connected yet: there is no place to store answers. You can rate without running an
-                additional analysis once it opens.
-              </p>
+              <RatingSection />
             </PanelSection>
 
             <PanelSection title="Additional analyses">

@@ -96,7 +96,9 @@ export async function buildPlan(ra: number, dec: number, requested?: string): Pr
   const queryUrl = `https://irsa.ipac.caltech.edu/SIA?COLLECTION=spherex_dr1&POS=${encodeURIComponent(`CIRCLE ${ra} ${dec} 0.0005`)}&RESPONSEFORMAT=CSV`;
   const seen = new Set<string>();
   const rows: Row[] = [];
-  for (const r of parseCsv(await api.get(queryUrl, { timeout: 50_000 }).text())) {
+  // IRSA's SIA proxy sometimes answers 502/503/504 for a moment and then succeeds (2026-11-15), so retry it briefly.
+  const sia = await api.get(queryUrl, { timeout: 50_000, retry: { limit: 2, statusCodes: [502, 503, 504], backoffLimit: 1_000 } });
+  for (const r of parseCsv(await sia.text())) {
     if (r.dataproduct_subtype !== "science") continue;
     const detector = r.energy_bandpassname.replace("SPHEREx-", "");
     const key = `${r.obs_id}:${detector}`;
