@@ -1,6 +1,6 @@
 # Project Demo: 7-slide outline (draft)
 
-> 제출 항목: Project Demo. 슬라이드 7장 이하(제목 장 포함) 또는 30초 이하 영상(영어 자막) 중 하나를 외부에 올리고 공개 링크 1개를 낸다. 파일 업로드는 없다.
+> 제출 항목: Project Demo. **GIF를 넣은 슬라이드 7장(제목 장 포함)으로 정함 (결정 #42).** 외부에 올리고 공개 링크 1개를 낸다. 파일 업로드는 없다.
 > 초안 2026-11-15 (Claude Code 작성, 사람 검토 전). 슬라이드 문구는 영어, 아래 메모는 한국어.
 > 구조는 서울 D-Day 안내 PDF 20쪽의 권장 구성을 따른다. 심사 기준(`docs/memory/direction.md`): Impact, Creativity, Validity, Relevance, Presentation.
 

@@ -63,7 +63,7 @@
 산출물 담당은 초안이 나온 뒤 허한결이 배정한다.
 
 - [ ] High-Level Summary (영어 50–200단어, `summary.md`) · 담당: 
-- [ ] Project Demo: 슬라이드 7장 공개 링크 · 담당: 
+- [ ] Project Demo: 슬라이드 7장(GIF 포함, 결정 #42) 공개 링크 · 담당: 
 - [ ] Final Project: 배포 사이트 + 레포 README · 담당: 
 - [ ] Project Details (`details.md`) · 담당: 
 - [ ] Use of SI (`ai-usage.md`, `docs/memory/ai-usage.md` 정리) · 담당: 
