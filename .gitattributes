@@ -4,3 +4,6 @@
 
 # Binary files, never converted.
 *.woff2 binary
+
+# Windows batch files need CRLF; cmd.exe misreads labels and goto in LF files.
+*.bat text eol=crlf
