@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel the previous run when a new commit arrives on the same branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Checks only, so read-only permissions. No secrets.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, types, Vitest, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Test database for the Vitest `db` project. Same image and address as docker-compose.test.yaml, so the
+    # credentials are not secret.
+    services:
+      test-db:
+        image: postgres:17-alpine
+        ports: ["5433:5432"]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+
+      - name: Prisma schema
+        run: |
+          pnpm exec prisma validate
+          pnpm exec prisma format
+          git diff --exit-code -- prisma
+
+      - run: pnpm audit --audit-level high
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:vitest
+
+      # Regular production build: the showcase stays closed.
+      - run: pnpm build
