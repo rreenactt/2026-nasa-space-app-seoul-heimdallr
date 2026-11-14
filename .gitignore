@@ -47,3 +47,12 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+# personal AI memory (never commit)
+CLAUDE.local.md
+**/CLAUDE.local.md
+
+# astronomy data (large, kept in object storage)
+*.fits
+*.fits.gz
+/data/cache/
