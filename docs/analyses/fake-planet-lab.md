@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 | --- | --- |
 | ID | `fake-planet-lab` |
-| 상태 | 확정 · **1차 구현됨** (독립 팝업, 분석 패널 통합 전) |
+| 상태 | 확정 · **1차 구현됨** (분석 패널 토글에서 열림) |
 | 담당 | 김재현 (`rreenactt`) |
 | 출력 종류 | overlay, text |
 | 최소 SPHEREx 방문 횟수 | 1 |
@@ -55,7 +55,7 @@
 
 ## 9. 구현 기록 (2026-11-14)
 
-- **위치:** 홈의 `Open Fake Planet Lab` 팝업 (`app/_components/fake-planet-lab/`). 분석 패널(5장)과 아직 연결하지 않았다.
+- **위치:** 분석 패널 오른쪽 "Additional analyses"의 토글 (`app/_components/analyses/additional-analyses.tsx`). 패널의 ra/dec·대상 이름·출처를 초기 대상으로 받아 열린다. (`app/_components/fake-planet-lab/`)
 - **데이터:** IRSA SIA2(`spherex_dr1`)로 좌표를 덮는 노출을 찾고, DataLink로 확인한 L2b 파일에서 필요한 행만 HTTP 바이트 범위로 읽는다(AWS 공개 버킷 우선). IMAGE·FLAGS(RICE_1 압축 해제)·VARIANCE·ZODI·WCS-WAVE를 쓴다. 원본은 저장하지 않는다.
 - **플래그 해석:** 비트 번호를 하드코딩하지 않고 파일 헤더의 `MSKNnnnn`/`MSKDnnnn`에서 이름·설명을 읽는다. 분류: 측정 제외(NONFUNC·MISSING_DATA·HOT·COLD·SUR_ERROR), 오염 경고(포화·우주선·유령상·잔상·누화·줄무늬), 맥락(OUTLIER), 정보(SOURCE·FULLSAMPLE·DICHROIC·PHANMISS), 해석 미지원(그 밖). 한 픽셀의 여러 비트를 모두 풀어 보여준다.
 - **OUTLIER는 결함으로 치지 않는다.** SPHEREx 파이프라인은 기준 하늘과 다른 픽셀을 OUTLIER로 표시해서, 움직이는 천체(예: 3I/ATLAS 코마 중심)도 여기에 걸린다. 측정 원에서는 가리지 않고 "자세히 보기"로만 쓴다.

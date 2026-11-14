@@ -5,14 +5,16 @@
 
 ## 담당
 
-- 추가 분석: Comet Breath, Sky Time Machine, Fake Planet Lab (1차 구현)
+- 추가 분석 5개 모두 1차 구현: Comet Breath, Sky Time Machine, Fake Planet Lab, Neighborhood in Motion, Sky Sonata
 
 ## 진행 중
 
-- 브랜치 `feat/comet-breath-sky-time-machine`: 세 분석을 홈의 독립 팝업으로 구현. 분석 패널(5장)과 연결 전
+- 추가 분석 5개를 분석 패널 "Additional analyses" 토글에 연결 (패널 지점이 초기 대상)
 
 ## 완료
 
+- Sky Sonata: 규칙 시험(좌우·높이·밝기, 같은 A/B → 같은 소리) 통과, 키보드·정지 동작 확인
+- Neighborhood in Motion: 21개 천체, Barnard's Star 최근접 11,736년·1.155 pc(문헌과 일치), SPHEREx D6에서 Ross 128·Barnard 중심이 모델과 1.5″·4.1″
 - 세 분석 1차 구현, 실제 데이터 검증(Barnard's Star 25년 이동 10.39″/년 = Gaia, 3I/ATLAS 12월 스펙트럼 24점)
 - DR1 컷아웃 경로 확인: AWS 공개 버킷 바이트 범위 읽기 (`PLAN.md` 14장 메모)
 - 결정 #26–28 제안 (팀 확인 필요)
@@ -26,4 +28,4 @@
 
 - Comet Breath·Sky Time Machine 화면 문구 영어화
 - Sky Time Machine: SPHEREx 채널을 비교 미션 파장에 자동 맞춤, URL을 `/?ra=&dec=&fov=`로 통일
-- 분석 패널·3I/ATLAS 특별 핀과 연결
+- 3I/ATLAS 특별 핀과 Comet Breath 연결, 링크에 분석·컷아웃 크기 파라미터(팀이 이름 결정)

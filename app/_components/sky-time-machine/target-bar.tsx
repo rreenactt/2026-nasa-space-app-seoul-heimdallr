@@ -9,6 +9,8 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { EXAMPLES, MISSION_ORDER, MISSIONS } from "@/app/_lib/sky/missions";
+import { TARGET_FOV } from "../sky/constants";
+import { selectionUrl } from "../sky/sky-selection";
 import { exampleTarget, MISSION_COLOR, useStm } from "./stm-state";
 
 const FOVS = [3, 5, 8, 12];
@@ -28,7 +30,8 @@ export function TargetBar() {
     }
   };
   const share = async () => {
-    const url = `${window.location.origin}/?stm=${target.ra.toFixed(5)},${target.dec.toFixed(5)},${target.fovArcmin}`;
+    // Standard link: opens the sky at this point with the analysis panel (fov = sky view in degrees, not the cutout).
+    const url = `${window.location.origin}${selectionUrl({ ra: target.ra, dec: target.dec, fov: TARGET_FOV })}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);

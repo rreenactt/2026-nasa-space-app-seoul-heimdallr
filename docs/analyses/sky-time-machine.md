@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 | --- | --- |
 | ID | `sky-time-machine` |
-| 상태 | 확정 · **1차 구현됨** (독립 팝업, 분석 패널 통합 전) |
+| 상태 | 확정 · **1차 구현됨** (분석 패널 토글에서 열림) |
 | 담당 | 김재현 (`rreenactt`) |
 | 출력 종류 | view, overlay |
 | 최소 SPHEREx 방문 횟수 | 1 (과거 미션 데이터로 비교) |
@@ -57,7 +57,7 @@ Barnard's Star처럼 고유운동이 큰 별에서 25년 궤적이 Gaia 예측�
 
 ## 9. 구현 기록 (2026-11-14)
 
-- **위치:** 홈의 `Sky Time Machine` 팝업 (`app/_components/sky-time-machine/`). 탭: 타임라인·재생 / 두 시점 비교 / 이동 표시 / 근거 확인.
+- **위치:** 분석 패널 오른쪽 "Additional analyses"의 토글 (`app/_components/analyses/additional-analyses.tsx`). 패널의 ra/dec·대상 이름·출처를 초기 대상으로 받아 열린다. 기본 시야 8′ (`app/_components/sky-time-machine/`). 링크 버튼은 표준 `/?ra=&dec=&fov=`를 만들고, 예전 `?stm=` 링크는 패널을 연 뒤 이 분석을 그 시야로 자동으로 연다. 탭: 타임라인·재생 / 두 시점 비교 / 이동 표시 / 근거 확인.
 - **검색:** 미션마다 IRSA SIA2 한 번(`twomass_allsky`, `wise_allsky`·`wise_3bandcryo`·`wise_2bandcryo`, `neowiser`, `spherex_dr1`). 시각은 공개일이 아니라 SIA2의 `t_min`·`t_max`(실제 관측 시각)를 쓴다. 노출을 20일 간격 기준으로 관측 통과(방문)로 묶는다.
 - **WISE·NEOWISE 시점 (결정 #26):** 공식 unWISE 시간분해 합성 영상은 IRSA·AWS 공개 버킷·NERSC 공개 경로 어디에도 이미지로 공개되어 있지 않았다(카탈로그만 있음). 대신 IRSA WISE/NEOWISE L1b 단일 노출을 통과마다 최대 5장(통과 전체에 고르게) 받아, MAGZP 22.5로 맞추고 배경 중앙값을 뺀 뒤 픽셀별 중앙값으로 합친다. 화면·근거에 "이 도구에서 계산한 합성"으로 표시한다.
 - **2MASS:** 같은 밤의 Atlas 타일 중 시야 중심에 가까운 것 최대 4장을 함께 쓴다. **SPHEREx:** 통과마다 노출 1장(가운데), 원본을 바이트 범위로 읽고 시야 중심 파장을 `WCS-WAVE`로 계산해 표시한다.

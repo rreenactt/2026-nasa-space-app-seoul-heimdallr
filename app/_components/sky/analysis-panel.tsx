@@ -4,33 +4,35 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AdditionalAnalyses, type AutoOpenAnalysis } from "../analyses/additional-analyses";
 import { CUTOUT_ARCMIN, SKY_SURVEY } from "./constants";
 import { formatDec, formatRa } from "./sky-coordinates";
 import type { SkySelection } from "./sky-selection";
 
 const RATINGS = ["Moving", "Not moving", "Noise or artifact"];
-const ANALYSES = ["Sky Time Machine", "Fake Planet Lab", "Comet Breath", "Neighborhood in Motion", "Sky Sonata"];
 
 type AnalysisPanelProps = {
   selection: SkySelection | null;
   onClose: () => void;
+  /** Opens one additional analysis right away (older `?stm=` / `?sonata=` links). */
+  autoOpen?: AutoOpenAnalysis;
 };
 
 /**
  * Overlay over the sky for one point (PLAN.md chapter 5): images on the left, summary, rating and additional analyses
  * on the right. This is the shell; each part says plainly that it is not connected yet instead of showing made-up data.
  */
-export function AnalysisPanel({ selection, onClose }: AnalysisPanelProps) {
+export function AnalysisPanel({ selection, onClose, autoOpen }: AnalysisPanelProps) {
   return (
     <Dialog open={selection !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="dark grid h-[min(760px,calc(100dvh-4rem))] w-[min(1200px,calc(100vw-4rem))] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
-        {selection && <PanelBody selection={selection} />}
+        {selection && <PanelBody selection={selection} autoOpen={autoOpen} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function PanelBody({ selection }: { selection: SkySelection }) {
+function PanelBody({ selection, autoOpen }: { selection: SkySelection; autoOpen?: AutoOpenAnalysis }) {
   const { ra, dec, target } = selection;
   return (
     <>
@@ -82,12 +84,7 @@ function PanelBody({ selection }: { selection: SkySelection }) {
             </PanelSection>
 
             <PanelSection title="Additional analyses">
-              <ul className="grid gap-1 text-muted-foreground">
-                {ANALYSES.map((name) => (
-                  <li key={name}>{name}</li>
-                ))}
-              </ul>
-              <p className="text-xs text-muted-foreground">Not connected in this build.</p>
+              <AdditionalAnalyses selection={selection} autoOpen={autoOpen} />
             </PanelSection>
 
             <PanelSection title="Share">

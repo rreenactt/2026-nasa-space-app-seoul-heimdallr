@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useRef, useState } from "react";
+import type { AutoOpenAnalysis } from "../analyses/additional-analyses";
 import { AnalysisPanel } from "./analysis-panel";
 import { AIM_FOV, INITIAL_VIEW, SKY_SURVEY, TARGET_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";
@@ -21,14 +22,14 @@ const SkyView = dynamic(() => import("./sky-view"), { ssr: false });
 export function SkyExplorer({
   initialSelection,
   initialView,
-  analysisLinks,
+  autoOpen,
 }: {
   /** Opens the analysis panel at start (a shared `?ra=&dec=&fov=` link). */
   initialSelection: SkySelection | null;
   /** Where the sky starts, such as a shared link's point; the Galactic Center otherwise. */
   initialView?: SkyViewState;
-  /** Buttons for the additional analyses, shown under the search box until they move into the analysis panel. */
-  analysisLinks?: React.ReactNode;
+  /** Opens one additional analysis in the panel at start (older `?stm=` / `?sonata=` links). */
+  autoOpen?: AutoOpenAnalysis;
 }) {
   const [startView] = useState<SkyViewState>(initialView ?? INITIAL_VIEW);
   const [aiming, setAiming] = useState(startView.fov <= AIM_FOV);
@@ -78,10 +79,9 @@ export function SkyExplorer({
         onSelect={selectPoint}
         onError={setError}
       />
-      {/* Top-left column: the search box, then the analysis buttons below it (and below any search message). */}
+      {/* Top-left column: the search box (and any search message below it). */}
       <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2">
         <SkySearchBox onTarget={goToTarget} onPoint={goTo} />
-        {analysisLinks}
       </div>
       <CursorReadout aiming={aiming} />
       {error && (
@@ -94,7 +94,7 @@ export function SkyExplorer({
         {SKY_SURVEY.notice && <p className="text-amber-300">{SKY_SURVEY.notice}</p>}
         <p className="text-white/60">{SKY_SURVEY.credit}</p>
       </div>
-      <AnalysisPanel selection={selection} onClose={closePanel} />
+      <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={autoOpen} />
     </div>
   );
 }

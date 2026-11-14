@@ -43,6 +43,8 @@ interface Props {
   /** Shared display range (IMAGE − ZODI, MJy/sr) so visits are stretched identically. */
   range: { lo: number; hi: number };
   label: string;
+  /** Extra point markers (sky positions) drawn on top, e.g. a measured centroid. */
+  markers?: { ra: number; dec: number; color: string; shape: "plus" | "x" }[];
   onPick?: (p: { ra: number; dec: number }) => void;
   onProbe?: (p: PixelProbe | null) => void;
 }
@@ -52,7 +54,7 @@ interface Props {
  * displayed pixel and every flag value is an original one. Display = IMAGE − ZODI with one shared stretch. Flag layers never hide the image: they are
  * drawn as a translucent tint and can be switched off to see the masked signal.
  */
-export function LayeredCanvas({ frame, grid, layers, opacity, candidate, apertureArcsec, range, label, onPick, onProbe }: Props) {
+export function LayeredCanvas({ frame, grid, layers, opacity, candidate, apertureArcsec, range, label, markers, onPick, onProbe }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const map = useIndexMap(frame, grid);
   const bits = useMemo(() => decodeBits(frame.payload.flagBits), [frame.payload.flagBits]);
@@ -146,6 +148,23 @@ export function LayeredCanvas({ frame, grid, layers, opacity, candidate, apertur
             <line y1={c.r + 0.5 + rGrid + 1} y2={c.r + 0.5 + rGrid + 6} x1={c.i + 0.5} x2={c.i + 0.5} />
           </g>
         )}
+        {markers?.map((mk, i) => {
+          const g = skyToGrid(grid, mk.ra, mk.dec);
+          if (!g) return null;
+          const cx = g.i + 0.5;
+          const cy = g.r + 0.5;
+          return mk.shape === "plus" ? (
+            <g key={i} stroke={mk.color} strokeWidth={0.9}>
+              <line x1={cx - 4} x2={cx + 4} y1={cy} y2={cy} />
+              <line x1={cx} x2={cx} y1={cy - 4} y2={cy + 4} />
+            </g>
+          ) : (
+            <g key={i} stroke={mk.color} strokeWidth={0.9}>
+              <line x1={cx - 3} x2={cx + 3} y1={cy - 3} y2={cy + 3} />
+              <line x1={cx - 3} x2={cx + 3} y1={cy + 3} y2={cy - 3} />
+            </g>
+          );
+        })}
         <g fill="#fff" fillOpacity={0.75} fontSize={7}>
           <text x={grid.n - 12} y={9}>N↑</text>
           <text x={3} y={grid.n - 4}>←E</text>
