@@ -22,7 +22,7 @@ export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
   return (
     <form
       role="search"
-      className="dark absolute top-4 left-4 w-96 text-foreground"
+      className="dark w-96 text-foreground"
       onSubmit={(event) => {
         event.preventDefault();
         const result = parseSkySearch(query);

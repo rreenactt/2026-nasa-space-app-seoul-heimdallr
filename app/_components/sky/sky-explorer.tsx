@@ -24,8 +24,19 @@ const modeFor = (fov: number): Mode => (fov <= ZOOM_IN_FOV ? "aladin" : "sphere"
  * The sky screen: a wide celestial sphere that hands off to Aladin Lite below ZOOM_IN_FOV and back above ZOOM_OUT_FOV.
  * Clicking a test target pin, or a point in the zoom view, opens the analysis panel and puts the point in the URL.
  */
-export function SkyExplorer({ initialSelection }: { initialSelection: SkySelection | null }) {
-  const [view, setView] = useState<SkyView>(initialSelection ?? INITIAL_VIEW);
+export function SkyExplorer({
+  initialSelection,
+  initialView,
+  analysisLinks,
+}: {
+  /** Opens the analysis panel at start (a shared `?ra=&dec=&fov=` link). */
+  initialSelection: SkySelection | null;
+  /** Where the sky starts when it differs from the selection, such as an older `?stm=` link. */
+  initialView?: SkyView;
+  /** Buttons for the additional analyses, shown under the search box until they move into the analysis panel. */
+  analysisLinks?: React.ReactNode;
+}) {
+  const [view, setView] = useState<SkyView>(initialView ?? INITIAL_VIEW);
   const [mode, setMode] = useState<Mode>(modeFor(view.fov));
   const [selection, setSelection] = useState<SkySelection | null>(initialSelection);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +93,11 @@ export function SkyExplorer({ initialSelection }: { initialSelection: SkySelecti
           onError={setError}
         />
       )}
-      <SkySearchBox onTarget={selectTarget} onPoint={goToPoint} />
+      {/* Top-left column: the search box, then the analysis buttons below it (and below any search message). */}
+      <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2">
+        <SkySearchBox onTarget={selectTarget} onPoint={goToPoint} />
+        {analysisLinks}
+      </div>
       <CursorReadout mode={mode} />
       {error && (
         <p role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md bg-red-950/80 px-3 py-2 text-sm">
