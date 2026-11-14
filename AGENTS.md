@@ -38,6 +38,8 @@ lib/
 ├── ky.ts                # HTTP client
 ├── query-client.ts      # TanStack Query client
 └── utils.ts             # cn re-export (shadcn alias)
+.github/workflows/
+└── vercel-production.yml # Checks, then deploys main to Vercel production
 ```
 
 ## Commands

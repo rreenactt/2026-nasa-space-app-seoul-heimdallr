@@ -1,0 +1,58 @@
+name: Vercel Production
+
+# Deploys main to Vercel production: checks (lint, types), then builds on the runner and uploads the prebuilt output.
+# Needs the repository secrets VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One production deployment at a time; a newer push waits instead of racing an older one.
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    name: Check and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm from packageManager in package.json, Node from .nvmrc.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+
+      - name: Install the Vercel CLI
+        run: pnpm add --global vercel@latest
+
+      # Production environment variables and project settings from Vercel (.vercel/, not committed).
+      - name: Pull the Vercel environment
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy
+        id: deploy
+        run: |
+          url="$(vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"

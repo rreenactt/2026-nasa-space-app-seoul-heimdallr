@@ -53,6 +53,19 @@ Application code never reads `process.env` directly; it goes through the modules
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Generates the Next.js route types (`next typegen`), then runs `tsc --noEmit` |
 
+## Deployment
+
+Every push to `main` deploys to Vercel production through GitHub Actions (`.github/workflows/vercel-production.yml`): it runs `pnpm lint` and `pnpm typecheck`, builds with `vercel build` on the runner, and uploads the result with `vercel deploy --prebuilt`. It can also be started by hand from the Actions tab.
+
+Set these repository secrets (Settings > Secrets and variables > Actions):
+
+| Secret | Where to find it |
+| --- | --- |
+| `VERCEL_TOKEN` | Vercel account settings > Tokens |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | `.vercel/project.json` after running `vercel link` in the project (`orgId`, `projectId`) |
+
+Set the app's environment variables (such as `NEXT_PUBLIC_APP_NAME`) in the Vercel project for the Production environment; the workflow pulls them before it builds.
+
 ## Project structure
 
 The folder layout, and what belongs in each folder, is in [AGENTS.md](AGENTS.md#structure). `AGENTS.md` and `CLAUDE.md` also hold the instructions for coding agents (the Next.js block is managed by `next dev`).
