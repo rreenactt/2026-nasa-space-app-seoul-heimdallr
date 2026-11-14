@@ -211,7 +211,10 @@ export function BlinkViewer() {
         </div>
         {mode !== "stack" && usable.length > 1 && (
           <label className="flex items-center gap-2">
-            <span className="w-28 shrink-0">Visit {(current?.visit.index ?? 0)} of {visits.length}</span>
+            {/* Position among the visits shown (usable); the visit number stays the plan's, as in the exposure list. */}
+            <span className="w-36 shrink-0" title={usable.length < visits.length ? `${visits.length - usable.length} of ${visits.length} visits have no frame within the wavelength tolerance` : undefined}>
+              {Math.min(idx, usable.length - 1) + 1} / {usable.length} · Visit {current?.visit.index ?? 0}
+            </span>
             <input
               type="range"
               min={0}
@@ -221,7 +224,7 @@ export function BlinkViewer() {
                 setPlaying(false);
                 setIdx(Number(e.target.value));
               }}
-              aria-valuetext={current?.mid ? `Visit ${current.visit.index}, ${mjdMonth(current.mid)}` : undefined}
+              aria-valuetext={current?.mid ? `${Math.min(idx, usable.length - 1) + 1} of ${usable.length} shown: visit ${current.visit.index}, ${mjdMonth(current.mid)}` : undefined}
               className="w-full"
             />
           </label>
@@ -261,6 +264,7 @@ export function BlinkSummary() {
     <div className="grid gap-2">
       <p className="font-mono">
         {visitsWithData} visit{visitsWithData === 1 ? "" : "s"}
+        {loaded && visits.length > visitsWithData && ` (${visits.length - visitsWithData} of ${visits.length} without a ${detector} frame in tolerance)`}
         {mids.length > 0 && ` · ${mjdMonth(mids[0])}${mids.length > 1 ? ` → ${mjdMonth(mids[mids.length - 1])}` : ""}`} · {detector}{" "}
         {p.referenceWavelengthUm != null && `${p.referenceWavelengthUm.toFixed(3)} µm`}
       </p>
