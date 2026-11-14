@@ -39,6 +39,7 @@ import { FovScale } from "./fov-scale";
 import { paintCandidates } from "./candidate-layer";
 import { recordPlace, usePlaceHistory } from "./place-history";
 import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
+import { MostRated } from "./most-rated";
 import { findTestTarget, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
 
@@ -351,16 +352,20 @@ export function SkyExplorer({
             </div>
           </>
         ) : (
-          <button
-            type="button"
-            aria-expanded={false}
-            onClick={toggleQueue}
-            className="pointer-events-auto absolute top-3 left-4 flex h-8 items-center gap-2 rounded-sm bg-ink/80 px-2.5 text-[13px] font-medium text-paper transition-colors hover:bg-ink"
-          >
-            <ListIcon className="size-4 stroke-[1.5]" aria-hidden />
-            Review queue
-            <Keycap className="ml-3">Q</Keycap>
-          </button>
+          <div className="pointer-events-auto absolute top-3 left-4 flex flex-col items-start gap-2">
+            <button
+              type="button"
+              aria-expanded={false}
+              onClick={toggleQueue}
+              className="flex h-8 items-center gap-2 rounded-sm bg-ink/80 px-2.5 text-[13px] font-medium text-paper transition-colors hover:bg-ink"
+            >
+              <ListIcon className="size-4 stroke-[1.5]" aria-hidden />
+              Review queue
+              <Keycap className="ml-3">Q</Keycap>
+            </button>
+            {/* Most rated places (from main, decision #35). Not in the Figma screens yet, so it sits under the button. */}
+            <MostRated onSelect={goTo} />
+          </div>
         )}
         <div className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2">
           <SkyTools

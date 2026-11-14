@@ -1,0 +1,26 @@
+// Feature B: anonymous ratings of a sky point (PLAN.md chapter 8, decision #34).
+
+/// The three choices (decision #12). UI labels: Moving / Not moving / Noise or artifact.
+enum RatingChoice {
+  MOVING
+  NOT_MOVING
+  NOISE_OR_ARTIFACT
+}
+
+/// One browser's current rating of one sky cell. Changing the rating updates the row.
+model Rating {
+  id         String       @id @default(uuid()) @db.Uuid
+  /// Data release the rated images came from (DR1, QR3).
+  release    String
+  /// HEALPix order-11 NESTED pixel (cells about 1.7′ across) holding the clicked point: a fixed sky grid.
+  hpxIndex   Int
+  /// Random ID from the server-issued `hd_voter` cookie. Not personal data.
+  voterId    String       @db.Uuid
+  choice     RatingChoice
+  /// SPHEREx visits shown when the rating was given (decision #17), to split the tally later.
+  visitCount Int
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([release, hpxIndex, voterId])
+}

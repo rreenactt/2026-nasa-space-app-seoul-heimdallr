@@ -15,6 +15,9 @@ import {
 import { angularDistance, type EquatorialCoordinates, formatDec, formatRa } from "./sky-coordinates";
 import { MARK_LABELS, type MarkKind, StatusMark } from "./status-mark";
 import { useView } from "./view-store";
+import type { RatingState } from "@/app/_lib/ratings/types";
+import { ratingSummary } from "./rating-section";
+import { useRatingSummary } from "./use-ratings";
 
 type Tab = "view" | "sky" | "recent";
 type Sort = "priority" | "snr" | "visits";
@@ -70,6 +73,9 @@ export function ReviewQueuePanel({
   const [tab, setTab] = useState<Tab>("view");
   const [sort, setSort] = useState<Sort>("priority");
   const view = useView();
+  // This browser's ratings of the listed places; others' tallies stay hidden until rated (decision #6).
+  const ratings = useRatingSummary(queue.map((entry) => entry.point));
+  const ratingOf = (entry: ReviewEntry) => ratings.data?.[queue.indexOf(entry)];
   const history = usePlaceHistory();
 
   const entries = useMemo(() => {
@@ -156,6 +162,7 @@ export function ReviewQueuePanel({
                 key={entry.id}
                 entry={entry}
                 current={entry.id === currentId}
+                rating={ratingOf(entry)}
                 seen={history.some((visit) => samePlace(visit, entry.point))}
                 onSelect={onSelect}
               />
@@ -170,6 +177,7 @@ export function ReviewQueuePanel({
                 key={entry.id}
                 entry={entry}
                 current={entry.id === currentId}
+                rating={ratingOf(entry)}
                 seen={history.some((visit) => samePlace(visit, entry.point))}
                 onSelect={onSelect}
               />
@@ -228,11 +236,13 @@ function StatusCounts({ filter, onChange }: { filter: CandidateFilter; onChange:
 function EntryRow({
   entry,
   current,
+  rating,
   seen,
   onSelect,
 }: {
   entry: ReviewEntry;
   current: boolean;
+  rating: RatingState | undefined;
   seen: boolean;
   onSelect: (entry: ReviewEntry) => void;
 }) {
@@ -257,6 +267,9 @@ function EntryRow({
           <span className="block font-data text-[11px] text-ash">
             {formatRa(entry.point.ra)}&nbsp;&nbsp;{formatDec(entry.point.dec)}
           </span>
+          {ratingSummary(rating) && (
+            <span className="block truncate text-[11px] text-signal">{ratingSummary(rating)}</span>
+          )}
         </span>
         <span className="text-right font-data text-[11px] leading-4 text-ash">
           {candidate ? (
