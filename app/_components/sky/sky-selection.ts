@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { MAX_FOV } from "./constants";
-import type { EquatorialCoordinates } from "./sky-coordinates";
+import { MAX_FOV, MIN_FOV } from "./constants";
+import type { EquatorialCoordinates, SkyView } from "./sky-coordinates";
 import { findTestTarget, type TestTarget } from "./test-targets";
 
 /** The point the analysis panel is open for, and the field of view it was chosen at. */
@@ -32,4 +32,32 @@ export function parseSelection(searchParams: Record<string, string | string[] | 
 export function selectionUrl({ ra, dec, fov }: SkySelection): string {
   const params = new URLSearchParams({ ra: ra.toFixed(5), dec: dec.toFixed(5), fov: fov.toFixed(3) });
   return `/?${params}`;
+}
+
+const viewParam = z
+  .string()
+  .trim()
+  .transform((value) => value.split(",").map((part) => (part.trim() === "" ? Number.NaN : Number(part))))
+  .pipe(
+    z.tuple([
+      z.number().min(0).lt(360),
+      z.number().min(-90).max(90),
+      z.number().min(MIN_FOV).max(MAX_FOV),
+    ]),
+  );
+
+/**
+ * Reads `?view=ra,dec,fov` (degrees): a link to the sky as someone was looking at it, with no panel open. Anything
+ * missing or out of range falls back to the default view.
+ */
+export function parseView(searchParams: Record<string, string | string[] | undefined>): SkyView | null {
+  const parsed = viewParam.safeParse(searchParams.view);
+  if (!parsed.success) return null;
+  const [ra, dec, fov] = parsed.data;
+  return { ra, dec, fov };
+}
+
+/** Shareable URL for the sky as it is now, without opening the analysis panel. */
+export function viewUrl({ ra, dec, fov }: SkyView): string {
+  return `/?view=${ra.toFixed(5)},${dec.toFixed(5)},${fov.toPrecision(4)}`;
 }

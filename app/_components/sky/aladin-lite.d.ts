@@ -56,7 +56,7 @@ declare module "aladin-lite" {
   };
 
   export type Source = { ra: number; dec: number; data: Record<string, unknown> };
-  export type Catalog = { addSources(sources: Source | Source[]): void };
+  export type Catalog = { addSources(sources: Source | Source[]): void; show(): void; hide(): void };
 
   export type Aladin = {
     on(event: "mouseMove", callback: (event: MouseMoveEvent) => void): void;
@@ -75,6 +75,8 @@ declare module "aladin-lite" {
     /** Zooms to a field of view over `seconds`, then calls `complete`. */
     zoomToFoV(fov: number, seconds?: number, complete?: () => void): void;
     addCatalog(catalog: Catalog): void;
+    /** Merges into the coordinate grid options; `enabled` shows or hides the grid. */
+    setCooGrid(options: { enabled?: boolean }): void;
     /** Screen position [x, y] in CSS pixels, or undefined/null when the point is outside the view. */
     world2pix(ra: number, dec: number): [number, number] | null | undefined;
   };

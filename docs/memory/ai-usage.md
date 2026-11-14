@@ -35,3 +35,4 @@
 | 2026-11-14 | rreenactt | Claude Code | 분석 패널 로딩 화면(블링크 자료·방문별 Gaia를 다 받은 뒤 표시, 진행바), 추가 분석별 "Download data" 대기열·진행바·예상 시간·취소, 받은 자료로 바로 여는 "Open", 결정 #31 제안 | `app/_components/analyses/`, `app/_components/blink/`, `app/_components/sky/analysis-panel.tsx`, 각 분석 데이터 훅, `docs/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | ansirh | Claude Code | 하늘 화면 넓은 시야에서 빈 곳 클릭 시 그 지점으로 2° 확대 이동 (분석 패널은 조준 시야에서 클릭), 이동·확대를 한 애니메이션으로 매 프레임 계산(van Wijk·Nuij 경로), 조준 사각형 크기를 매 프레임 맞춤 | `app/_components/sky/`, `docs/PLAN.md` | 허한결 지시, 검토 필요 |
 | 2026-11-14 | ansirh | Claude Code | 하늘 화면 "분석할 곳" 목록(테스트 대상 + 움직임 후보 검토 순서·필터 구조)과 분석 패널 "다음" 버튼 | `app/_components/sky/`, `docs/PLAN.md`, `docs/decisions.md` | 허한결 지시, 검토 필요 |
+| 2026-11-14 | ansirh | Claude Code | 하늘 조작(확대·축소 버튼, 시야 표시, 겹쳐 보기 켜고 끄기, 지금 보는 하늘 링크 `?view=`), 평가 안내 문구를 사실대로 수정, 방문 수 불일치 원인 분석(이슈 #7) | `app/_components/sky/`, `app/page.tsx`, `docs/` | 허한결 지시, 검토 필요 |

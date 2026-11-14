@@ -98,7 +98,10 @@ function PanelBody({
                   </Button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">Rating opens once the images load.</p>
+              <p className="text-xs text-muted-foreground">
+                Rating is not connected yet: there is no place to store answers. You can rate without running an
+                additional analysis once it opens.
+              </p>
             </PanelSection>
 
             <PanelSection title="Additional analyses">

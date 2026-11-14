@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AutoOpenAnalysis } from "../analyses/additional-analyses";
 import { AnalysisPanel } from "./analysis-panel";
-import { AIM_FOV, CLICK_ZOOM_FOV, INITIAL_VIEW, SKY_SURVEY, TARGET_FOV } from "./constants";
+import { AIM_FOV, CLICK_ZOOM_FOV, INITIAL_VIEW, MAX_FOV, MIN_FOV, SKY_SURVEY, TARGET_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";
 import { type EquatorialCoordinates, formatDec, formatRa, type SkyView as SkyViewState } from "./sky-coordinates";
 import {
@@ -16,10 +16,12 @@ import {
   reviewQueue,
 } from "./review-queue";
 import { SkySearchBox } from "./sky-search-box";
-import { type SkySelection, selectionUrl } from "./sky-selection";
-import type { Flight } from "./sky-view";
+import { SkyControls } from "./sky-controls";
+import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
+import type { Flight, SkyLayers } from "./sky-view";
 import { TargetList } from "./target-list";
 import { findTestTarget, type TestTarget } from "./test-targets";
+import { getView, subscribeView } from "./view-store";
 
 // Aladin Lite touches browser APIs as soon as it loads, so the sky renders only on the client.
 const SkyView = dynamic(() => import("./sky-view"), { ssr: false });
@@ -49,7 +51,12 @@ export function SkyExplorer({
   // A shared link's analysis opens only for the panel it came with, not for every place opened afterwards.
   const [linkedAnalysis, setLinkedAnalysis] = useState(autoOpen);
   const [candidateFilter, setCandidateFilter] = useState<CandidateFilter>(ALL_CANDIDATES);
+  const [layers, setLayers] = useState<SkyLayers>({ pins: true, constellations: true, grid: true });
   const flightId = useRef(0);
+  const selectionRef = useRef(selection);
+  useEffect(() => {
+    selectionRef.current = selection;
+  }, [selection]);
   const queue = useMemo(() => reviewQueue(candidateFilter), [candidateFilter]);
 
   // Only crossing AIM_FOV changes state, so zooming does not re-render the screen.
@@ -63,7 +70,39 @@ export function SkyExplorer({
   }, []);
   const closePanel = useCallback(() => {
     setSelection(null);
-    window.history.replaceState(null, "", "/");
+    const view = getView();
+    window.history.replaceState(null, "", view ? viewUrl(view) : "/");
+  }, []);
+
+  // With no panel open, the URL follows the view as `?view=ra,dec,fov` once it settles, so the address bar is always a
+  // link to what is on screen. Browsers throttle replaceState, so it is not called on every frame.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribeView(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const view = getView();
+        if (view && !selectionRef.current) window.history.replaceState(null, "", viewUrl(view));
+      }, 500);
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, []);
+
+  // Zoom buttons: an animated zoom about the view center. Repeated clicks during the animation build on the zoom
+  // already asked for, not on the field of view the animation has reached.
+  const lastZoom = useRef<{ fov: number; at: number } | null>(null);
+  const zoomBy = useCallback((factor: number) => {
+    const view = getView();
+    if (!view) return;
+    const now = performance.now();
+    const base = lastZoom.current && now - lastZoom.current.at < 700 ? lastZoom.current.fov : view.fov;
+    const fov = Math.min(Math.max(base * factor, MIN_FOV), MAX_FOV);
+    lastZoom.current = { fov, at: now };
+    flightId.current += 1;
+    setFlight({ ra: view.ra, dec: view.dec, fov, id: flightId.current });
   }, []);
 
   // A test target or a searched point: fly there and open the panel, which the flight shows through.
@@ -108,6 +147,7 @@ export function SkyExplorer({
       <SkyView
         initialView={startView}
         flight={flight}
+        layers={layers}
         onCursorMove={setCursor}
         onFovChange={onFovChange}
         onSelect={selectPoint}
@@ -125,6 +165,9 @@ export function SkyExplorer({
         />
       </div>
       <CursorReadout aiming={aiming} />
+      <div className="absolute top-4 right-4 z-10">
+        <SkyControls layers={layers} onLayersChange={setLayers} onZoom={zoomBy} />
+      </div>
       {error && (
         <p role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md bg-red-950/80 px-3 py-2 text-sm">
           Sky view unavailable: {error}
