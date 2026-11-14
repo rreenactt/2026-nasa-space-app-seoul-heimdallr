@@ -1,11 +1,12 @@
 // aladin-lite ships no type declarations. These cover only what this app uses, checked against the
-// aladin-lite 3.8.2 source (Aladin.AVAILABLE_CALLBACKS and the callback arguments it passes).
+// aladin-lite 3.8.2 source (Aladin.AVAILABLE_CALLBACKS, the callback arguments it passes, and the methods below).
 declare module "aladin-lite" {
   export type AladinOptions = {
     survey?: string;
     target?: string;
     fov?: number;
     cooFrame?: "ICRS" | "ICRSd" | "GAL";
+    /** TAN is the perspective view from the sphere's center; Aladin Lite allows it up to 150°. */
     projection?: "SIN" | "TAN" | "AIT" | "MOL" | "MER" | "STG" | "ZEA";
     backgroundColor?: string;
     /** Sends anonymous usage statistics to CDS when true (the library default). */
@@ -25,6 +26,17 @@ declare module "aladin-lite" {
     showShareControl?: boolean;
     showSimbadPointerControl?: boolean;
     inertia?: boolean;
+    /** Keeps celestial north at the top while dragging (off by default: a drag can roll the view). */
+    lockNorthUp?: boolean;
+    /** Coordinate grid; its spacing follows the field of view. */
+    gridOptions?: {
+      enabled?: boolean;
+      color?: string;
+      opacity?: number;
+      thickness?: number;
+      showLabels?: boolean;
+      labelSize?: number;
+    };
   };
 
   /** RA/Dec are null when the pointer is outside the projection. */
@@ -44,10 +56,7 @@ declare module "aladin-lite" {
   };
 
   export type Source = { ra: number; dec: number; data: Record<string, unknown> };
-
-  export type Catalog = {
-    addSources(sources: Source | Source[]): void;
-  };
+  export type Catalog = { addSources(sources: Source | Source[]): void };
 
   export type Aladin = {
     on(event: "mouseMove", callback: (event: MouseMoveEvent) => void): void;
@@ -60,6 +69,11 @@ declare module "aladin-lite" {
     getFov(): [number, number];
     gotoRaDec(ra: number, dec: number): void;
     setFoV(fov: number): void;
+    setFoVRange(min: number, max: number): void;
+    /** Moves the center over `seconds`, then calls `complete`. */
+    animateToRaDec(ra: number, dec: number, seconds?: number, complete?: () => void): void;
+    /** Zooms to a field of view over `seconds`, then calls `complete`. */
+    zoomToFoV(fov: number, seconds?: number, complete?: () => void): void;
     addCatalog(catalog: Catalog): void;
     /** Screen position [x, y] in CSS pixels, or undefined/null when the point is outside the view. */
     world2pix(ra: number, dec: number): [number, number] | null | undefined;

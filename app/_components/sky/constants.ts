@@ -1,11 +1,9 @@
 import type { SkyView } from "./sky-coordinates";
 
-/** Imagery for the sky screen: the zoom view's HiPS and the sphere's 360° background built from it. */
+/** Imagery for the sky screen: one HiPS that Aladin Lite renders at every field of view. */
 export type SkySurvey = {
-  /** HiPS ID or base URL that Aladin Lite loads in the zoom view. */
+  /** HiPS ID or base URL. */
   hips: string;
-  /** Equirectangular background in public/, built by scripts/sky-background/build_background.py. */
-  background: string;
   /** Credit line shown on screen. */
   credit: string;
   /** Short name for the analysis panel's data line. */
@@ -17,7 +15,6 @@ export type SkySurvey = {
 /** Intended imagery: the SPHEREx QR2 color HiPS published by CDS. Browsing only; analysis uses IRSA DR1/QR3 cutouts. */
 export const SPHEREX_COLOR_SURVEY: SkySurvey = {
   hips: "CDS/P/SPHEREx/QR2/color",
-  background: "/sky/spherex-qr2-color-4096.jpg",
   credit: "SPHEREx QR2 color preview (CDS HiPS) · Courtesy NASA/JPL-Caltech",
   shortName: "SPHEREx QR2 color preview",
 };
@@ -28,28 +25,30 @@ export const SPHEREX_COLOR_SURVEY: SkySurvey = {
  */
 export const TWO_MASS_COLOR_SURVEY: SkySurvey = {
   hips: "https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color",
-  background: "/sky/2mass-color-4096.jpg",
   credit: "2MASS J, H, K color · University of Massachusetts & IPAC/Caltech (HiPS via IRSA)",
   shortName: "2MASS color (temporary, not SPHEREx)",
   notice: "Temporary background: 2MASS, not SPHEREx. The SPHEREx sky tiles are unavailable during the CDS outage.",
 };
 
-/** Switch back to SPHEREX_COLOR_SURVEY once CDS serves the SPHEREx tiles again and its background is built. */
+/** Switch back to SPHEREX_COLOR_SURVEY once CDS serves the SPHEREx tiles again. */
 export const SKY_SURVEY = TWO_MASS_COLOR_SURVEY;
 
-/** Zooming the sphere to this horizontal field of view (degrees) or narrower hands off to Aladin Lite. */
-export const ZOOM_IN_FOV = 5;
+/** Widest horizontal field of view (degrees). TAN allows up to 150° in Aladin Lite; wider looks stretched at the edges. */
+export const MAX_FOV = 120;
 
-/** Zooming Aladin Lite out past this field of view (degrees) returns to the sphere. The gap avoids flicker at the boundary. */
-export const ZOOM_OUT_FOV = 6;
+/** Narrowest field of view (degrees), a little wider than one cutout. */
+export const MIN_FOV = 0.05;
 
-/** Widest horizontal field of view the sphere allows (degrees). */
-export const MAX_SPHERE_FOV = 120;
+/** At this field of view (degrees) or narrower, the cursor becomes the aiming square and a click opens the panel. */
+export const AIM_FOV = 5;
 
-/** Field of view (degrees) the zoom view opens at when a test target pin is clicked. */
+/** Field of view (degrees) the view flies to when a test target or a searched point is chosen. */
 export const TARGET_FOV = 1;
 
-/** Side of the aiming square in the zoom view: the default cutout size of the analysis (PLAN.md chapter 4), in arcminutes. */
+/** Seconds a fly-to takes. */
+export const FLY_SECONDS = 1.2;
+
+/** Side of the aiming square: the default cutout size of the analysis (PLAN.md chapter 4), in arcminutes. */
 export const CUTOUT_ARCMIN = 3;
 
 /** First view: the Galactic Center. */

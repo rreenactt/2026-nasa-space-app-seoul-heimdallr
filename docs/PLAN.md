@@ -357,44 +357,42 @@ flowchart LR
 ```
 
 - **웹:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, TanStack Query (레포 기본 구성). `main` 푸시 시 Vercel 프로덕션 배포. 코딩 규칙은 루트 `AGENTS.md`
-- **3D:** three.js(React Three Fiber) + Aladin Lite 3.8.2 하이브리드로 한다 (아래 "3D 하늘 구현", [결정 #24](decisions.md)). Neighborhood in Motion도 같은 three.js를 쓴다. 블링크는 canvas, 소리는 Web Audio
+- **3D:** Aladin Lite 3.8.2 하나를 TAN 투영으로 모든 시야에 쓴다 (아래 "3D 하늘 구현", [결정 #29](decisions.md)). Neighborhood in Motion은 three.js를 쓴다. 블링크는 canvas, 소리는 Web Audio
 - **천문 데이터 처리:** Python (astropy, astroquery 또는 PyVO, numpy, reproject). 실시간 처리를 별도 Python API(FastAPI 등)로 둘지, 사전 처리만 Python으로 하고 웹은 Next.js Route Handler로 둘지 **팀 결정 필요**
 - **평가 저장:** 익명 키-값 DB (Supabase, Firebase 등 무료 등급 · **팀 결정 필요**)
 - 무거운 처리는 미리 돌려 정적 파일로 두고, 웹은 보여주기만 한다. 평가만 서버에 저장한다.
 
 ### 3D 하늘 구현
 
-3D 하늘은 처음부터 만들지 않고, 공개된 SPHEREx 하늘 타일과 오픈소스 뷰어를 조합한다. 시야에 따라 두 단계로 나눈다.
+3D 하늘은 처음부터 만들지 않고, 공개된 하늘 타일(HiPS)과 오픈소스 뷰어 Aladin Lite를 쓴다. **화면은 Aladin Lite 하나**이고, 시야에 따라 하는 일만 달라진다 ([결정 #29](decisions.md)).
 
-| 단계 | 시야 | 구현 | 배경 이미지 | 하는 일 |
-| --- | --- | --- | --- | --- |
-| 둘러보기 | 넓음 | three.js 1인칭 천구 (카메라를 구 중심에 둠) | CDS `CDS/P/SPHEREx/QR2/color` HiPS의 360° 등장방형(CAR) 이미지 1장 (CDS 장애 중에는 2MASS 컬러로 대체, 아래 참고) | 커서 RA/Dec 표시, 별자리 선, 테스트 대상·후보 핀 |
-| 조준 | 약 5° 이하 | Aladin Lite v3 (SIN 투영) | 같은 SPHEREx 컬러 HiPS 타일 (order 7) | 조준선, 클릭 → 분석 패널 |
+| 시야 | 하는 일 |
+| --- | --- |
+| 120°–5° (둘러보기) | 커서 RA/Dec 표시, 좌표 격자, 별자리 선, 테스트 대상·후보 핀 (핀 클릭 → 그 대상으로 이동 + 분석 패널) |
+| 5° 이하 (조준) | 커서가 컷아웃 크기(3′)의 사각 조준선으로 바뀌고, 클릭하면 그 지점의 분석 패널이 열린다 |
 
+- **TAN 투영 하나로 전환 경계를 없앤다.** TAN은 구 중심에서 바라본 원근 시점(1인칭 천구)과 같은 투영이고, Aladin Lite는 TAN을 150°까지 허용한다(2026-11-14 확인). 넓게 볼 때는 저해상도 전천 타일을, 확대할수록 고해상도 타일을 받아 오며, 받기 전에는 한 단계 낮은 타일을 늘려 보여서 "흐릿 → 선명"만 있고 검은 화면이나 경계가 없다. 처음에는 three.js 천구(넓은 시야)와 Aladin Lite(5° 이하)를 바꿔 끼웠지만, 엔진 교체 때 검은 화면, 배경 해상도 급변(4096px 1장 → 타일), 투영 차이(원근 ↔ SIN)로 경계가 보여서 바꿨다.
+- **북쪽을 항상 화면 위로 고정한다 (`lockNorthUp`).** Aladin Lite의 드래그는 잡은 지점을 커서로 옮기는 구 회전이라 기본값으로는 화면이 기울어진다(2026-11-14 확인).
+- **시야 범위는 0.05°–120°** (`MIN_FOV`, `MAX_FOV`). 120°보다 넓으면 TAN 가장자리가 크게 늘어난다.
 - **배경은 둘러보기용이다.** CDS 컬러 HiPS는 QR2 기준이라, 분석은 4장대로 IRSA DR1/QR3 컷아웃으로 한다. IRSA의 DR1 HiPS 큐브는 타일 1개가 약 300MB인 FITS라 브라우저 배경으로 쓸 수 없다.
-- **구 안쪽에서 보므로 좌우가 뒤집힌다.** 배경 이미지는 열 x가 RA = 360(x+0.5)/폭 − 180으로 오른쪽으로 증가하게 만든다. three.js 구의 UV 배치와 맞아서 안쪽에서 보면 RA가 왼쪽으로 증가한다.
-- **배경 이미지는 `scripts/sky-background/build_background.py`로 만든다.** HiPS의 `Norder3/Allsky` 미리보기(정적 파일 1개)를 받아 CAR로 재표본화한다. hips2fits 같은 원격 서비스가 필요 없어 CDS 장애와 무관하고, HiPS 주소만 바꾸면 SPHEREx 컬러로도 같은 방법으로 만든다. 지금은 4096×2048(약 1.2MB).
-- **좌표계는 ICRS 적도 좌표(RA/Dec, 도 단위)로 통일한다.** three.js, Aladin Lite, IRSA가 모두 같은 기준을 쓴다.
-- **시야 전환은 자동 양방향이다.** 천구에서 약 5° 이하로 확대하면 같은 시선 방향(RA/Dec)과 시야를 Aladin Lite에 넘기고, Aladin Lite에서 약 6°보다 넓게 축소하면 천구로 돌아온다. 두 경계 사이의 여유는 경계에서 화면이 깜빡이는 것을 막는다.
+- **좌표계는 ICRS 적도 좌표(RA/Dec, 도 단위)로 통일한다.** Aladin Lite와 IRSA가 같은 기준을 쓴다.
+- **이동은 애니메이션으로 한다.** 핀·검색으로 고른 곳까지 1.2초 동안 이동하며 1° 시야로 확대한다. 현재 시야 밖의 먼 곳이면 먼저 넓게 축소했다가 확대해서, 높은 배율로 하늘을 가로지르지 않는다.
 - **알려진 소행성은 조준 화면에 표시하지 않는다.** 배경 모자이크는 여러 시점이 섞여 있어 시점 하나로 위치를 계산할 수 없다. 분석 패널에서 각 프레임의 관측 시점으로 조회해 겹쳐 보인다 (절대 원칙 6).
 - **테스트 대상 핀은 위치와 시점을 함께 둔다 (절대 원칙 6).** 4개는 IRSA `gaia_dr3_source`에서 조회한 Gaia DR3 위치(2016.0), WISE 0855는 AllWISE 명칭 좌표(2010년경)다 (`app/_components/sky/test-targets.ts`). 조준 화면의 2MASS(1999년경) 이미지에서 Barnard's Star는 핀보다 약 3′ 남쪽에 보이는데, 고유운동(약 10.4″/년 × 17년) 그대로다.
-- **클릭 동작:** 천구에서 핀을 누르면 그 대상으로 1° 조준 화면을 열고 분석 패널을 연다. 조준 화면에서는 기본 컷아웃 크기(3′)의 사각 조준선이 커서를 따라가고, 클릭하면(드래그 제외) 그 지점의 패널이 열린다. 핀에서 12px 안을 누르면 대상 자체를 고른다. 좌표가 테스트 대상과 1″ 안이면 패널에 대상 이름을 보인다.
-- **검색창 (화면 왼쪽 위):** 테스트 대상 이름(별칭 포함, 예: `eps ind b`)이나 좌표를 받는다. 좌표는 도 단위 십진수(`269.4485 4.7394`)와 RA 시·Dec 도 육십분법(`17 57 48.5 +04 41 36`, `17h57m48.5s +4d41m36s`, `17:57:48.5 4:41:36`)을 읽는다. 찾으면 그 지점의 1° 조준 화면과 분석 패널을 연다. 다른 천체 이름은 이름 해석 서비스(SIMBAD)가 CDS 장애로 막혀 있어 아직 지원하지 않고, 화면에 그렇게 안내한다.
+- **클릭 동작:** 둘러보기 시야에서 핀을 누르면 그 대상으로 1° 시야까지 이동하고 분석 패널을 연다. 조준 시야(5° 이하)에서는 클릭하면(드래그 제외) 그 지점의 패널이 열린다. 핀에서 12px 안을 누르면 대상 자체를 고른다. 좌표가 테스트 대상과 1″ 안이면 패널에 대상 이름을 보인다.
+- **검색창 (화면 왼쪽 위):** 테스트 대상 이름(별칭 포함, 예: `eps ind b`)이나 좌표를 받는다. 좌표는 도 단위 십진수(`269.4485 4.7394`)와 RA 시·Dec 도 육십분법(`17 57 48.5 +04 41 36`, `17h57m48.5s +4d41m36s`, `17:57:48.5 4:41:36`)을 읽는다. 찾으면 그 지점의 1° 시야로 이동하고 분석 패널을 연다. 다른 천체 이름은 이름 해석 서비스(SIMBAD)가 CDS 장애로 막혀 있어 아직 지원하지 않고, 화면에 그렇게 안내한다.
 - **분석 패널은 지금 껍데기다.** 블링크 뷰어·요약·평가·추가 분석 자리는 "아직 연결되지 않음"으로 표시하고 값을 지어내지 않는다. 링크 복사만 동작한다. 기본 분석 파이프라인이 준비되면 이 자리에 연결한다.
-- **별자리 선:** d3-celestial `constellations.lines.json`(BSD-3, J2000)을 라이선스 파일과 함께 `app/_components/sky/data/`에 둔다. 구 위의 두 점을 잇는 직선은 중심에서 보면 대원 호와 겹치므로 선분을 나누지 않는다.
-- **Next.js에서는 클라이언트에서만 불러온다.** three.js·Aladin Lite를 쓰는 모듈 맨 위에 `import "client-only"`를 두고 (`AGENTS.md` 규칙), Client Component 안에서 `next/dynamic`(`ssr: false`)으로 불러온다. Aladin Lite는 처음 확대할 때 불러오는 별도 청크로 둔다.
-- **배경 이미지는 `public/sky/`에 둔다.** 몇 장뿐이고 거의 바뀌지 않으므로 오브젝트 스토리지 규칙(9장 데이터 관리)의 예외로 한다. PC만 대상이므로 8192×4096 1장을 기본으로 하고, GPU 텍스처 한도가 낮으면 4096×2048 판을 쓴다.
+- **별자리 선:** d3-celestial `constellations.lines.json`(BSD-3, J2000)을 라이선스 파일과 함께 `app/_components/sky/data/`에 둔다. TAN 투영에서는 대원이 직선이라 별 사이를 직선으로 잇는다. Aladin Lite의 선(polyline) 기능은 쓰지 않고 하늘 위 캔버스에 직접 그린다: 3.8.2에서는 TAN 투영 밖(시선에서 90° 넘게 떨어진) 점이 있는 선을 그리다 예외가 나서 화면 전체가 멈춘다 (2026-11-14 확인).
+- **Next.js에서는 클라이언트에서만 불러온다.** Aladin Lite를 쓰는 모듈 맨 위에 `import "client-only"`를 두고 (`AGENTS.md` 규칙), Client Component 안에서 `next/dynamic`(`ssr: false`)으로 별도 청크로 불러온다.
 - **Aladin Lite 이벤트 (3.8.2 소스로 확인):** `mouseMove` → `{ra, dec, x, y}` (투영 밖이면 ra·dec가 null), `click` → `{ra, dec, x, y, isDragging}` (ICRS), `zoomChanged` → 가로 시야(도). 화면 좌표 → RA/Dec 변환은 `pix2world`.
 - **Aladin Lite의 `log` 옵션은 끈다.** 기본값이 켜져 있어 CDS에 사용 통계를 보낸다.
-- **CDS 장애 중에는 2MASS 컬러로 대체한다 ([결정 #25](decisions.md)).** CDS가 2026-11-09부터 사이버 보안 사고로 Aladin 하늘 이미지·hips2fits·SIMBAD를 막았고, SPHEREx 컬러 HiPS는 다른 기관 미러에도 없다. 그동안 배경과 조준 화면 모두 IRSA가 미러한 2MASS 컬러 HiPS(`https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color`)를 쓰고, 화면에 "SPHEREx가 아닌 임시 배경"임을 표시한다 (절대 원칙 4). 설정은 `app/_components/sky/constants.ts`의 `SKY_SURVEY` 한 줄이다. CDS가 복구되면 SPHEREx 컬러 배경을 스크립트로 만들고 `SKY_SURVEY`를 되돌린다.
-- **일정상 안전장치:** three.js 단계가 늦어지면 Aladin Lite만으로 "둘러보기 + 클릭"을 제공하고 제출한다.
+- **CDS 장애 중에는 2MASS 컬러로 대체한다 ([결정 #25](decisions.md)).** CDS가 2026-11-09부터 사이버 보안 사고로 Aladin 하늘 이미지·hips2fits·SIMBAD를 막았고, SPHEREx 컬러 HiPS는 다른 기관 미러에도 없다. 그동안 하늘 화면은 IRSA가 미러한 2MASS 컬러 HiPS(`https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color`)를 쓰고, 화면에 "SPHEREx가 아닌 임시 배경"임을 표시한다 (절대 원칙 4). 설정은 `app/_components/sky/constants.ts`의 `SKY_SURVEY` 한 줄이다. CDS가 복구되면 `SKY_SURVEY`만 되돌리면 된다. 같은 IRSA 미러의 DSS2 컬러(가시광선 0.4–0.6μm)가 보기에는 더 익숙하지만, SPHEREx 파장(0.75–5μm) 밖이라 은하면처럼 먼지가 많은 곳이 분석 패널과 다르게 보여서 쓰지 않는다. 2MASS(1.2–2.2μm)는 SPHEREx 파장 안이다 (2026-11-14 검토, 허한결 결정).
 
 | 도구 | 용도 | 라이선스 |
 | --- | --- | --- |
-| three.js, React Three Fiber | 1인칭 천구, Neighborhood in Motion | MIT |
-| Aladin Lite 3.8.2 (npm `aladin-lite`, 안정판으로 버전 고정, 수정 없이 사용) | 조준 단계 HiPS 표시 | LGPL-3.0 (별도 청크로 불러오고 README·References에 라이선스와 소스 링크 표기) |
+| three.js, React Three Fiber | Neighborhood in Motion (설치만 됨, 하늘 화면에서는 쓰지 않음) | MIT |
+| Aladin Lite 3.8.2 (npm `aladin-lite`, 안정판으로 버전 고정, 수정 없이 사용) | 하늘 화면 전체 (TAN 투영, 0.05°–120°) | LGPL-3.0 (별도 청크로 불러오고 README·References에 라이선스와 소스 링크 표기) |
 | d3-celestial 데이터 파일 | 별자리 선·경계 | BSD-3 (데이터의 원 출처도 References에 적는다) |
-| HiPS Allsky 미리보기 | 360° 배경 이미지 생성 (`scripts/sky-background/`) | HiPS 제공자 감사 문구 필요 (2MASS: University of Massachusetts & IPAC/Caltech) |
 
 검토 후 쓰지 않기로 한 것: Stellarium Web Engine (AGPL-3.0이라 MIT 레포와 충돌 소지, 소스 빌드 필요), WorldWide Telescope 엔진 (MIT지만 공식 래퍼가 Vue용이라 React 연결 비용이 큼).
 
@@ -453,7 +451,6 @@ flowchart LR
 
 - 이미지·결과 파일은 레포가 아니라 오브젝트 스토리지(예: S3, Cloudflare R2, Supabase Storage)에 두고, 레포에는 목록 JSON만 둔다. 이미지 파일을 git에 넣으면 레포가 빠르게 커진다.
 - 해커톤 범위에서 후보가 수십 개 수준이면 정적 호스팅에 함께 올려도 된다. **저장소 서비스는 팀 결정 필요.**
-- 예외: 3D 하늘 배경 이미지는 `public/sky/`에 둔다 (9장 "3D 하늘 구현").
 
 #### 장애 대응
 
@@ -502,7 +499,7 @@ flowchart LR
 | 추가 분석 5개를 모두 구현하기 어려움 | 6장 공통 규칙대로 틀을 먼저 구현하고, 난이도 낮은 기법부터 추가. 미구현 기법은 "준비 중"으로 표시해 설계를 보여줌 |
 | DR1이 클라우드 전용이라 컷아웃 서비스로 받을 수 없을 가능성 | 착수 직후 DR1 컷아웃 가능 여부 확인, 안 되면 QR3 컷아웃 또는 S3 직접 읽기로 전환 |
 | 3D 배경 이미지(CDS SPHEREx 컬러 HiPS)가 QR2 기준 | 배경은 둘러보기용으로만 쓰고, 분석 패널은 DR1/QR3 컷아웃임을 화면에 표시 |
-| CDS(alasky) 장애로 SPHEREx 컬러 HiPS를 못 받음 (2026-11-09부터 실제 발생, 복구 시점 미정) | 배경·조준 화면 모두 IRSA 미러 2MASS 컬러로 대체하고 화면에 임시임을 표시 ([결정 #25](decisions.md)). 데모 전 CDS 상태를 확인해 복구됐으면 SPHEREx로 되돌림 |
+| CDS(alasky) 장애로 SPHEREx 컬러 HiPS를 못 받음 (2026-11-09부터 실제 발생, 복구 시점 미정) | 하늘 화면을 IRSA 미러 2MASS 컬러로 대체하고 화면에 임시임을 표시 ([결정 #25](decisions.md)). 데모 전 CDS 상태를 확인해 복구됐으면 SPHEREx로 되돌림 |
 | 대회 전 작성 코드 사용 금지 규정 | 11/14 09:00 이후 작업만 커밋 |
 
 ---
@@ -547,7 +544,8 @@ flowchart LR
 - [ ] 파장 일치 허용치 (4장, 실제 자료로 결정)
 - [ ] DR1 컷아웃 가능 여부 확인, 안 되면 QR3 또는 S3 직접 읽기 (4장, 11장)
   - 확인 결과(2026-11-14, rreenactt): DR1 IBE 컷아웃은 동작하지만 같은 요청이 12–93초로 들쭉날쭉하다. DataLink의 `cloud_access`가 가리키는 AWS 공개 버킷 L2b 파일을 HTTP 바이트 범위로 읽으면 필요한 행만(약 2.4 MB) 5–11초에 받는다. FLAGS는 RICE_1 압축이라 행 단위로 풀어야 하며, IRSA 컷아웃과 픽셀값·플래그가 일치함을 확인했다. Comet Breath·Sky Time Machine·Fake Planet Lab이 이 방식을 쓴다.
-- [ ] CDS 복구 후 SPHEREx 컬러 배경 생성(`scripts/sky-background/`)과 `SKY_SURVEY` 되돌리기 (9장, [결정 #25](decisions.md))
+- [ ] CDS 복구 후 `SKY_SURVEY`를 SPHEREx 컬러로 되돌리기 (9장, [결정 #25](decisions.md))
+- [ ] 하늘 타일을 우리 서버(Route Handler)를 거쳐 받을지: 로컬 실험에서 확대 후 선명해지는 시간이 중앙값 약 12초 → 약 5초. 공개 엔드포인트·Vercel 사용량·함수 리전은 배포 담당 확인 필요 (9장, [`experiments/2026-11-14-sky-tile-proxy/`](experiments/2026-11-14-sky-tile-proxy/README.md))
 - [ ] 실시간 처리 구조: 별도 Python API / Next.js Route Handler + 사전 처리 (9장)
   - 참고(rreenactt): 추가 분석 3개는 Next.js Route Handler만으로 FITS 읽기·WCS·재투영·측광을 TypeScript로 처리한다(Python 없음, 저장 없음).
 - [ ] 평가 DB 서비스 (9장)

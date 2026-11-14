@@ -14,27 +14,12 @@ export function normalizeRa(ra: number) {
   return ((ra % 360) + 360) % 360;
 }
 
-/**
- * Unit vector for a sky position in scene space. +y points to the north celestial pole, RA 0 lies on +x,
- * and RA grows toward -z, so seen from the center of the sphere RA increases to the left as on the real sky.
- */
-export function equatorialToVector(ra: number, dec: number): [number, number, number] {
-  const r = ra * DEG;
-  const d = dec * DEG;
-  return [Math.cos(d) * Math.cos(r), Math.sin(d), -Math.cos(d) * Math.sin(r)];
-}
-
-export function vectorToEquatorial(x: number, y: number, z: number): EquatorialCoordinates {
-  const length = Math.hypot(x, y, z);
-  return {
-    ra: normalizeRa(Math.atan2(-z, x) / DEG),
-    dec: Math.asin(clamp(y / length, -1, 1)) / DEG,
-  };
-}
-
-/** Converts a horizontal field of view to the vertical one a three.js PerspectiveCamera expects. */
-export function horizontalToVerticalFov(horizontalFov: number, aspect: number) {
-  return (2 * Math.atan(Math.tan((horizontalFov * DEG) / 2) / aspect)) / DEG;
+/** Angle between two sky positions, in degrees (haversine, stable for small separations). */
+export function angularDistance(a: EquatorialCoordinates, b: EquatorialCoordinates) {
+  const dDec = (b.dec - a.dec) * DEG;
+  const dRa = (b.ra - a.ra) * DEG;
+  const h = Math.sin(dDec / 2) ** 2 + Math.cos(a.dec * DEG) * Math.cos(b.dec * DEG) * Math.sin(dRa / 2) ** 2;
+  return (2 * Math.asin(Math.min(1, Math.sqrt(h)))) / DEG;
 }
 
 /** Splits a positive value into whole units, minutes, and seconds (rounded to `secondDigits`). */
