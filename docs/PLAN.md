@@ -361,7 +361,7 @@ flowchart LR
 - **웹:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, TanStack Query (레포 기본 구성). `main` 푸시 시 Vercel 프로덕션 배포. 코딩 규칙은 루트 `AGENTS.md`
 - **3D:** Aladin Lite 3.8.2 하나를 TAN 투영으로 모든 시야에 쓴다 (아래 "3D 하늘 구현", [결정 #29](decisions.md)). Neighborhood in Motion은 three.js를 쓴다. 블링크는 canvas, 소리는 Web Audio
 - **천문 데이터 처리:** Python (astropy, astroquery 또는 PyVO, numpy, reproject). 실시간 처리를 별도 Python API(FastAPI 등)로 둘지, 사전 처리만 Python으로 하고 웹은 Next.js Route Handler로 둘지 **팀 결정 필요**
-- **평가 저장:** 익명 키-값 DB (Supabase, Firebase 등 무료 등급 · **팀 결정 필요**)
+- **평가 저장:** Neon Postgres + Prisma 7. 평가는 익명으로 저장한다 ([결정 #33](decisions.md)). 코드: `lib/db.ts`(클라이언트 하나), `data/`(쿼리), `prisma/models/`(모델). 로컬 개발은 `pnpm docker:db`의 Postgres
 - 무거운 처리는 미리 돌려 정적 파일로 두고, 웹은 보여주기만 한다. 평가만 서버에 저장한다.
 
 ### 3D 하늘 구현
@@ -552,7 +552,6 @@ flowchart LR
 - [ ] 하늘 타일을 우리 서버(Route Handler)를 거쳐 받을지: 로컬 실험에서 확대 후 선명해지는 시간이 중앙값 약 12초 → 약 5초. 공개 엔드포인트·Vercel 사용량·함수 리전은 배포 담당 확인 필요 (9장, [`experiments/2026-11-14-sky-tile-proxy/`](experiments/2026-11-14-sky-tile-proxy/README.md))
 - [ ] 실시간 처리 구조: 별도 Python API / Next.js Route Handler + 사전 처리 (9장)
   - 참고(rreenactt): 추가 분석 3개는 Next.js Route Handler만으로 FITS 읽기·WCS·재투영·측광을 TypeScript로 처리한다(Python 없음, 저장 없음).
-- [ ] 평가 DB 서비스 (9장)
 - [ ] 이미지·결과 저장소 서비스 (9장)
 - [ ] Comet Breath 화면 배치: 3I/ATLAS 특별 핀 여부 (6장)
 - [ ] 추가 분석 5개의 구현 우선순위 (6장, 11장)

@@ -3,6 +3,8 @@ minimumReleaseAge: 10080
 
 # Packages whose install scripts may run (true) or are skipped (false). An unlisted package with a build script fails the install.
 allowBuilds:
+  "@prisma/engines": true
+  prisma: true
   sharp: false
   unrs-resolver: false
 
