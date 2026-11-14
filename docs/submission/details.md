@@ -37,13 +37,17 @@ HEIMDALLR lets anyone look for things that move or change in NASA's SPHEREx all-
 
 ## Test targets
 
-| Target | Result so far |
-| --- | --- |
-| Barnard's Star | 3 SPHEREx visits; in the blink the star moves north and lines up with Gaia's predicted positions. Sky Time Machine measures 10.39″/yr (Gaia agrees). |
-| Epsilon Indi B | [TODO: 검증 결과 표 작업 후 채움] |
-| WISE 0855−0714 | Not in Gaia; position from Luhman & Esplin 2014. In one SPHEREx exposure (D6, 5.0 µm) its signal-to-noise is 1.7, too faint to locate, and the tool says so instead of guessing. [TODO: 블링크 결과] |
-| RW Aurigae | [TODO: 변광 확인 결과] |
-| R Draconis | [TODO: 변광 확인 결과] |
+Every number below was measured with the tool's own analysis code (the same visit planning, wavelength matching and aperture photometry the panel uses). Full per-exposure records: `docs/submission/test-targets.md`.
+
+| Target | What it tests | Result |
+| --- | --- | --- |
+| Barnard's Star | Fast proper motion (10.4″/yr) | 3 SPHEREx visits; in the blink the star moves north and lines up with Gaia's predicted positions. Sky Time Machine measures 10.39″/yr over 23.81 years, matching Gaia DR3. |
+| Epsilon Indi B | Faint nearby brown dwarf | Detected in all 6 exposures over 3 visits (1.11 µm, S/N ≈ 100), 44–48″ from its 2016 Gaia position and within 1.1″ of where Gaia's motion predicts. Nothing remains at the old position. |
+| WISE 0855−0714 | Coldest known brown dwarf, not in Gaia | Invisible at the default 1.45 µm. At 4.6 µm a faint signal (S/N 3.6–5.4) sits at its predicted position, but a Gaia star 7.3″ away blends with it, so we call it consistent with WISE 0855, not confirmed. Its pin (≈2010 position) is now 2.1′ away, outside the 3′ analysis grid. |
+| RW Aurigae | Young star that varies in brightness | The star's center is saturated in every exposure; two exposures a week apart already differ by 25%, so we do not claim a brightness change. |
+| R Draconis | Bright Mira variable | Fully saturated in all 6 exposures (2.2 µm); no brightness can be measured, and the tool shows the saturation flags instead of a number. |
+
+What this shows: SPHEREx positions match Gaia to a fraction of a pixel when the object is visible; between visits these stars move less than a pixel, so Gaia predictions and the 25-year comparison carry the motion; the detector choice matters for very cold objects; and very bright variables saturate.
 
 ## Design choices
 

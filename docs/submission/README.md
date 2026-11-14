@@ -9,6 +9,7 @@
 | `details.md` | Project Details | 작동 방식, 설계 이유, 도구, 한계, 다음 계획 | 초안 |
 | `ai-usage.md` | Use of SI | [`docs/memory/ai-usage.md`](../memory/ai-usage.md)를 정리 | 초안 |
 | `data.md` | Space Agency Data | NASA 자료 최소 1개 + 파트너 기관 자료, 데이터가 준 영감 | 초안 |
+| `test-targets.md` | (Project Details·슬라이드 6장 근거) | 테스트 대상 5개 검증 결과 표, 노출별 측정 기록 | 초안 |
 | `references.md` | References | 데이터·도구·코드·이미지 출처, 링크, 라이선스, SPHEREx 감사 문구 | 초안 |
 
 - **Project Name:** HEIMDALLR (칸 위에 따로 입력)
