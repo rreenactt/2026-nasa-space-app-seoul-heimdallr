@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { CometBreathDialog } from "./_components/comet-breath/comet-breath-dialog";
 import { FakePlanetLabDialog } from "./_components/fake-planet-lab/fake-planet-lab-dialog";
+import { NeighborhoodDialog } from "./_components/neighborhood/neighborhood-dialog";
 import { TARGET_FOV } from "./_components/sky/constants";
 import { SkyExplorer } from "./_components/sky/sky-explorer";
 import { parseSelection } from "./_components/sky/sky-selection";
@@ -40,6 +41,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               trigger={<Button size="sm" variant="secondary">Sky Time Machine</Button>}
             />
             <FakePlanetLabDialog trigger={<Button size="sm" variant="secondary">Fake Planet Lab</Button>} />
+            <NeighborhoodDialog trigger={<Button size="sm" variant="secondary">Neighborhood in Motion</Button>} />
             <CometBreathDialog trigger={<Button size="sm" variant="secondary">Comet Breath · 3I/ATLAS</Button>} />
           </nav>
         }

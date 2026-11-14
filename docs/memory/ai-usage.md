@@ -26,3 +26,4 @@
 | 2026-11-14 | rreenactt | Claude Code | Sky Time Machine 구현: 2MASS·WISE·NEOWISE·SPHEREx SIA2 검색, 공통 격자 재투영, WISE 통과별 중앙값 합성, Gaia 정렬 검증 | `app/_components/sky-time-machine/`, `app/_lib/sky/`, `app/api/sky/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | rreenactt | Claude Code | Fake Planet Lab 구현: FLAGS 헤더 기반 비트 해석·레이어, 후보 점검 8종, 기록 JSON 내보내기 | `app/_components/fake-planet-lab/`, `app/_lib/fpl/`, `app/api/fpl/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | rreenactt | Claude Code | 추가 분석 3개 구현 기록, 결정 #26–28 제안, `PLAN.md` 4·14장 갱신 | `docs/` | 김재현 지시, 검토 필요 |
+| 2026-11-14 | rreenactt | Claude Code | Neighborhood in Motion 구현: Gaia DR3 근접 천체 조회·이름 확인, WISE 0855 문헌값(arXiv:1409.5899 표 확인), 3D 직선 운동 모델·불확실성 표본, 3D 지도·하늘 시점·SPHEREx 연결, 구현 기록 | `app/_components/neighborhood/`, `app/_lib/nim/`, `app/api/nim/`, `docs/analyses/neighborhood-in-motion.md` | 김재현 지시, 검토 필요 |
