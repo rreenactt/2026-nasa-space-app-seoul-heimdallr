@@ -10,14 +10,24 @@ import type { FlagBit, TanSipWcs, WaveLookup } from "./types";
  * Nothing is written anywhere; about 2–3 MB is transferred per cutout.
  */
 
-export type RangeFetcher = (start: number, endInclusive: number) => Promise<ArrayBuffer>;
+/** `url` (when set) lets header chains be remembered per file. */
+export type RangeFetcher = ((start: number, endInclusive: number) => Promise<ArrayBuffer>) & { url?: string };
 
 export class OutsideDetectorError extends Error {}
 
-async function readHeaderAt(fetchRange: RangeFetcher, offset: number, index: number): Promise<FitsHdu> {
+async function readHeaderAt(fetchRange: RangeFetcher, offset: number, index: number, last?: { start: number; bytes: Uint8Array }): Promise<FitsHdu> {
+  // The previous read often already holds this header (PRIMARY is followed directly by IMAGE's header).
+  if (last && offset >= last.start && offset < last.start + last.bytes.length) {
+    const parsed = parseHeader(last.bytes.subarray(offset - last.start));
+    if (parsed) return { index, header: parsed.header, cards: parsed.cards, dataOffset: offset + parsed.length, dataLength: dataLengthOf(parsed.header) };
+  }
   let size = 2880 * 12;
   for (;;) {
     const bytes = new Uint8Array(await fetchRange(offset, offset + size - 1));
+    if (last) {
+      last.start = offset;
+      last.bytes = bytes;
+    }
     const parsed = parseHeader(bytes);
     if (parsed) {
       return {
@@ -35,20 +45,34 @@ async function readHeaderAt(fetchRange: RangeFetcher, offset: number, index: num
 
 const extname = (h: FitsHdu) => String(h.header.get("EXTNAME") ?? "").trim();
 
+/**
+ * Header chains already walked, per file URL (headers only, in this server process; no pixels). Several analyses
+ * open the same exposures, and each walk costs one round trip per HDU.
+ */
+const headerCache = new Map<string, Map<string, FitsHdu>>();
+const HEADER_CACHE_SIZE = 400;
+
 /** Walks the HDU chain reading headers only, until all `wanted` extensions are found. */
 export async function readRemoteHeaders(fetchRange: RangeFetcher, wanted: string[]): Promise<Map<string, FitsHdu>> {
+  const cached = fetchRange.url ? headerCache.get(fetchRange.url) : undefined;
+  if (cached && wanted.every((w) => cached.has(w))) return cached;
   const found = new Map<string, FitsHdu>();
   let offset = 0;
+  const last = { start: -1, bytes: new Uint8Array(0) };
   for (let index = 0; index < 16 && wanted.some((w) => !found.has(w)); index++) {
     let hdu: FitsHdu;
     try {
-      hdu = await readHeaderAt(fetchRange, offset, index);
+      hdu = await readHeaderAt(fetchRange, offset, index, last);
     } catch (e) {
       if (index > 0) break; // past the last HDU
       throw e;
     }
     found.set(extname(hdu) || `HDU${index}`, hdu);
     offset = hdu.dataOffset + paddedLength(hdu.dataLength);
+  }
+  if (fetchRange.url) {
+    if (headerCache.size >= HEADER_CACHE_SIZE) headerCache.delete(headerCache.keys().next().value!);
+    headerCache.set(fetchRange.url, found);
   }
   return found;
 }

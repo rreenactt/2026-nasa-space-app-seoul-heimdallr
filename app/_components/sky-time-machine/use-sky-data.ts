@@ -58,7 +58,7 @@ export function useLoadedFrames(epochs: Epoch[], grid: SkyGrid) {
   return new Map(epochs.map((e, i) => [e.id, results[i]?.data]));
 }
 
-/** Prefetches the given epochs one or two at a time (IRSA throttles bursts). */
+/** Prefetches the given epochs eight at a time (the server reads WISE from S3 and queues IBE itself). */
 export function usePrefetchFrames(grid: SkyGrid | null) {
   const qc = useQueryClient();
   const [state, setState] = useState({ total: 0, done: 0, running: false });
@@ -76,7 +76,7 @@ export function usePrefetchFrames(grid: SkyGrid | null) {
           if (run.current === id) setState((s) => ({ ...s, done: s.done + 1 }));
         }
       };
-      await Promise.all([worker(), worker()]);
+      await Promise.all(Array.from({ length: 8 }, worker));
       if (run.current === id) setState((s) => ({ ...s, running: false }));
     },
     [grid, qc],

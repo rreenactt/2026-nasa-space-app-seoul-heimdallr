@@ -140,7 +140,7 @@ export type BatchItem =
  * Fetches many cutouts with a small concurrency limit (polite to IRSA), filling the shared query cache
  * so the image tab reuses them. Results live in memory only.
  */
-export function useFrameBatch(concurrency = 3) {
+export function useFrameBatch(concurrency = 8) {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<BatchItem[]>([]);
   const [running, setRunning] = useState(false);
