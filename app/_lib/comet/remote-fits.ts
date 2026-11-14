@@ -87,6 +87,9 @@ export interface RemoteCutout {
   /** Cutout origin in the full detector image (0-based). */
   x0: number;
   y0: number;
+  /** Full detector image size (pixels). */
+  fullWidth: number;
+  fullHeight: number;
   image: Float32Array;
   variance: Float32Array;
   zodi: Float32Array;
@@ -195,6 +198,8 @@ export async function readRemoteCutout(fetchRange: RangeFetcher, ra: number, dec
     height: h,
     x0,
     y0,
+    fullWidth: W,
+    fullHeight: H,
     image: img,
     variance: vari,
     zodi: zod,

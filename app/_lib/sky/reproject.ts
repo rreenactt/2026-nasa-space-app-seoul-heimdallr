@@ -74,3 +74,24 @@ export function coverageOf(data: Float32Array): number {
   for (const x of data) if (Number.isFinite(x)) c++;
   return c / data.length;
 }
+
+/**
+ * Nearest-neighbour map from grid pixels to source pixel indices (-1 = outside the source).
+ * Used to display integer bit masks without mixing bits, and to trace every displayed pixel
+ * back to the original pixel it came from.
+ */
+export function nearestIndexMap(width: number, height: number, wcs: CelestialWcs, grid: SkyGrid): Int32Array {
+  const out = new Int32Array(grid.n * grid.n).fill(-1);
+  for (let r = 0; r < grid.n; r++) {
+    for (let i = 0; i < grid.n; i++) {
+      const sky = gridToSky(grid, i, r);
+      const p = skyToPixel(wcs, sky.ra, sky.dec);
+      if (!p) continue;
+      const x = Math.round(p.x);
+      const y = Math.round(p.y);
+      if (x < 0 || y < 0 || x >= width || y >= height) continue;
+      out[r * grid.n + i] = y * width + x;
+    }
+  }
+  return out;
+}

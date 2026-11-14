@@ -127,6 +127,7 @@ export async function fetchFrame(params: { obsId: string; detector: string; ra: 
     pixelSource: `${source} — HTTP range: 행 ${cut.y0}–${cut.y0 + cut.height - 1}, 열 ${cut.x0}–${cut.x0 + cut.width - 1} (0-based)`,
     datalinkUrl: resolved.datalinkUrl,
     origin: [cut.x0, cut.y0],
+    fullSize: [cut.fullWidth, cut.fullHeight],
     centerRa: params.ra,
     centerDec: params.dec,
     width: cut.width,

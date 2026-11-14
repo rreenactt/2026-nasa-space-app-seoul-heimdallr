@@ -12,6 +12,7 @@ import { coverageOf, finiteMedian, medianStack, reproject } from "@/app/_lib/sky
 import { gridToSky, parseCelestialWcs, separationArcsec } from "@/app/_lib/sky/wcs";
 import type { Epoch, EpochFrame, Exposure, GaiaStar, MissionId, MissionSearchResult, SkyGrid } from "@/app/_lib/sky/types";
 import { rangeFetcher, resolvePixelFile } from "../../comet/_server/irsa";
+import { gaiaQuery } from "./gaia";
 
 /**
  * On-demand archive access for Sky Time Machine. Every request searches / downloads / resamples and
@@ -19,14 +20,13 @@ import { rangeFetcher, resolvePixelFile } from "../../comet/_server/irsa";
  */
 
 const SIA_URL = "https://irsa.ipac.caltech.edu/SIA";
-const TAP_URL = "https://irsa.ipac.caltech.edu/TAP/sync";
 /** Only IRSA's image backend may be fetched by URL (the URL comes from our own SIA2 answer, echoed by the client). */
 export const IBE_PREFIX = /^https:\/\/irsa\.ipac\.caltech\.edu\/ibe\/data\/(wise|twomass)\/[\w./-]+\.fits(\.gz)?$/;
 
 export class UpstreamNotFound extends Error {}
 
 /** CSV with quoted fields (SIA2 titles and regions may contain commas). */
-function parseCsv(text: string): Record<string, string>[] {
+export function parseCsv(text: string): Record<string, string>[] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -286,11 +286,11 @@ export async function buildEpochFrame(epoch: Epoch, grid: SkyGrid): Promise<Epoc
 }
 
 /** Gaia DR3 stars with measurable proper motion in the field (epoch 2016.0). */
-export async function fetchGaia(ra: number, dec: number, radiusDeg: number, minPm: number): Promise<{ stars: GaiaStar[]; query: string }> {
-  const query =
-    `SELECT TOP 40 source_id, ra, dec, pmra, pmdec, parallax, phot_g_mean_mag FROM gaia_dr3_source ` +
-    `WHERE CONTAINS(POINT('ICRS',ra,dec), CIRCLE('ICRS',${ra},${dec},${radiusDeg}))=1 AND pm > ${minPm} ORDER BY pm DESC`;
-  const csv = await api.post(TAP_URL, { body: new URLSearchParams({ QUERY: query, FORMAT: "csv" }), timeout: 55_000 }).text();
+export async function fetchGaia(ra: number, dec: number, radiusDeg: number, minPm: number): Promise<{ stars: GaiaStar[]; query: string; service: string }> {
+  const template =
+    `SELECT TOP 40 source_id, ra, dec, pmra, pmdec, parallax, phot_g_mean_mag FROM {table} ` +
+    `WHERE 1=CONTAINS(POINT('ICRS',ra,dec), CIRCLE('ICRS',${ra},${dec},${radiusDeg})) AND pm > ${minPm} ORDER BY pm DESC`;
+  const { csv, service, query } = await gaiaQuery(template);
   const stars = parseCsv(csv).map((r) => ({
     sourceId: r.source_id,
     ra: Number(r.ra),
@@ -300,6 +300,6 @@ export async function fetchGaia(ra: number, dec: number, radiusDeg: number, minP
     parallax: r.parallax ? Number(r.parallax) : null,
     gmag: r.phot_g_mean_mag ? Number(r.phot_g_mean_mag) : null,
   }));
-  return { stars, query };
+  return { stars, query, service };
 }
 

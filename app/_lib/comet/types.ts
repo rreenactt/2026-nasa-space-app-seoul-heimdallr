@@ -73,6 +73,8 @@ export interface FramePayload {
   datalinkUrl: string;
   /** Cutout origin in the full detector image (0-based x, y). */
   origin: [number, number];
+  /** Full detector image size (pixels), for distance-to-detector-edge checks. */
+  fullSize: [number, number];
   centerRa: number;
   centerDec: number;
   width: number;

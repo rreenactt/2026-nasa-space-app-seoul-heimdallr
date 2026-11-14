@@ -1,4 +1,5 @@
 import { CometBreathDialog } from "./_components/comet-breath/comet-breath-dialog";
+import { FakePlanetLabDialog } from "./_components/fake-planet-lab/fake-planet-lab-dialog";
 import { SkyTimeMachineDialog } from "./_components/sky-time-machine/sky-time-machine-dialog";
 import type { Target } from "./_components/sky-time-machine/stm-state";
 
@@ -21,6 +22,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </p>
         <div>
           <SkyTimeMachineDialog initialTarget={shared} defaultOpen={Boolean(shared)} trigger={undefined} />
+        </div>
+      </section>
+      <section className="grid gap-2">
+        <h2 className="text-xl font-semibold tracking-tight">Fake Planet Lab</h2>
+        <p className="text-muted-foreground">
+          Is a moving-looking dot a real signal or an image defect? Inspect SPHEREx quality flags, uncertainty and other observations at any position, and keep the evidence.
+        </p>
+        <div>
+          <FakePlanetLabDialog />
         </div>
       </section>
       <section className="grid gap-2">
