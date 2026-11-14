@@ -40,3 +40,4 @@
 | 2026-11-14 | rreenactt | Claude Code | 분석 문서 6개를 구현 기준으로 재정리(무엇·왜·입력·방법·출력·한계·검증·코드·남은 일, 기본 분석 `basic-blink.md` 신설), 인수인계 문서, IRSA 동시 요청 측정 기록·스크립트 | `docs/analyses/`, `docs/memory/handoff/`, `docs/experiments/2026-11-14-irsa-concurrency/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | rreenactt | Claude Code | 블링크 슬라이더 방문 번호 표시 수정(보이는 방문 기준 위치와 원래 방문 번호 분리, 요약에 프레임 없는 방문 수 표시) | `app/_components/blink/blink-viewer.tsx`, `docs/analyses/basic-blink.md` | 김재현 지시(팀원 보고 확인), 검토 필요 |
 | 2026-11-15 | tnsgud9 | Claude Code | 끊어진 커밋(6072b33)의 Prisma 7 셋업 복원: `lib/db.ts`, Prisma 스키마·설정, 로컬 Postgres, 환경 변수, Prisma 에이전트 스킬, 결정 #33 기록 | `lib/db.ts`, `prisma/`, `prisma.config.ts`, `docker-compose.yaml`, `config/env.server.ts`, `.agents/skills/`, `.claude/skills/`, `docs/` | 이순형 지시, 검토 필요 |
+| 2026-11-15 | ansirh | Claude Code | 제출물 초안(요약·상세 설명·데이터·출처·AI 사용, 슬라이드 7장 목차), 감사 문구 공식 출처 조사, 마일스톤·산출물 일정 갱신 | `docs/submission/`, `docs/memory/milestones.md` | 허한결 지시, 검토 필요 |
