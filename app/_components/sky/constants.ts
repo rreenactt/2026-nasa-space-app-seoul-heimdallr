@@ -42,11 +42,14 @@ export const MIN_FOV = 0.05;
 /** At this field of view (degrees) or narrower, the cursor becomes the aiming square and a click opens the panel. */
 export const AIM_FOV = 5;
 
+/**
+ * Field of view (degrees) a click on the sky flies to when the view is wider than AIM_FOV: narrow enough to aim, wide
+ * enough to still see the surroundings of the clicked point.
+ */
+export const CLICK_ZOOM_FOV = 2;
+
 /** Field of view (degrees) the view flies to when a test target or a searched point is chosen. */
 export const TARGET_FOV = 1;
-
-/** Seconds a fly-to takes. */
-export const FLY_SECONDS = 1.2;
 
 /** Side of the aiming square: the default cutout size of the analysis (PLAN.md chapter 4), in arcminutes. */
 export const CUTOUT_ARCMIN = 3;

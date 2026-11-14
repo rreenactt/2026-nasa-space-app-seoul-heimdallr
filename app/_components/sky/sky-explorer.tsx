@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useRef, useState } from "react";
 import type { AutoOpenAnalysis } from "../analyses/additional-analyses";
 import { AnalysisPanel } from "./analysis-panel";
-import { AIM_FOV, INITIAL_VIEW, SKY_SURVEY, TARGET_FOV } from "./constants";
+import { AIM_FOV, CLICK_ZOOM_FOV, INITIAL_VIEW, SKY_SURVEY, TARGET_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";
 import { type EquatorialCoordinates, formatDec, formatRa, type SkyView as SkyViewState } from "./sky-coordinates";
 import { SkySearchBox } from "./sky-search-box";
@@ -17,7 +17,8 @@ const SkyView = dynamic(() => import("./sky-view"), { ssr: false });
 
 /**
  * The sky screen: one Aladin Lite view from 120° down to arcminutes. Clicking a test target pin, or a point once zoomed
- * in to aim, opens the analysis panel and puts the point in the URL.
+ * in to aim, opens the analysis panel and puts the point in the URL. A click on the wide view zooms in on that point
+ * instead, so reaching a spot to analyze takes two clicks rather than many wheel steps.
  */
 export function SkyExplorer({
   initialSelection,
@@ -61,12 +62,19 @@ export function SkyExplorer({
     [openPanel],
   );
   const goToTarget = useCallback((target: TestTarget) => goTo(target, target), [goTo]);
+  // Too wide to aim: a click on empty sky only zooms in on that point. At 90° one screen pixel is about 3′, as large as
+  // the analysis cutout, so the panel opens on the next click, once the user can see what they are picking.
+  const zoomTo = useCallback((point: EquatorialCoordinates) => {
+    flightId.current += 1;
+    setFlight({ ...point, fov: CLICK_ZOOM_FOV, id: flightId.current });
+  }, []);
   const selectPoint = useCallback(
     (point: EquatorialCoordinates, fov: number, target?: TestTarget) => {
       if (target && fov > AIM_FOV) goTo(target, target);
+      else if (fov > AIM_FOV) zoomTo(point);
       else openPanel({ ...point, fov, target: target ?? findTestTarget(point) });
     },
-    [goTo, openPanel],
+    [goTo, openPanel, zoomTo],
   );
 
   return (
@@ -103,7 +111,7 @@ function CursorReadout({ aiming }: { aiming: boolean }) {
   const cursor = useCursor();
   return (
     <div className="pointer-events-none absolute bottom-4 left-4 rounded-md bg-black/60 px-3 py-2 font-mono text-xs leading-5 text-white/80">
-      <div>{aiming ? "Aiming · click to analyze" : "Click a pin or zoom in to aim"}</div>
+      <div>{aiming ? "Aiming · click to analyze" : "Click to zoom in · click a pin to analyze"}</div>
       <div>RA {cursor ? formatRa(cursor.ra) : "—"}</div>
       <div>Dec {cursor ? formatDec(cursor.dec) : "—"}</div>
     </div>
