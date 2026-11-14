@@ -1,0 +1,52 @@
+import { CSPProvider } from "@base-ui/react/csp-provider";
+import type { Metadata } from "next";
+import { Noto_Sans } from "next/font/google";
+import { headers } from "next/headers";
+import "./globals.css";
+import { env } from "@/config/env";
+import { cn } from "cn";
+import { Toaster } from "@/components/ui/toast";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/components/query-provider";
+
+// Fallback for the characters Pretendard and Pretendard JP lack (other scripts); app/shared.css lists
+// --font-noto-sans after them. Not preloaded, so a page downloads it only when it shows such characters.
+const notoSans = Noto_Sans({ variable: "--font-noto-sans", preload: false, adjustFontFallback: false });
+
+export const metadata: Metadata = {
+  title: { default: env.appName, template: `%s | ${env.appName}` },
+  description: "Full-stack web application built on the Next.js App Router",
+};
+
+// Reads the CSP nonce set by the proxy, so every page renders per request (no static generation).
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  return (
+    <html
+      lang="en"
+      className={cn("h-full", "antialiased", "font-sans", notoSans.variable)}
+      suppressHydrationWarning
+    >
+      <body className="min-h-full flex flex-col">
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+            nonce={nonce}
+          >
+            {/* Also puts the nonce on inline scripts that shadcn components (Base UI) inject. */}
+            <CSPProvider nonce={nonce}>
+              {/* One toast viewport for the whole app; client code shows a toast with `toast.add()` from components/ui/toast. */}
+              <Toaster>
+                <TooltipProvider>{children}</TooltipProvider>
+              </Toaster>
+            </CSPProvider>
+          </ThemeProvider>
+        </QueryProvider>
+      </body>
+    </html>
+  );
+}
