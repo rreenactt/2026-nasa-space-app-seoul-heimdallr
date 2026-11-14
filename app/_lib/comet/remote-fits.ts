@@ -171,7 +171,8 @@ async function readFlagRows(fetchRange: RangeFetcher, hdu: FitsHdu, fullWidth: n
   return out;
 }
 
-export async function readRemoteCutout(fetchRange: RangeFetcher, ra: number, dec: number, size: number): Promise<RemoteCutout> {
+/** `variance: false` skips the VARIANCE rows (about a third of the bytes) for callers that do not use them; the field is then empty. */
+export async function readRemoteCutout(fetchRange: RangeFetcher, ra: number, dec: number, size: number, options: { variance?: boolean } = {}): Promise<RemoteCutout> {
   const hdus = await readRemoteHeaders(fetchRange, ["IMAGE", "FLAGS", "VARIANCE", "ZODI", "WCS-WAVE"]);
   const image = hdus.get("IMAGE");
   const flags = hdus.get("FLAGS");
@@ -194,7 +195,7 @@ export async function readRemoteCutout(fetchRange: RangeFetcher, ra: number, dec
   const waveHdu = hdus.get("WCS-WAVE");
   const [img, vari, zod, flg, waveRow] = await Promise.all([
     readFloatRows(fetchRange, image, W, x0, y0, w, h),
-    readFloatRows(fetchRange, variance, W, x0, y0, w, h),
+    options.variance === false ? Promise.resolve(new Float32Array(0)) : readFloatRows(fetchRange, variance, W, x0, y0, w, h),
     readFloatRows(fetchRange, zodi, W, x0, y0, w, h),
     readFlagRows(fetchRange, flags, W, x0, y0, w, h),
     waveHdu
