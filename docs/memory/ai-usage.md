@@ -27,3 +27,4 @@
 | 2026-11-14 | rreenactt | Claude Code | Fake Planet Lab 구현: FLAGS 헤더 기반 비트 해석·레이어, 후보 점검 8종, 기록 JSON 내보내기 | `app/_components/fake-planet-lab/`, `app/_lib/fpl/`, `app/api/fpl/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | rreenactt | Claude Code | 추가 분석 3개 구현 기록, 결정 #26–28 제안, `PLAN.md` 4·14장 갱신 | `docs/` | 김재현 지시, 검토 필요 |
 | 2026-11-14 | ansirh | Claude Code | 3D 하늘을 Aladin Lite 하나(TAN 투영)로 통일해 둘러보기 ↔ 조준 전환 경계 제거, 별자리 선 캔버스 그리기, 결정 #29 기록 | `app/_components/sky/`, `docs/PLAN.md`, `docs/decisions.md` | 허한결 지시, 검토 필요 |
+| 2026-11-14 | ansirh | Claude Code | 하늘 타일 로딩 원인 조사(Aladin 요청 취소·미러·연결 수 측정)와 타일 프록시 로컬 실험, 실험 기록 문서·측정 스크립트 작성 | `docs/experiments/2026-11-14-sky-tile-proxy/`, `docs/PLAN.md` | 허한결 지시, 검토 필요 |

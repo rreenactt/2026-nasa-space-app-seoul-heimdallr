@@ -545,6 +545,7 @@ flowchart LR
 - [ ] DR1 컷아웃 가능 여부 확인, 안 되면 QR3 또는 S3 직접 읽기 (4장, 11장)
   - 확인 결과(2026-11-14, rreenactt): DR1 IBE 컷아웃은 동작하지만 같은 요청이 12–93초로 들쭉날쭉하다. DataLink의 `cloud_access`가 가리키는 AWS 공개 버킷 L2b 파일을 HTTP 바이트 범위로 읽으면 필요한 행만(약 2.4 MB) 5–11초에 받는다. FLAGS는 RICE_1 압축이라 행 단위로 풀어야 하며, IRSA 컷아웃과 픽셀값·플래그가 일치함을 확인했다. Comet Breath·Sky Time Machine·Fake Planet Lab이 이 방식을 쓴다.
 - [ ] CDS 복구 후 `SKY_SURVEY`를 SPHEREx 컬러로 되돌리기 (9장, [결정 #25](decisions.md))
+- [ ] 하늘 타일을 우리 서버(Route Handler)를 거쳐 받을지: 로컬 실험에서 확대 후 선명해지는 시간이 중앙값 약 12초 → 약 5초. 공개 엔드포인트·Vercel 사용량·함수 리전은 배포 담당 확인 필요 (9장, [`experiments/2026-11-14-sky-tile-proxy/`](experiments/2026-11-14-sky-tile-proxy/README.md))
 - [ ] 실시간 처리 구조: 별도 Python API / Next.js Route Handler + 사전 처리 (9장)
   - 참고(rreenactt): 추가 분석 3개는 Next.js Route Handler만으로 FITS 읽기·WCS·재투영·측광을 TypeScript로 처리한다(Python 없음, 저장 없음).
 - [ ] 평가 DB 서비스 (9장)
