@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 | --- | --- |
 | ID | `sky-sonata` |
-| 상태 | 확정 · **1차 구현됨** (3D 하늘 위 버튼으로 여는 팝업, 분석 패널 통합 전) |
+| 상태 | 확정 · **1차 구현됨** (분석 패널 토글에서 열림) |
 | 담당 | 김재현 (`rreenactt`) |
 | 출력 종류 | audio |
 | 최소 SPHEREx 방문 횟수 | 1 (변화 알림은 2 이상) |
@@ -53,7 +53,7 @@
 
 ## 9. 구현 기록 (2026-11-14)
 
-- **위치:** 3D 하늘 위 `Sky Sonata` 버튼 (`app/_components/sky-sonata/`). 탭: Listen / Practice / Rules & sources. 화면 맨 위에 "규칙에 따른 변환이며 우주에서 녹음한 소리가 아님"을 적는다.
+- **위치:** 분석 패널 오른쪽 "Additional analyses"의 토글 (`app/_components/analyses/additional-analyses.tsx`). 패널의 ra/dec·대상 이름·출처를 초기 대상으로 받아 열린다. 예전 `?sonata=` 링크는 패널을 연 뒤 이 분석을 그 소리 설정으로 자동으로 연다 (`app/_components/sky-sonata/`). 탭: Listen / Practice / Rules & sources. 화면 맨 위에 "규칙에 따른 변환이며 우주에서 녹음한 소리가 아님"을 적는다.
 - **데이터:** Fake Planet Lab과 같은 경로로 SPHEREx DR1 노출을 찾고 원본 픽셀(IMAGE·ZODI·VARIANCE·FLAGS·WCS-WAVE)을 바이트 범위로 읽는다. 저장하지 않는다.
 - **광원(원본 픽셀, 화면 대비와 무관):** IMAGE − ZODI − 하늘 중앙값(3σ 클리핑)에서 5σ 이상 봉우리이면서 3×3 합도 S/N ≥ 5인 점. 밝기는 3×3 합(mJy). NONFUNC·MISSING_DATA·HOT·COLD는 건너뛰고, TRANSIENT·SNOWBALL은 봉우리로 쓰지 않는다. 포화 플래그 픽셀이 이어진 영역은 하나의 "포화 광원"으로 묶는다(Barnard's Star 핵 57픽셀 → 1개).
 - **소리 규칙(`sonata-rules-1`, 고정·설명):** 좌우 = 2x − 1, 음높이 f = fMin·(fMax/fMin)^(1−y)(위가 높음, 기본 220–1760 Hz), 밝기 = 로그 압축 음량(상한 있음), 가로 위치 = 스캔 시점(기본 6초). 포화 광원은 네모파(밝기 신뢰 불가), 자료 없음은 낮은 이중 클릭. 측정값과 소리 설정을 분리한다.

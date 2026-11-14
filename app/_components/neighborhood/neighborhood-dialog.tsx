@@ -15,7 +15,7 @@ import { mjdToDecimalYear, modelStatus, skyAt } from "@/app/_lib/nim/motion";
 import { useSpherexSearch } from "../fake-planet-lab/use-fpl-data";
 import { DataTab } from "./data-tab";
 import { STATUS_COLOR } from "./map-3d";
-import { formatYear, NimStateProvider, RANGES, useNim, type RangeMode } from "./nim-state";
+import { formatYear, NimStateProvider, RANGES, useNim, type NimFocus, type RangeMode } from "./nim-state";
 import { SkyView } from "./sky-view";
 import { SpherexTab } from "./spherex-tab";
 
@@ -23,7 +23,7 @@ import { SpherexTab } from "./spherex-tab";
 const Map3D = dynamic(() => import("./map-3d"), { ssr: false });
 
 /** Neighborhood in Motion: nearby stars and brown dwarfs placed in 3D from measured distance and motion. */
-export function NeighborhoodDialog({ trigger }: { trigger?: React.ReactElement }) {
+export function NeighborhoodDialog({ trigger, focus }: { trigger?: React.ReactElement; focus?: NimFocus }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -34,7 +34,7 @@ export function NeighborhoodDialog({ trigger }: { trigger?: React.ReactElement }
           <DialogDescription>Our nearest neighbours placed in 3D from measured distance and motion — past and future positions come from a model, not observations.</DialogDescription>
         </DialogHeader>
         {open && (
-          <NimStateProvider>
+          <NimStateProvider focus={focus}>
             <Body />
           </NimStateProvider>
         )}
@@ -91,7 +91,7 @@ function TimeBar() {
 }
 
 function Body() {
-  const { catalog, selected, models, objects, selectedId, setSelectedId, year, mode, showUncertainty, setShowUncertainty, assumedRv } = useNim();
+  const { catalog, selected, models, objects, selectedId, setSelectedId, year, mode, showUncertainty, setShowUncertainty, assumedRv, focusNote } = useNim();
   const [tab, setTab] = useState("map");
   const [hover, setHover] = useState<string | null>(null);
   const m = selected ? models.get(selected.id) : undefined;
@@ -105,6 +105,7 @@ function Body() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+      {focusNote && <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs">{focusNote}</p>}
       <TimeBar />
       <div className="grid gap-3 md:grid-cols-[14rem_minmax(0,1fr)]">
         <div className="grid content-start gap-2">

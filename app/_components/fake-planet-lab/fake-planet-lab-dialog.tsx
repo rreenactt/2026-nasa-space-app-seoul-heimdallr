@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FPL_EXAMPLES, FplStateProvider, useFpl } from "./fpl-state";
+import { FPL_EXAMPLES, FplStateProvider, useFpl, type FplTarget } from "./fpl-state";
 import { FlagGuideTab, ProvenanceTab, RecordsTab } from "./guide-tabs";
 import { InspectTab } from "./inspect-tab";
 
@@ -24,7 +24,7 @@ const TABS: { id: Tab; label: string; icon: React.ComponentType }[] = [
  * Fake Planet Lab: is a moving-looking dot a real signal, or an image defect / comparison artifact?
  * Shows SPHEREx quality flags, uncertainty and other observations for a clicked position. On-demand data only.
  */
-export function FakePlanetLabDialog({ trigger }: { trigger?: React.ReactElement }) {
+export function FakePlanetLabDialog({ trigger, initialTarget }: { trigger?: React.ReactElement; initialTarget?: FplTarget }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -35,7 +35,7 @@ export function FakePlanetLabDialog({ trigger }: { trigger?: React.ReactElement 
           <DialogDescription>Check whether a dot is a real signal or a defect: quality flags, uncertainty and other observations, with the evidence kept.</DialogDescription>
         </DialogHeader>
         {open && (
-          <FplStateProvider>
+          <FplStateProvider initialTarget={initialTarget}>
             <Body />
           </FplStateProvider>
         )}

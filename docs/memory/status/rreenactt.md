@@ -9,7 +9,7 @@
 
 ## 진행 중
 
-- 브랜치 `feat/sky-sonata`(Neighborhood in Motion 포함): 다섯 분석 모두 3D 하늘 위 버튼으로 열림, 분석 패널(5장)과 연결 전
+- 추가 분석 5개를 분석 패널 "Additional analyses" 토글에 연결 (패널 지점이 초기 대상)
 
 ## 완료
 
@@ -28,4 +28,4 @@
 
 - Comet Breath·Sky Time Machine 화면 문구 영어화
 - Sky Time Machine: SPHEREx 채널을 비교 미션 파장에 자동 맞춤, URL을 `/?ra=&dec=&fov=`로 통일
-- 분석 패널·3I/ATLAS 특별 핀과 연결
+- 3I/ATLAS 특별 핀과 Comet Breath 연결, 링크에 분석·컷아웃 크기 파라미터(팀이 이름 결정)

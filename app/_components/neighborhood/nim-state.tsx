@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/ky";
-import { buildModel, type MotionModel } from "@/app/_lib/nim/motion";
+import { buildModel, skyAt, type MotionModel } from "@/app/_lib/nim/motion";
 import type { NeighborCatalog, NeighborObject } from "@/app/_lib/nim/types";
 
 export type RangeMode = "near" | "extrapolation";
@@ -28,6 +28,8 @@ interface NimState {
   setAssumedRv: (id: string, v: number) => void;
   showUncertainty: boolean;
   setShowUncertainty: (v: boolean) => void;
+  /** Why the current object was (or was not) chosen when opened from the analysis panel. */
+  focusNote: string | null;
 }
 
 function useCatalog() {
@@ -41,7 +43,28 @@ function useCatalog() {
 
 const Ctx = createContext<NimState | null>(null);
 
-export function NimStateProvider({ children }: { children: React.ReactNode }) {
+export interface NimFocus {
+  ra: number;
+  dec: number;
+  name?: string;
+}
+
+/** Nearest catalog object to a sky position, using each object's model position now (2025.8) and at its epoch. */
+export function nearestObject(objects: NeighborObject[], models: Map<string, MotionModel>, f: NimFocus) {
+  let best: { o: NeighborObject; sepDeg: number } | null = null;
+  for (const o of objects) {
+    const m = models.get(o.id);
+    if (!m) continue;
+    for (const p of [skyAt(m, 2025.8), { ra: o.ra, dec: o.dec }]) {
+      const dRa = (((p.ra - f.ra + 540) % 360) - 180) * Math.cos((f.dec * Math.PI) / 180);
+      const sep = Math.hypot(dRa, p.dec - f.dec);
+      if (!best || sep < best.sepDeg) best = { o, sepDeg: sep };
+    }
+  }
+  return best;
+}
+
+export function NimStateProvider({ focus, children }: { focus?: NimFocus; children: React.ReactNode }) {
   const catalog = useCatalog();
   const [selectedId, setSelectedId] = useState("gaia:4472832130942575872");
   const [year, setYear] = useState(2025.8);
@@ -51,6 +74,25 @@ export function NimStateProvider({ children }: { children: React.ReactNode }) {
 
   const objects = useMemo(() => catalog.data?.objects ?? [], [catalog.data]);
   const models = useMemo(() => new Map(objects.map((o) => [o.id, buildModel(o, assumedRv[o.id] ?? 0)])), [objects, assumedRv]);
+  const [focusNote, setFocusNote] = useState<string | null>(null);
+  const [focusApplied, setFocusApplied] = useState(false);
+
+  // Opened from the analysis panel: select the object at that point, if there is one (within 0.1°).
+  useEffect(() => {
+    if (!focus || focusApplied || !objects.length) return;
+    const near = nearestObject(objects, models, focus);
+    /* eslint-disable react-hooks/set-state-in-effect -- one-time selection once the catalog arrives */
+    setFocusApplied(true);
+    if (near && near.sepDeg <= 0.1) {
+      setSelectedId(near.o.id);
+      setFocusNote(`Selected ${near.o.name}, ${(near.sepDeg * 3600).toFixed(0)}″ from the point you opened.`);
+    } else {
+      setFocusNote(
+        `No object of this map (within about 3.6 pc) lies near the point you opened${focus.name ? ` (${focus.name})` : ""}${near ? `; the closest is ${near.o.name}, ${near.sepDeg.toFixed(1)}° away` : ""}.`,
+      );
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [focus, focusApplied, objects, models]);
 
   const value: NimState = {
     catalog,
@@ -70,6 +112,7 @@ export function NimStateProvider({ children }: { children: React.ReactNode }) {
     setAssumedRv: (id, v) => setAssumedRvState((s) => ({ ...s, [id]: v })),
     showUncertainty,
     setShowUncertainty,
+    focusNote,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

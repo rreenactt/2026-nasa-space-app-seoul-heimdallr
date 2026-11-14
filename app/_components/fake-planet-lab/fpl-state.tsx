@@ -84,8 +84,8 @@ export function visitsOf(exposures: FplExposure[]) {
   return out;
 }
 
-export function FplStateProvider({ children }: { children: React.ReactNode }) {
-  const [target, setTargetState] = useState<FplTarget>(FPL_EXAMPLES[0]);
+export function FplStateProvider({ initialTarget, children }: { initialTarget?: FplTarget; children: React.ReactNode }) {
+  const [target, setTargetState] = useState<FplTarget>(initialTarget ?? FPL_EXAMPLES[0]);
   const search = useSpherexSearch(target.ra, target.dec);
   const [detector, setDetectorState] = useState<string>("");
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);

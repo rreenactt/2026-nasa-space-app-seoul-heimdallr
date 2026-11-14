@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 | --- | --- |
 | ID | `neighborhood-in-motion` |
-| 상태 | 확정 · **1차 구현됨** (3D 하늘 위 버튼으로 여는 팝업, 분석 패널 통합 전) |
+| 상태 | 확정 · **1차 구현됨** (분석 패널 토글에서 열림) |
 | 담당 | 김재현 (`rreenactt`) |
 | 출력 종류 | view |
 | 최소 SPHEREx 방문 횟수 | 1 |
@@ -53,7 +53,7 @@ Barnard's Star, Epsilon Indi B, WISE 0855의 위치·거리가 문헌값과 맞�
 
 ## 9. 구현 기록 (2026-11-14)
 
-- **위치:** 3D 하늘 위 `Neighborhood in Motion` 버튼 (`app/_components/neighborhood/`). 탭: 3D map / Sky view / SPHEREx / Data & model. 시간 막대는 "관측 부근(1800–2250)"과 "외삽(기원전 10,000 – 서기 32,000, 교육용)"을 나눠 둔다.
+- **위치:** 분석 패널 오른쪽 "Additional analyses"의 토글 (`app/_components/analyses/additional-analyses.tsx`). 패널의 ra/dec·대상 이름·출처를 초기 대상으로 받아 열린다. 그 지점에서 0.1° 안의 지도 천체를 자동으로 고르고(예: Barnard's Star, ε Indi B 핀 → B), 없으면 가장 가까운 천체와 거리를 알린다 (`app/_components/neighborhood/`). 탭: 3D map / Sky view / SPHEREx / Data & model. 시간 막대는 "관측 부근(1800–2250)"과 "외삽(기원전 10,000 – 서기 32,000, 교육용)"을 나눠 둔다.
 - **천체 (21개):** Gaia DR3에서 시차 > 280 mas(약 3.6 pc 이내) 18개와 ε Indi A·B를 매번 조회한다(ESA Gaia Archive 우선, 결정 #27). Gaia에는 이름이 없어, `source_id`마다 위치·시차·밝기로 확인한 이름을 붙였다(`app/_lib/nim/catalog.ts`). WISE 0855는 Gaia에 없어 Luhman & Esplin 2014 (arXiv:1409.5899v1) Table 2의 시차 0.433±0.015″·고유운동 (−8.10±0.02, 0.70±0.02)″/년과 Table 1의 2014.50 Spitzer 위치를 쓴다.
 - **측정값과 가정 분리:** 시선속도가 없는 6개(WISE 0855, Wolf 359, Sirius B, ε Eridani, Ross 128, ε Indi B)는 값을 0으로 저장하지 않고, 경로를 계산할 때만 가정값(기본 0 km/s, 사용자가 바꿀 수 있음)을 쓴다. 이런 천체의 미래 경로는 점선·주황색이다.
 - **주의 표시:** RUWE가 큰 천체(Luyten 726-8 두 성분 10–12, ε Indi B 4.3, ε Eridani 2.7, Sirius B 2.4)에 쌍성 영향을 적는다. ε Indi B는 Ba+Bb 미분해 단일 해이며 주성(A)의 운동을 빌려 쓰지 않고, 궤도 운동은 그리지 않는다. Luyten 726-8 성분은 A/B로 단정하지 않는다.
