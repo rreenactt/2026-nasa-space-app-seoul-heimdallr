@@ -10,7 +10,6 @@
 | [`fake-planet-lab`](fake-planet-lab.md) | Fake Planet Lab | overlay, text | 1 | 모든 좌표 | 추가 분석 목록 | 중 | 확정 | |
 | [`neighborhood-in-motion`](neighborhood-in-motion.md) | Neighborhood in Motion | view | 1 | 시차를 아는 근접 천체 | 추가 분석 목록 (조건부) | 중 | 확정 | |
 | [`sky-sonata`](sky-sonata.md) | Sky Sonata | audio | 1 | 모든 좌표 | 추가 분석 목록 | 하 | 확정 | |
-| [`blink-arena`](blink-arena.md) | Blink Arena | view | 2 | 여러 후보 카드 | **별도 화면 권장** | 하~중 | 확정 · 배치 논의 | |
 | [`comet-breath`](comet-breath.md) | Comet Breath | view, chart | - | 3I/ATLAS만 | **특별 대상 페이지 권장** | 중 | 확정 · 배치 논의 | |
 
 - **ID:** 영문 소문자와 하이픈. URL·캐시·파일 이름에 그대로 쓰인다.
@@ -19,8 +18,13 @@
 
 ## 배치 논의가 필요한 기법
 
-- **Blink Arena:** 좌표 하나를 분석하는 기능이 아니라 여러 후보 카드를 연속으로 판정하는 게임 모드다. 메인 화면의 별도 진입점("판정 게임")으로 두고, 판정 결과는 기능 B 평가 DB에 함께 저장하는 방식을 권장한다.
 - **Comet Breath:** 3I/ATLAS 전용 데이터셋으로만 동작한다. 추가 분석 목록에 두면 대부분의 좌표에서 비활성화되므로, 하늘에 3I/ATLAS 특별 핀을 두고 그 핀에서 진입하는 방식을 권장한다.
+
+## 보류 (추가 분석 아님, 기본 구현에서 제외)
+
+| ID | 이름 | 이유 |
+| --- | --- | --- |
+| [`blink-arena`](blink-arena.md) | Blink Arena | 좌표 하나가 아니라 여러 후보 카드를 연속으로 판정하는 웹 게임. 시간이 남으면 붙이는 선택 기능 |
 
 ## 새 기법 추가 방법
 
@@ -31,4 +35,4 @@
 
 ## 출처
 
-기법 선정: 팀 아이디어 쇼케이스 문서 "Planet X and SPHEREx 해커톤 프로젝트 아이디어 13선" 중 6개.
+기법 선정: 팀 아이디어 쇼케이스 문서 "Planet X and SPHEREx 해커톤 프로젝트 아이디어 13선" 중 6개. 이 중 Blink Arena는 추가 분석이 아니라서 목록에서 뺐다 (아래 "보류").

@@ -15,3 +15,4 @@
 | 2026-11-14 | ansirh | Claude Code | 기획 문서 커밋, 문서 간 불일치 검토, 평가 선택지 이름 통일, MIT `LICENSE` 추가 | `docs/`, `LICENSE`, `README.md` | 허한결 지시, 검토 필요 |
 | 2026-11-14 | ansirh | Claude Code | SPHEREx 방문 1회 상태를 "추가 분석 필요"로 바꾸고 평가 허용, 방문 개념 조사·설명 | `docs/` | 허한결 지시, 검토 필요 |
 | 2026-11-14 | ansirh | Claude Code | 다른 탐사와의 비교 규칙 정리, 프레임 합산 조건·방문 1회 평가 집계 반영, `AGENTS.md` 원칙 4 수정 | `AGENTS.md`, `docs/` | 허한결 지시, 검토 필요 |
+| 2026-11-14 | ansirh | Claude Code | Blink Arena 구조 검토, 추가 분석에서 빼고 보류 처리 | `docs/` | 허한결 지시, 검토 필요 |

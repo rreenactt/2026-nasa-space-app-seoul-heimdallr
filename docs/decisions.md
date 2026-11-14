@@ -13,7 +13,7 @@
 | 5 | 2026-11-14 | 분석 패널은 좌우 분할: 왼쪽 이미지 고정, 오른쪽 요약·평가·추가 분석 | 결과를 볼 때도 이미지와 대조 가능 | `PLAN.md` 5장 | 유효 |
 | 6 | 2026-11-14 | 평가는 3지선다, 평가 전 집계 숨김, 추가 분석 없이도 평가 가능 | 쏠림 방지, 진입 장벽 낮추기 | `PLAN.md` 8장 | 유효 |
 | 7 | 2026-11-14 | 기능 A는 배치 단위로 점점 늘리고, 평가가 낮은 후보는 주기적으로 추천에서 제외(삭제 아님) | 전천 분석 불가능, 잘못된 평가로 사라진 후보를 되돌릴 수 있게 | `PLAN.md` 7장 | 유효 |
-| 8 | 2026-11-14 | 추가 분석 6개 확정: Sky Time Machine, Blink Arena, Fake Planet Lab, Comet Breath, Neighborhood in Motion, Sky Sonata | 팀원 조사 결과 | `analyses/README.md` | 유효 |
+| 8 | 2026-11-14 | 추가 분석 6개 확정: Sky Time Machine, Blink Arena, Fake Planet Lab, Comet Breath, Neighborhood in Motion, Sky Sonata | 팀원 조사 결과 | `analyses/README.md` | 대체됨 (#18) |
 | 9 | 2026-11-14 | 데이터 관리: 임의 좌표는 실시간 + 캐시, 후보·테스트 대상은 사전 저장, 원본 FITS는 저장 안 함 | 저장 비용 절약, IRSA 장애에도 데모 가능 | `PLAN.md` 9장 | 유효 |
 | 10 | 2026-11-14 | 팀 공통 AI 메모리는 레포(`AGENTS.md`, `docs/memory/`)에서 관리, 개인 지시·메모는 레포에 올리지 않음 | 팀원 모두 AI 사용(Claude Code, ChatGPT), 공통 맥락 공유 | `AGENTS.md` | 유효 |
 | 11 | 2026-11-14 | 웹은 Next.js 16 App Router 기반, `main` 푸시 시 Vercel 배포 | 레포 기본 구성(이순형 작성) | `AGENTS.md`, `README.md` | 유효 |
@@ -23,3 +23,4 @@
 | 15 | 2026-11-14 | `AGENTS.md` 절대 원칙 4를 "관측이 부족하면 부족하다고 표시 (SPHEREx 방문 1회는 '추가 분석 필요'), 없는 관측을 지어내 채우지 않음"으로 수정 | #14와 맞춤. 원칙의 핵심(지어내지 않기)은 유지 | `AGENTS.md` | 유효 |
 | 16 | 2026-11-14 | 다른 탐사(2MASS·WISE·Gaia)와는 위치(움직임)만 비교하고 밝기·차분은 SPHEREx끼리만. 비교 시 파장이 가까운 SPHEREx 채널 사용. 같은 방문 안의 프레임 합산도 같은 검출기·파장 허용치 안에서만 | 위치는 파장과 거의 무관하지만 밝기는 파장마다 다름. 절대 원칙 3과 맞춤 | `PLAN.md` 4장, `analyses/sky-time-machine.md` | 유효 |
 | 17 | 2026-11-14 | SPHEREx 방문 1회 지점의 평가도 같은 집계에 합치고, 평가마다 방문 횟수를 저장해 나중에 나눠 볼 수 있게 함 | 외부 데이터와의 위치 비교도 타당한 근거 (#16) | `PLAN.md` 8장 | 유효 |
+| 18 | 2026-11-14 | 추가 분석은 5개: Sky Time Machine, Fake Planet Lab, Comet Breath, Neighborhood in Motion, Sky Sonata. Blink Arena는 추가 분석이 아니라서 빼고 기본 구현에서도 제외(보류, 선택 기능) | 좌표 하나에 대한 분석이 아님. 빠른 판정이라 패널 평가와 같은 무게로 셀 수 없어 설계가 더 필요함. 기본 구조를 먼저 완성 | `PLAN.md` 6·8·11·14장, `analyses/README.md`, `analyses/blink-arena.md`, `memory/direction.md` | 유효 |
