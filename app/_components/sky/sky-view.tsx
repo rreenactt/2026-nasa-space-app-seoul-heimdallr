@@ -15,12 +15,26 @@ export type Flight = SkyView & { id: number };
 /** Overlays that can be switched off; the sky image itself always shows. */
 export type SkyLayers = { pins: boolean; constellations: boolean; grid: boolean };
 
+/** What a painter gets on each redraw: a sky-to-screen projection (null beyond the view) and the view size. */
+export type SkyPaintFrame = {
+  project: (ra: number, dec: number) => [number, number] | null;
+  fov: number;
+  width: number;
+  height: number;
+};
+/** Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes. */
+export type SkyPainter = (context: CanvasRenderingContext2D, frame: SkyPaintFrame) => void;
+
 type SkyViewProps = {
   initialView: SkyView;
   flight: Flight | null;
   layers: SkyLayers;
+  /** Candidate marks, density cells and opened places (candidate-layer.ts). */
+  painter?: SkyPainter;
   onCursorMove: (cursor: EquatorialCoordinates | null) => void;
   onFovChange: (fov: number) => void;
+  /** A flight reached its destination (not called when another flight or a drag cut it short). */
+  onFlightEnd?: (id: number) => void;
   /** A click (not a drag) at any field of view, with the test target when it landed on that target's pin. */
   onSelect: (point: EquatorialCoordinates, fov: number, target?: TestTarget) => void;
   onError: (message: string) => void;
@@ -52,26 +66,35 @@ export default function SkyView({
   initialView,
   flight,
   layers,
+  painter,
   onCursorMove,
   onFovChange,
+  onFlightEnd,
   onSelect,
   onError,
 }: SkyViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const reticle = useRef<HTMLDivElement>(null);
   const linesCanvas = useRef<HTMLCanvasElement>(null);
+  const markCanvas = useRef<HTMLCanvasElement>(null);
+  const painterRef = useRef(painter);
+  const painterVersion = useRef(0);
   const aladinRef = useRef<Aladin | null>(null);
   const pinsRef = useRef<Catalog | null>(null);
   const layersRef = useRef(layers);
   const pendingFlight = useRef<Flight | null>(null);
   /** Cancels the flight in progress, if any. */
   const stopFlight = useRef<() => void>(() => {});
-  const callbacks = useRef({ onCursorMove, onFovChange, onSelect, onError });
+  const callbacks = useRef({ onCursorMove, onFovChange, onFlightEnd, onSelect, onError });
   const startView = useRef(initialView);
 
   useEffect(() => {
-    callbacks.current = { onCursorMove, onFovChange, onSelect, onError };
+    callbacks.current = { onCursorMove, onFovChange, onFlightEnd, onSelect, onError };
   });
+  useEffect(() => {
+    painterRef.current = painter;
+    painterVersion.current += 1;
+  }, [painter]);
 
   useEffect(() => {
     const element = container.current;
@@ -124,6 +147,7 @@ export default function SkyView({
         // steps during a zoom. The constellation lines are redrawn only on frames where the view moved, zoomed, or
         // resized.
         let drawnFor = "";
+        let paintedFor = "";
         let placedFor = "";
         let reportedFor = "";
         const onFrame = () => {
@@ -140,6 +164,23 @@ export default function SkyView({
           if (canvas && key !== drawnFor) {
             drawnFor = key;
             drawConstellations(canvas, aladin, element.clientWidth, element.clientHeight);
+          }
+          const marks = markCanvas.current;
+          const markKey = `${key} ${painterVersion.current}`;
+          if (marks && markKey !== paintedFor) {
+            paintedFor = markKey;
+            const context = prepareCanvas(marks, element.clientWidth, element.clientHeight);
+            if (context && painterRef.current) {
+              painterRef.current(context, {
+                project: (ra, dec) => {
+                  const pixel = aladin.world2pix(ra, dec);
+                  return pixel ? [pixel[0], pixel[1]] : null;
+                },
+                fov: width,
+                width: element.clientWidth,
+                height: element.clientHeight,
+              });
+            }
           }
           const square = reticle.current;
           if (!square) return;
@@ -189,7 +230,8 @@ export default function SkyView({
 
         aladinRef.current = aladin;
         callbacks.current.onFovChange(fov);
-        if (pendingFlight.current) stopFlight.current = fly(aladin, pendingFlight.current);
+        const pending = pendingFlight.current;
+        if (pending) stopFlight.current = fly(aladin, pending, () => callbacks.current.onFlightEnd?.(pending.id));
       })
       .catch((error: unknown) => {
         if (!cancelled) callbacks.current.onError(String(error));
@@ -227,7 +269,7 @@ export default function SkyView({
       return;
     }
     stopFlight.current();
-    stopFlight.current = fly(aladinRef.current, flight);
+    stopFlight.current = fly(aladinRef.current, flight, () => callbacks.current.onFlightEnd?.(flight.id));
   }, [flight]);
 
   // Aladin Lite restyles the element it is given (position included), so it gets an inner element that fills a
@@ -240,6 +282,7 @@ export default function SkyView({
         aria-hidden
         className={cn("pointer-events-none absolute inset-0 h-full w-full", !layers.constellations && "hidden")}
       />
+      <canvas ref={markCanvas} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
       {/* Aiming square the size of the analysis cutout; clicking opens the analysis panel for that point. */}
       <div
         ref={reticle}
@@ -254,6 +297,20 @@ function applyLayers(aladin: Aladin, pins: Catalog, layers: SkyLayers) {
   if (layers.pins) pins.show();
   else pins.hide();
   aladin.setCooGrid({ enabled: layers.grid });
+}
+
+/** Sizes a canvas to its box at the device pixel ratio and clears it; returns a context in CSS pixels. */
+function prepareCanvas(canvas: HTMLCanvasElement, width: number, height: number) {
+  const ratio = window.devicePixelRatio || 1;
+  if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+  }
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.clearRect(0, 0, width, height);
+  return context;
 }
 
 function drawConstellations(canvas: HTMLCanvasElement, aladin: Aladin, width: number, height: number) {
@@ -300,7 +357,7 @@ const FLIGHT_MAX_SECONDS = 2.2;
  * Aladin's own animateToRaDec and zoomToFoV run separately, pan at a constant angular speed (fast on screen when zoomed
  * in), and step the zoom on a 50 ms timer, which is what made flights stutter.
  */
-function fly(aladin: Aladin, { ra, dec, fov }: Flight): () => void {
+function fly(aladin: Aladin, { ra, dec, fov }: Flight, onDone: () => void): () => void {
   const [startRa, startDec] = aladin.getRaDec();
   const [startFov] = aladin.getFov();
   const endFov = Math.min(Math.max(fov, MIN_FOV), MAX_FOV);
@@ -316,6 +373,7 @@ function fly(aladin: Aladin, { ra, dec, fov }: Flight): () => void {
     aladin.gotoRaDec(stepRa, stepDec);
     aladin.setFoV(t < 1 ? Math.min(Math.max(width, MIN_FOV), MAX_FOV) : endFov);
     if (t < 1) frame = requestAnimationFrame(step);
+    else onDone();
   };
   frame = requestAnimationFrame(step);
   return () => cancelAnimationFrame(frame);

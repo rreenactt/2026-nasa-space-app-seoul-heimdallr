@@ -29,7 +29,9 @@ type AnalysisPanelProps = {
 export function AnalysisPanel({ selection, onClose, autoOpen, next }: AnalysisPanelProps) {
   return (
     <Dialog open={selection !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="dark grid h-[min(760px,calc(100dvh-4rem))] w-[min(1200px,calc(100vw-4rem))] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
+      {/* Inside the frame (56px band on top, 12px at the sides and bottom; Figma "I · Frame states · Analysis open"),
+          over the sky the frame darkens by 45%. Only the placement is set here; the panel body is unchanged. */}
+      <DialogContent className="dark top-[calc(50%+22px)] grid h-[min(760px,calc(100dvh-100px))] w-[min(1200px,calc(100vw-56px))] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
         {/* Keyed by the point: "Next" swaps the place while the panel stays open, and every part starts fresh. */}
         {selection && (
           <PanelBody key={`${selection.ra} ${selection.dec}`} selection={selection} autoOpen={autoOpen} next={next} />

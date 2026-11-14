@@ -29,3 +29,25 @@
   /* Monospace text uses the system's monospace fonts, so the build downloads no font */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
+
+/*
+ * Interface tokens from the Figma design ("HEIMDALLR UI"): a black page, white and grey steps, one signal color.
+ * Values come from the CSS of the reference sites (Anduril neutrals, SpaceX whites, Eyes on the Solar System greys).
+ */
+@theme inline {
+  --font-display: var(--font-display-face), var(--font-sans);
+  --font-data: var(--font-data-face), var(--font-mono);
+  --font-ui: var(--font-ui-face), var(--font-sans);
+
+  --color-ink: #010101;
+  --color-paper: #f0f0fa;
+  --color-bone: #f1f0ea;
+  --color-ash: #b0b0a9;
+  --color-smoke: #6c6e6b;
+  --color-rule: #2f3234;
+  --color-mist: #c6c6c9;
+  --color-signal: #fbde7e;
+  --color-signal-deep: #523808;
+
+  --ease-out-expo: cubic-bezier(0.2, 0.2, 0, 1);
+}

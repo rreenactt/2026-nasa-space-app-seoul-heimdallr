@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans } from "next/font/google";
+import { Fragment_Mono, Host_Grotesk, Michroma, Noto_Sans } from "next/font/google";
 import "./globals.css";
 import { env } from "@/config/env";
 import { cn } from "cn";
@@ -12,6 +12,12 @@ import { QueryProvider } from "@/components/query-provider";
 // --font-noto-sans after them. Not preloaded, so a page downloads it only when it shows such characters.
 const notoSans = Noto_Sans({ variable: "--font-noto-sans", preload: false, adjustFontFallback: false });
 
+// Interface fonts from the Figma design ("HEIMDALLR UI"): a wide face for the wordmark, a monospace for tabs and data,
+// a grotesk for interface text. Only elements with font-display, font-data or font-ui use them.
+const display = Michroma({ variable: "--font-display-face", weight: "400", subsets: ["latin"] });
+const data = Fragment_Mono({ variable: "--font-data-face", weight: "400", subsets: ["latin"] });
+const ui = Host_Grotesk({ variable: "--font-ui-face", subsets: ["latin"] });
+
 export const metadata: Metadata = {
   title: { default: env.appName, template: `%s | ${env.appName}` },
   description: "Full-stack web application built on the Next.js App Router",
@@ -21,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", "font-sans", notoSans.variable)}
+      className={cn("h-full", "antialiased", "font-sans", notoSans.variable, display.variable, data.variable, ui.variable)}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
