@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,28 +19,49 @@ type AnalysisPanelProps = {
   onClose: () => void;
   /** Opens one additional analysis right away (older `?stm=` / `?sonata=` links). */
   autoOpen?: AutoOpenAnalysis;
+  /** The next place in the review order (test targets, then movement candidates), if any. */
+  next?: { name: string; go: () => void };
 };
 
 /**
  * Overlay over the sky for one point (PLAN.md chapter 5): images on the left, summary, rating and additional analyses
  * on the right. This is the shell; each part says plainly that it is not connected yet instead of showing made-up data.
  */
-export function AnalysisPanel({ selection, onClose, autoOpen }: AnalysisPanelProps) {
+export function AnalysisPanel({ selection, onClose, autoOpen, next }: AnalysisPanelProps) {
   return (
     <Dialog open={selection !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="dark grid h-[min(760px,calc(100dvh-4rem))] w-[min(1200px,calc(100vw-4rem))] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
-        {selection && <PanelBody selection={selection} autoOpen={autoOpen} />}
+        {/* Keyed by the point: "Next" swaps the place while the panel stays open, and every part starts fresh. */}
+        {selection && (
+          <PanelBody key={`${selection.ra} ${selection.dec}`} selection={selection} autoOpen={autoOpen} next={next} />
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function PanelBody({ selection, autoOpen }: { selection: SkySelection; autoOpen?: AutoOpenAnalysis }) {
+function PanelBody({
+  selection,
+  autoOpen,
+  next,
+}: {
+  selection: SkySelection;
+  autoOpen?: AutoOpenAnalysis;
+  next?: AnalysisPanelProps["next"];
+}) {
   const { ra, dec, target } = selection;
   return (
     <>
       <DialogHeader className="border-b px-6 pt-5 pb-4">
-        <DialogTitle className="text-lg">{target?.name ?? "Selected point"}</DialogTitle>
+        <div className="flex items-center gap-3 pr-8">
+          <DialogTitle className="text-lg">{target?.name ?? "Selected point"}</DialogTitle>
+          {next && (
+            <Button variant="outline" size="sm" className="ml-auto" onClick={next.go}>
+              Next: {next.name}
+              <ArrowRightIcon />
+            </Button>
+          )}
+        </div>
         <DialogDescription className="font-mono text-xs">
           RA {formatRa(ra)} · Dec {formatDec(dec)} (ICRS) · {ra.toFixed(5)}°, {dec.toFixed(5)}°
         </DialogDescription>
