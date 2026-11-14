@@ -6,20 +6,39 @@ import type { AutoOpenAnalysis } from "../analyses/additional-analyses";
 import { AnalysisPanel } from "./analysis-panel";
 import { AIM_FOV, CLICK_ZOOM_FOV, INITIAL_VIEW, MAX_FOV, MIN_FOV, SKY_SURVEY, TARGET_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";
-import { type EquatorialCoordinates, formatDec, formatRa, type SkyView as SkyViewState } from "./sky-coordinates";
+import {
+  clamp,
+  type EquatorialCoordinates,
+  formatDec,
+  formatRa,
+  normalizeRa,
+  type SkyView as SkyViewState,
+} from "./sky-coordinates";
 import {
   ALL_CANDIDATES,
   type CandidateFilter,
+  MOVEMENT_CANDIDATES,
   findReviewEntry,
   nextReviewEntry,
   type ReviewEntry,
   reviewQueue,
 } from "./review-queue";
-import { SkySearchBox } from "./sky-search-box";
-import { SkyControls } from "./sky-controls";
+import { EyeIcon, ListIcon } from "lucide-react";
+import { cn } from "cn";
+import { Keycap } from "../site/keycap";
+import { DEFAULT_OVERLAYS, type SkyOverlays, skyLayers } from "./overlays";
+import { SkyIntro } from "./sky-intro";
+import { ShortcutSheet, useSkyShortcuts } from "./sky-shortcuts";
+import { SiteHeader } from "../site/site-header";
+import { SkyFrame } from "./sky-frame";
+import { SkyHeaderActions } from "./sky-header-actions";
+import { ShowOnSky, SkyTools } from "./sky-tools";
 import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
-import type { Flight, SkyLayers } from "./sky-view";
-import { TargetList } from "./target-list";
+import type { Flight, SkyPainter } from "./sky-view";
+import { FovScale } from "./fov-scale";
+import { paintCandidates } from "./candidate-layer";
+import { recordPlace, usePlaceHistory } from "./place-history";
+import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
 import { findTestTarget, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
 
@@ -51,7 +70,41 @@ export function SkyExplorer({
   // A shared link's analysis opens only for the panel it came with, not for every place opened afterwards.
   const [linkedAnalysis, setLinkedAnalysis] = useState(autoOpen);
   const [candidateFilter, setCandidateFilter] = useState<CandidateFilter>(ALL_CANDIDATES);
-  const [layers, setLayers] = useState<SkyLayers>({ pins: true, constellations: true, grid: true });
+  const [overlays, setOverlays] = useStoredOverlays();
+  const layers = useMemo(() => skyLayers(overlays), [overlays]);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const opened = usePlaceHistory();
+  // A place being flown to: the frame closes in and a ring marks it; the panel opens when the camera lands
+  // (Figma "I · Frame states · Flying to a target").
+  const [flyingTo, setFlyingTo] = useState<(SkySelection & { id: number }) | null>(null);
+  const flyingRef = useRef(flyingTo);
+  useEffect(() => {
+    flyingRef.current = flyingTo;
+  }, [flyingTo]);
+  const painter = useMemo<SkyPainter>(
+    () => (context, frame) =>
+      paintCandidates(context, frame, {
+        candidates: MOVEMENT_CANDIDATES,
+        overlays,
+        opened,
+        selected: flyingTo ?? selection,
+      }),
+    [overlays, opened, selection, flyingTo],
+  );
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const foldQueue = useCallback(() => setQueueOpen(false), []);
+  // A drag takes the view back: the queue folds and a flight in progress is abandoned (its panel does not open).
+  const onDragStart = useCallback(() => {
+    setQueueOpen(false);
+    setFlyingTo(null);
+  }, []);
+  const dragging = useSkyDrag(onDragStart);
+  // The frame comes in for a scene (flying to a place, the queue open, a place open) and stays off while looking
+  // around or in full screen (decision #38, Figma "I · Frame states").
+  const framed = !fullscreen && (selection !== null || queueOpen || flyingTo !== null);
   const flightId = useRef(0);
   const selectionRef = useRef(selection);
   useEffect(() => {
@@ -66,6 +119,7 @@ export function SkyExplorer({
   const openPanel = useCallback((next: SkySelection) => {
     setSelection(next);
     setLinkedAnalysis(undefined);
+    recordPlace({ ra: next.ra, dec: next.dec, name: next.target?.name });
     window.history.replaceState(null, "", selectionUrl(next));
   }, []);
   const closePanel = useCallback(() => {
@@ -105,15 +159,37 @@ export function SkyExplorer({
     setFlight({ ra: view.ra, dec: view.dec, fov, id: flightId.current });
   }, []);
 
-  // A test target or a searched point: fly there and open the panel, which the flight shows through.
-  const goTo = useCallback(
-    (point: EquatorialCoordinates, target?: TestTarget) => {
-      flightId.current += 1;
-      setFlight({ ...point, fov: TARGET_FOV, id: flightId.current });
-      openPanel({ ...point, fov: TARGET_FOV, target: target ?? findTestTarget(point) });
+  // A test target, a queue row, Next or a searched point: close any open panel, fly there with the frame on, and open
+  // the panel once the camera lands.
+  const goTo = useCallback((point: EquatorialCoordinates, target?: TestTarget) => {
+    flightId.current += 1;
+    const id = flightId.current;
+    setSelection(null);
+    setFlight({ ...point, fov: TARGET_FOV, id });
+    setFlyingTo({ ...point, fov: TARGET_FOV, target: target ?? findTestTarget(point), id });
+  }, []);
+  const onFlightEnd = useCallback(
+    (id: number) => {
+      const flying = flyingRef.current;
+      if (!flying) return;
+      // Another flight (zoom, pan, back to the first view) replaced this one: the place is not opened.
+      if (flying.id !== id) {
+        setFlyingTo(null);
+        return;
+      }
+      setFlyingTo(null);
+      openPanel({ ra: flying.ra, dec: flying.dec, fov: flying.fov, target: flying.target });
     },
     [openPanel],
   );
+  // A wheel zoom also takes the view back from a flight, which then never lands.
+  useEffect(() => {
+    const onWheel = (event: WheelEvent) => {
+      if (event.target instanceof Element && event.target.closest("[data-sky-surface]")) setFlyingTo(null);
+    };
+    window.addEventListener("wheel", onWheel, { capture: true, passive: true });
+    return () => window.removeEventListener("wheel", onWheel, { capture: true });
+  }, []);
   const goToTarget = useCallback((target: TestTarget) => goTo(target, target), [goTo]);
   // Too wide to aim: a click on empty sky only zooms in on that point. At 90° one screen pixel is about 3′, as large as
   // the analysis cutout, so the panel opens on the next click, once the user can see what they are picking.
@@ -142,42 +218,192 @@ export function SkyExplorer({
     [nextEntry, goToEntry],
   );
 
+  // Opening the queue, Next, or a shared candidate link turns candidates back on (decision #40).
+  const showCandidates = useCallback(
+    () => setOverlays((value) => (value.candidates ? value : { ...value, candidates: true })),
+    [setOverlays],
+  );
+  const toggleQueue = useCallback(() => {
+    setQueueOpen((open) => !open);
+    showCandidates();
+  }, [showCandidates]);
+  const step = useCallback(
+    (direction: 1 | -1) => {
+      if (queue.length === 0) return;
+      const index = currentEntry ? queue.findIndex((entry) => entry.id === currentEntry.id) : -1;
+      const target = queue[(index + direction + queue.length) % queue.length] ?? queue[0];
+      showCandidates();
+      goToEntry(target);
+    },
+    [queue, currentEntry, goToEntry, showCandidates],
+  );
+  const pan = useCallback((dx: number, dy: number) => {
+    const view = getView();
+    if (!view) return;
+    const stepDeg = view.fov * 0.15;
+    const dec = clamp(view.dec + dy * stepDeg, -90, 90);
+    const ra = normalizeRa(view.ra - (dx * stepDeg) / Math.max(Math.cos((view.dec * Math.PI) / 180), 0.05));
+    flightId.current += 1;
+    setFlight({ ra, dec, fov: view.fov, id: flightId.current });
+  }, []);
+
+  const goHome = useCallback(() => {
+    flightId.current += 1;
+    setFlight({ ...INITIAL_VIEW, id: flightId.current });
+  }, []);
+
+  // Full screen keeps the frame off until it is left again.
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement !== null);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen().catch(() => undefined);
+  }, []);
+
+  useSkyShortcuts(
+    {
+      zoom: zoomBy,
+      pan,
+      fullscreen: toggleFullscreen,
+      queue: toggleQueue,
+      next: () => step(1),
+      previous: () => step(-1),
+      analyzeCenter: () => {
+        const view = getView();
+        if (view) selectPoint(view, view.fov);
+      },
+      candidates: () => setOverlays((value) => ({ ...value, candidates: !value.candidates })),
+      layers: () => setLayersOpen((open) => !open),
+      search: () => setSearchOpen(true),
+      help: () => setShortcutsOpen(true),
+      escape: () => {
+        if (layersOpen) setLayersOpen(false);
+        else if (searchOpen) setSearchOpen(false);
+        else if (queueOpen) setQueueOpen(false);
+      },
+    },
+    // The analysis panel and the shortcut sheet are dialogs with their own keys.
+    selection === null && !shortcutsOpen,
+  );
+
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-black text-white">
-      <SkyView
-        initialView={startView}
-        flight={flight}
-        layers={layers}
-        onCursorMove={setCursor}
-        onFovChange={onFovChange}
-        onSelect={selectPoint}
-        onError={setError}
-      />
-      {/* Top-left column: the search box (and any search message below it), then the places to analyze. */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2">
-        <SkySearchBox onTarget={goToTarget} onPoint={goTo} />
-        <TargetList
-          queue={queue}
-          currentId={currentEntry?.id}
-          filter={candidateFilter}
-          onFilterChange={setCandidateFilter}
-          onSelect={goToEntry}
+    <div data-sky-framed={framed} className="relative h-dvh w-full overflow-hidden bg-ink text-paper">
+      <div data-sky-surface className="absolute inset-0">
+        <SkyView
+          initialView={startView}
+          flight={flight}
+          layers={layers}
+          painter={painter}
+          onCursorMove={setCursor}
+          onFovChange={onFovChange}
+          onFlightEnd={onFlightEnd}
+          onSelect={selectPoint}
+          onError={setError}
         />
       </div>
-      <CursorReadout aiming={aiming} />
-      <div className="absolute top-4 right-4 z-10">
-        <SkyControls layers={layers} onLayersChange={setLayers} onZoom={zoomBy} />
+      <SkyFrame on={framed} dim={selection !== null} />
+      <SiteHeader
+        className={cn(
+          "absolute inset-x-0 top-0 z-20 transition-opacity duration-300",
+          framed || searchOpen
+            ? "opacity-100"
+            : dragging
+              ? "pointer-events-none opacity-0"
+              : "opacity-70 hover:opacity-100 focus-within:opacity-100",
+        )}
+        actions={
+          <SkyHeaderActions
+            onTarget={goToTarget}
+            onPoint={goTo}
+            searchOpen={searchOpen}
+            onSearchOpenChange={setSearchOpen}
+            menuExtra={[{ label: "Keyboard shortcuts", key: "?", onSelect: () => setShortcutsOpen(true) }]}
+          />
+        }
+      />
+      {/* Everything anchored to the sky sits in this box, which shrinks with the frame. */}
+      <div
+        className={cn(
+          "pointer-events-none absolute z-10 font-ui transition-[inset] ease-out-expo",
+          framed ? "inset-[56px_12px_12px_12px] duration-500" : "inset-[56px_0_0_0] duration-250",
+        )}
+      >
+        {/* Reviewing (Figma "I · Frame states · Reviewing"): the queue takes the button's place inside the frame,
+            nearly full height, and "How to rate" sits at the top right. */}
+        {queueOpen ? (
+          <>
+            <div className="pointer-events-auto absolute top-4 bottom-[76px] left-4">
+              <ReviewQueuePanel
+                queue={queue}
+                currentId={currentEntry?.id}
+                filter={candidateFilter}
+                onFilterChange={setCandidateFilter}
+                onSelect={goToEntry}
+                onOpenPlace={goTo}
+                onClose={foldQueue}
+              />
+            </div>
+            <div className="pointer-events-auto absolute top-4 right-4">
+              <RatingGuide />
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={toggleQueue}
+            className="pointer-events-auto absolute top-3 left-4 flex h-8 items-center gap-2 rounded-sm bg-ink/80 px-2.5 text-[13px] font-medium text-paper transition-colors hover:bg-ink"
+          >
+            <ListIcon className="size-4 stroke-[1.5]" aria-hidden />
+            Review queue
+            <Keycap className="ml-3">Q</Keycap>
+          </button>
+        )}
+        <div className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2">
+          <SkyTools
+            onZoom={zoomBy}
+            onHome={goHome}
+            fullscreen={fullscreen}
+            onFullscreen={toggleFullscreen}
+            layersOpen={layersOpen}
+            onLayersOpenChange={setLayersOpen}
+            layersPanel={<ShowOnSky overlays={overlays} onChange={setOverlays} onClose={() => setLayersOpen(false)} />}
+          />
+        </div>
+        <CursorReadout aiming={aiming} />
+        <FovScale hidden={framed} />
+        {!overlays.candidates && (
+          <button
+            type="button"
+            onClick={showCandidates}
+            className="absolute bottom-16 left-6 flex items-center gap-2 rounded-sm bg-ink/85 px-3 py-1.5 text-xs text-bone hover:text-paper"
+          >
+            <EyeIcon className="size-3.5 stroke-[1.5]" aria-hidden />
+            Candidates hidden
+            <span className="text-ash">·</span>
+            Show
+            <Keycap>C</Keycap>
+          </button>
+        )}
+        {/* The credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
+        <div className="absolute right-4 bottom-9 max-w-md text-right text-xs leading-5">
+          {SKY_SURVEY.notice && <p className="font-medium text-signal">{SKY_SURVEY.notice}</p>}
+          <p className="text-ash">{SKY_SURVEY.credit}</p>
+        </div>
       </div>
       {error && (
-        <p role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md bg-red-950/80 px-3 py-2 text-sm">
+        <p
+          role="alert"
+          className="absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded-sm bg-red-950/80 px-3 py-2 text-sm"
+        >
           Sky view unavailable: {error}
         </p>
       )}
-      {/* The credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
-      <div className="pointer-events-none absolute right-4 bottom-12 max-w-md text-right text-xs leading-5">
-        {SKY_SURVEY.notice && <p className="text-amber-300">{SKY_SURVEY.notice}</p>}
-        <p className="text-white/60">{SKY_SURVEY.credit}</p>
-      </div>
+      <SkyIntro enabled={!initialSelection && !initialView} />
+      <ShortcutSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} next={next} />
     </div>
   );
@@ -186,10 +412,81 @@ export function SkyExplorer({
 function CursorReadout({ aiming }: { aiming: boolean }) {
   const cursor = useCursor();
   return (
-    <div className="pointer-events-none absolute bottom-4 left-4 rounded-md bg-black/60 px-3 py-2 font-mono text-xs leading-5 text-white/80">
-      <div>{aiming ? "Aiming · click to analyze" : "Click to zoom in · click a pin to analyze"}</div>
-      <div>RA {cursor ? formatRa(cursor.ra) : "—"}</div>
-      <div>Dec {cursor ? formatDec(cursor.dec) : "—"}</div>
+    <div className="absolute bottom-4 left-6 grid gap-1 text-xs [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]">
+      <p className="text-ash">{aiming ? "Aiming. Click to analyze." : "Click to zoom in. Click a pin to analyze."}</p>
+      <p className="font-data tracking-[0.04em] text-bone/80">
+        RA {cursor ? formatRa(cursor.ra) : "—"}&nbsp;&nbsp;&nbsp;Dec {cursor ? formatDec(cursor.dec) : "—"}
+      </p>
     </div>
   );
+}
+
+const OVERLAYS_KEY = "heimdallr:show-on-sky";
+
+/** "Show on sky" settings, remembered in this browser (decision #40). Read after mount so the server render matches. */
+function useStoredOverlays() {
+  const [overlays, setOverlays] = useState<SkyOverlays>(DEFAULT_OVERLAYS);
+  const loaded = useRef(false);
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(OVERLAYS_KEY) ?? "null") as Partial<SkyOverlays> | null;
+      if (stored && typeof stored === "object") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of browser storage after mount
+        setOverlays({ ...DEFAULT_OVERLAYS, ...stored, statuses: { ...DEFAULT_OVERLAYS.statuses, ...stored.statuses } });
+      }
+    } catch {
+      // Storage blocked or malformed: keep the defaults.
+    }
+    loaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (!loaded.current) return;
+    try {
+      window.localStorage.setItem(OVERLAYS_KEY, JSON.stringify(overlays));
+    } catch {
+      // Storage blocked: the setting lasts until the page closes.
+    }
+  }, [overlays]);
+  return [overlays, setOverlays] as const;
+}
+
+/**
+ * True while the sky is being dragged and for 600 ms after release, so the header can step aside. A drag (not a
+ * click) also calls onDragStart, which folds the queue: dragging means looking around (decision #38).
+ */
+function useSkyDrag(onDragStart: () => void) {
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    let start: { x: number; y: number } | null = null;
+    let active = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const down = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (event.button !== 0 || !target?.closest("[data-sky-surface]")) return;
+      start = { x: event.clientX, y: event.clientY };
+    };
+    const move = (event: PointerEvent) => {
+      if (!start || active || Math.hypot(event.clientX - start.x, event.clientY - start.y) < 4) return;
+      active = true;
+      clearTimeout(timer);
+      setDragging(true);
+      onDragStart();
+    };
+    const up = () => {
+      start = null;
+      if (!active) return;
+      active = false;
+      timer = setTimeout(() => setDragging(false), 600);
+    };
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointermove", move, true);
+    window.addEventListener("pointerup", up, true);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", up, true);
+    };
+  }, [onDragStart]);
+  return dragging;
 }
