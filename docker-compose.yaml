@@ -1,0 +1,27 @@
+# Local development database. The test database lives separately in docker-compose.test.yaml.
+#
+# `pnpm docker:db` starts db, and the app runs on the host with `pnpm dev`. Point DATABASE_URL and DIRECT_URL in .env
+# at this database (localhost:5432) and create the schema with `pnpm db:migrate`.
+#
+# The database listens on this machine only (127.0.0.1), out of reach from the rest of the network.
+# Development data persists in the db-data volume; remove the volume to delete it.
+# The project name is the folder name, so projects in different folders get their own containers and volumes.
+services:
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "app"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  db-data:
