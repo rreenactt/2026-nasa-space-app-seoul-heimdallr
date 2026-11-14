@@ -7,10 +7,11 @@
 
 - 기획
 - 3D 하늘 화면 (`app/_components/sky/`)
-- UI 개편은 별도 세션이 `feat/ui-redesign` 워크트리에서 진행
+- 하늘 화면 UI 개편 (분석 패널 바깥, 브랜치 `feat/ui-redesign`, 디자인 정본 Figma "HEIMDALLR UI")
 
 ## 진행 중
 
+- 하늘 화면 UI 개편: I 시안 확정(결정 #36–#40, `feat/ui-redesign`에서 작성 중), 구현 전. 상단 탭(Explore·Review·Targets·Method) 구성은 허한결 결정 대기. 기능 동결(11/15 15:00) 전 구현 범위를 정해야 함
 - (실험) 하늘 화면 "빠르게 움직이는 별" 겹쳐 보기: 시야 1° 이하에서 Gaia DR3 고유운동으로 연도 슬라이더(1950–2050)에 맞춘 예상 위치·궤적 ([결정 #35](../../decisions.md), 브랜치 `feat/sky-fast-stars`, `main` 미반영). 보기 좋지 않으면 통째로 뺀다
 
 ## 완료
@@ -30,6 +31,7 @@
 
 ## 다음 할 일
 
+- I 시안 구현 범위 결정 후 구현: 인트로, 액자 상태, 검토 목록 패널, 육각형 밀도, Show on sky·C 토글, 단축키 목록 / Figma Foundations 변수 정리
 - 테스트 대상 5개 검증 결과 표 (챌린지 필수, 아직 없음)
 - 평가 DB(Neon + Prisma, [결정 #33](../../decisions.md))가 연결되면 평가 안내 문구 다시 고치기
 - 빠른 별 실험 유지·제거 결정
