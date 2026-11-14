@@ -73,6 +73,14 @@ interface FplState {
 
 const Ctx = createContext<FplState | null>(null);
 
+/** Default frames: the detector with the most visits, one exposure per visit (middle), up to 3. */
+export function defaultFplSelection(exposures: FplExposure[]) {
+  const dets = [...new Set(exposures.map((e) => e.detector))].sort();
+  const detector = dets.reduce((a, d) => (visitsOf(exposures.filter((e) => e.detector === d)).length > visitsOf(exposures.filter((e) => e.detector === a)).length ? d : a), dets[0]);
+  const picks = visitsOf(exposures.filter((e) => e.detector === detector)).map((v) => v[Math.floor(v.length / 2)]).slice(0, 3);
+  return { detector, picks };
+}
+
 /** Groups exposures into visits (gap > 20 days). */
 export function visitsOf(exposures: FplExposure[]) {
   const out: FplExposure[][] = [];
@@ -101,12 +109,10 @@ export function FplStateProvider({ initialTarget, children }: { initialTarget?: 
   // Defaults after a search: the detector with the most visits, and one exposure per visit (middle of the visit).
   useEffect(() => {
     if (!exposures.length || selectedKeys.length) return;
-    const dets = [...new Set(exposures.map((e) => e.detector))].sort();
-    const best = dets.reduce((a, d) => (visitsOf(exposures.filter((e) => e.detector === d)).length > visitsOf(exposures.filter((e) => e.detector === a)).length ? d : a), dets[0]);
-    const picks = visitsOf(exposures.filter((e) => e.detector === best)).map((v) => v[Math.floor(v.length / 2)]);
+    const d = defaultFplSelection(exposures);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time default selection when search results arrive
-    setDetectorState(best);
-    setSelectedKeys(picks.slice(0, 3).map((e) => e.key));
+    setDetectorState(d.detector);
+    setSelectedKeys(d.picks.map((e) => e.key));
   }, [exposures, selectedKeys.length]);
 
   const selected = selectedKeys.map((k) => exposures.find((e) => e.key === k)).filter((e): e is FplExposure => Boolean(e));

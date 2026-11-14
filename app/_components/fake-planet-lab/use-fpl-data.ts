@@ -10,25 +10,28 @@ import type { BrightNeighbor, FplExposure, FplSearchResult } from "@/app/_lib/fp
 const SESSION = { staleTime: Infinity, gcTime: 30 * 60_000 } as const;
 export const CUTOUT_PX = 64;
 
+export const spherexSearchQuery = (ra: number, dec: number) => ({
+  queryKey: ["fpl", "search", ra.toFixed(5), dec.toFixed(5)] as const,
+  queryFn: () => api.get("/api/fpl/search", { searchParams: { ra, dec }, timeout: 65_000 }).json<FplSearchResult>(),
+  ...SESSION,
+});
+
 export function useSpherexSearch(ra: number, dec: number) {
-  return useQuery({
-    queryKey: ["fpl", "search", ra.toFixed(5), dec.toFixed(5)],
-    queryFn: () => api.get("/api/fpl/search", { searchParams: { ra, dec }, timeout: 65_000 }).json<FplSearchResult>(),
-    ...SESSION,
-  });
+  return useQuery(spherexSearchQuery(ra, dec));
 }
+
+/** The same query useFrames makes for one exposure (shared cache across analyses). */
+export const spherexFrameQuery = (e: Pick<FplExposure, "key" | "obsId" | "detector">, ra: number, dec: number, size = CUTOUT_PX) => ({
+  queryKey: ["fpl", "frame", e.key, ra.toFixed(5), dec.toFixed(5), size] as const,
+  queryFn: () =>
+    api.get("/api/fpl/frame", { searchParams: { obsId: e.obsId, detector: e.detector, ra, dec, size }, timeout: 65_000 }).json<FramePayload>(),
+  retry: false,
+  ...SESSION,
+});
 
 export function useFrames(exposures: FplExposure[], ra: number, dec: number, size = CUTOUT_PX) {
   return useQueries({
-    queries: exposures.map((e) => ({
-      queryKey: ["fpl", "frame", e.key, ra.toFixed(5), dec.toFixed(5), size],
-      queryFn: () =>
-        api
-          .get("/api/fpl/frame", { searchParams: { obsId: e.obsId, detector: e.detector, ra, dec, size }, timeout: 65_000 })
-          .json<FramePayload>(),
-      retry: false,
-      ...SESSION,
-    })),
+    queries: exposures.map((e) => spherexFrameQuery(e, ra, dec, size)),
   });
 }
 

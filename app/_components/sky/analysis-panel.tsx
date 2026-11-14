@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AdditionalAnalyses, type AutoOpenAnalysis } from "../analyses/additional-analyses";
 import { BlinkProvider } from "../blink/blink-context";
-import { BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
+import { BlinkGate, BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
 import { SKY_SURVEY } from "./constants";
 import { formatDec, formatRa } from "./sky-coordinates";
 import type { SkySelection } from "./sky-selection";
@@ -76,6 +76,7 @@ function PanelBody({
       </DialogHeader>
 
       <BlinkProvider selection={selection}>
+      <BlinkGate>
       <div className="grid min-h-0 grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
         <section className="flex min-h-0 items-stretch justify-center border-r p-4">
           <BlinkViewer />
@@ -110,6 +111,7 @@ function PanelBody({
           </div>
         </ScrollArea>
       </div>
+      </BlinkGate>
       </BlinkProvider>
     </>
   );

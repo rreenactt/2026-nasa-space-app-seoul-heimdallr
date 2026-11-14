@@ -8,19 +8,22 @@ import type { Epoch, EpochFrame, GaiaStar, MissionId, MissionSearchResult, SkyGr
 /** Everything lives in memory for this page session only. */
 const SESSION = { staleTime: Infinity, gcTime: 30 * 60_000 } as const;
 
+/** One mission's search; frames overlapping the field (radius = half the field diagonal). */
+export function searchQuery(mission: MissionId, grid: SkyGrid) {
+  const radius = Math.min(0.2, ((grid.fovArcmin / 60) * Math.SQRT2) / 2);
+  return {
+    queryKey: ["sky", "search", mission, grid.ra.toFixed(5), grid.dec.toFixed(5), radius.toFixed(4)] as const,
+    queryFn: () =>
+      api.get("/api/sky/search", { searchParams: { mission, ra: grid.ra, dec: grid.dec, radius }, timeout: 65_000 }).json<MissionSearchResult>(),
+    ...SESSION,
+  };
+}
+
+export const SKY_SESSION = SESSION;
+
 export function useMissionSearches(missions: MissionId[], grid: SkyGrid | null) {
-  // Frames overlapping the field: radius = half the field diagonal.
-  const radius = grid ? Math.min(0.2, ((grid.fovArcmin / 60) * Math.SQRT2) / 2) : 0;
   return useQueries({
-    queries: missions.map((mission) => ({
-      queryKey: ["sky", "search", mission, grid?.ra.toFixed(5), grid?.dec.toFixed(5), radius.toFixed(4)],
-      queryFn: () =>
-        api
-          .get("/api/sky/search", { searchParams: { mission, ra: grid!.ra, dec: grid!.dec, radius }, timeout: 65_000 })
-          .json<MissionSearchResult>(),
-      enabled: grid !== null,
-      ...SESSION,
-    })),
+    queries: missions.map((mission) => (grid ? searchQuery(mission, grid) : { queryKey: ["sky", "search", mission, "none"], queryFn: () => null, enabled: false })),
   });
 }
 
