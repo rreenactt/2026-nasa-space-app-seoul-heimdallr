@@ -56,5 +56,6 @@
 
 ## This project
 
+- Live site: <https://2026-nasa-space-app-seoul-heimdallr.vercel.app/>
 - Source code: [TODO: GitHub URL] — MIT License (`LICENSE`)
 - AI tools: see Use of SI (`ai-usage.md`)

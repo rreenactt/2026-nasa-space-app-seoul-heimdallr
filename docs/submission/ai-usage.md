@@ -20,5 +20,5 @@
 ## How it is marked
 
 - Every AI-assisted task is logged with date, person, tool, files and review status in `docs/memory/ai-usage.md`.
-- [TODO] README에 "AI-assisted code" 안내를 넣는다 (`PLAN.md` 12장: 생성 코드는 주석과 README에 표시).
+- README의 "AI-assisted code" 절에 안내를 넣었다 (`PLAN.md` 12장).
 - [TODO] 슬라이드·영상에 AI 생성 이미지를 쓰면 워터마크를 넣는다. 지금은 없음.
