@@ -1,9 +1,10 @@
 import "client-only";
 
-import { Canvas, useLoader, useThree } from "@react-three/fiber";
-import { Suspense, useEffect, useRef } from "react";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
+import { type RefObject, Suspense, useEffect, useRef } from "react";
 import { BackSide, type PerspectiveCamera, SRGBColorSpace, TextureLoader, Vector3 } from "three";
 import { MAX_SPHERE_FOV, SKY_SURVEY, ZOOM_IN_FOV } from "./constants";
+import constellationLines from "./data/constellation-lines.json";
 import {
   clamp,
   type EquatorialCoordinates,
@@ -13,30 +14,81 @@ import {
   type SkyView,
   vectorToEquatorial,
 } from "./sky-coordinates";
+import { TEST_TARGETS, type TestTarget } from "./test-targets";
 
 type CelestialSphereProps = {
   initialView: SkyView;
   onCursorMove: (cursor: EquatorialCoordinates | null) => void;
   /** Called once the view is zoomed to ZOOM_IN_FOV or narrower. */
   onZoomIn: (view: SkyView) => void;
+  onTargetSelect: (target: TestTarget) => void;
 };
 
 /** First-person celestial sphere: the camera sits at the center and looks out at the inside of the sky. */
-export default function CelestialSphere(props: CelestialSphereProps) {
+export default function CelestialSphere({ onTargetSelect, ...props }: CelestialSphereProps) {
+  const pins = useRef<(HTMLButtonElement | null)[]>([]);
   return (
-    <Canvas
-      frameloop="demand"
-      camera={{ position: [0, 0, 0], near: 0.01, far: 10 }}
-      className="absolute! inset-0 cursor-grab touch-none active:cursor-grabbing"
-    >
-      <color attach="background" args={["#000000"]} />
-      <Suspense fallback={null}>
-        <SkyBackground />
-      </Suspense>
-      <CoordinateGrid />
-      <SkyControls {...props} />
-    </Canvas>
+    <>
+      <Canvas
+        frameloop="demand"
+        camera={{ position: [0, 0, 0], near: 0.01, far: 10 }}
+        className="absolute! inset-0 cursor-grab touch-none active:cursor-grabbing"
+      >
+        <color attach="background" args={["#000000"]} />
+        <Suspense fallback={null}>
+          <SkyBackground />
+        </Suspense>
+        <CoordinateGrid />
+        <ConstellationLines />
+        <SkyControls {...props} />
+        <PinTracker pins={pins} />
+      </Canvas>
+      {/* Pins are HTML so they stay sharp and clickable; PinTracker moves them after every render of the sky. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {TEST_TARGETS.map((target, index) => (
+          <button
+            key={target.id}
+            ref={(element) => {
+              pins.current[index] = element;
+            }}
+            type="button"
+            title={`${target.name} · ${target.note}`}
+            onClick={() => onTargetSelect(target)}
+            className="pointer-events-auto invisible absolute top-0 left-0 flex items-center gap-1.5 rounded-sm text-xs whitespace-nowrap text-amber-200 [text-shadow:0_0_4px_black] hover:text-amber-50 focus-visible:outline-2 focus-visible:outline-amber-300"
+          >
+            <span className="size-2.5 shrink-0 rounded-full border-2 border-current" />
+            {target.name}
+          </button>
+        ))}
+      </div>
+    </>
   );
+}
+
+const PIN_DOT_RADIUS = 5;
+const PIN_VECTORS = TEST_TARGETS.map((target) => new Vector3(...equatorialToVector(target.ra, target.dec)));
+
+/** Places each pin's dot on its target's screen position after every render, and hides pins behind the camera. */
+function PinTracker({ pins }: { pins: RefObject<(HTMLButtonElement | null)[]> }) {
+  const projected = useRef(new Vector3());
+  const forward = useRef(new Vector3());
+
+  useFrame(({ camera, size }) => {
+    camera.getWorldDirection(forward.current);
+    PIN_VECTORS.forEach((vector, index) => {
+      const pin = pins.current[index];
+      if (!pin) return;
+      const point = projected.current.copy(vector).project(camera);
+      const visible = vector.dot(forward.current) > 0 && Math.abs(point.x) <= 1.1 && Math.abs(point.y) <= 1.1;
+      pin.style.visibility = visible ? "visible" : "hidden";
+      if (!visible) return;
+      const x = ((point.x + 1) / 2) * size.width;
+      const y = ((1 - point.y) / 2) * size.height;
+      pin.style.transform = `translate(${x - PIN_DOT_RADIUS}px, ${y}px) translateY(-50%)`;
+    });
+  });
+
+  return null;
 }
 
 /**
@@ -113,12 +165,49 @@ function CoordinateGrid() {
   );
 }
 
+type ConstellationData = {
+  features: { geometry: { coordinates: number[][][] } }[];
+};
+
+/**
+ * Constellation stick figures from d3-celestial (BSD-3-Clause, see data/LICENSE-d3-celestial.txt; positions J2000,
+ * lines after the IAU constellation pages). Longitude in the file is RA in −180…180°. A straight segment between two
+ * points on the sphere projects onto the great-circle arc between them as seen from the center, so no subdivision is
+ * needed.
+ */
+function buildConstellationLines() {
+  const vertices: number[] = [];
+  for (const feature of (constellationLines as ConstellationData).features) {
+    for (const line of feature.geometry.coordinates) {
+      for (let i = 0; i < line.length - 1; i++) {
+        const [ra1, dec1] = line[i];
+        const [ra2, dec2] = line[i + 1];
+        vertices.push(...equatorialToVector(ra1, dec1), ...equatorialToVector(ra2, dec2));
+      }
+    }
+  }
+  return new Float32Array(vertices);
+}
+
+const CONSTELLATION_LINES = buildConstellationLines();
+
+function ConstellationLines() {
+  return (
+    <lineSegments>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[CONSTELLATION_LINES, 3]} />
+      </bufferGeometry>
+      <lineBasicMaterial color="#a8c8ff" transparent opacity={0.4} />
+    </lineSegments>
+  );
+}
+
 const ZOOM_SPEED = 0.0015;
 const MIN_POLE_SCALE = 0.2;
 const MAX_DEC = 89.9;
 
 /** Drag to look around, wheel to zoom, and report the RA/Dec under the cursor. */
-function SkyControls({ initialView, onCursorMove, onZoomIn }: CelestialSphereProps) {
+function SkyControls({ initialView, onCursorMove, onZoomIn }: Omit<CelestialSphereProps, "onTargetSelect">) {
   const get = useThree((state) => state.get);
   const size = useThree((state) => state.size);
   const view = useRef(initialView);
