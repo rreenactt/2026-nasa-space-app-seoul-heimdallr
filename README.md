@@ -2,6 +2,15 @@
 
 Our team's project for the [NASA International Space Apps Challenge](https://www.spaceappschallenge.org/) 2026 (Seoul), a web application built on the Next.js App Router.
 
+## Project plan
+
+The plan, the team's shared context for AI tools, and the decision log live in [`docs/`](docs/) (in Korean):
+
+- [`docs/PLAN.md`](docs/PLAN.md): features, UX, data handling, and architecture
+- [`docs/memory/`](docs/memory/): direction, milestones, glossary, team status, and the AI usage log
+- [`docs/decisions.md`](docs/decisions.md): decisions and the reasons behind them
+- [`docs/analyses/`](docs/analyses/): the additional analysis modules
+
 ## Tech stack
 
 | Area | Stack |
