@@ -5,12 +5,15 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { cn } from "cn";
+import type { RatingState } from "@/app/_lib/ratings/types";
+import { ratingSummary } from "./rating-section";
 import {
   type CandidateFilter,
   type CandidateStatus,
   MOVEMENT_CANDIDATES,
   type ReviewEntry,
 } from "./review-queue";
+import { useRatingSummary } from "./use-ratings";
 
 const STATUS_LABELS: Record<Exclude<CandidateStatus, "excluded">, string> = {
   noteworthy: "Noteworthy",
@@ -35,6 +38,9 @@ export function TargetList({ queue, currentId, filter, onFilterChange, onSelect 
   const [open, setOpen] = useState(true);
   const tests = queue.filter((entry) => entry.kind === "test");
   const candidates = queue.filter((entry) => entry.kind === "candidate");
+  // This browser's ratings of the listed places; others' tallies stay hidden until rated (decision #6).
+  const ratings = useRatingSummary(queue.map((entry) => entry.point));
+  const ratingOf = (entry: ReviewEntry) => ratings.data?.[queue.indexOf(entry)];
 
   return (
     <section className="dark w-96 rounded-md border border-white/10 bg-black/70 text-sm text-foreground backdrop-blur-sm">
@@ -51,7 +57,7 @@ export function TargetList({ queue, currentId, filter, onFilterChange, onSelect 
         <div className="grid max-h-[50dvh] gap-3 overflow-y-auto border-t border-white/10 px-3 py-3">
           <EntryGroup title={`Test targets (${tests.length})`}>
             {tests.map((entry) => (
-              <EntryButton key={entry.id} entry={entry} current={entry.id === currentId} onSelect={onSelect} />
+              <EntryButton key={entry.id} entry={entry} rating={ratingOf(entry)} current={entry.id === currentId} onSelect={onSelect} />
             ))}
           </EntryGroup>
 
@@ -67,7 +73,7 @@ export function TargetList({ queue, currentId, filter, onFilterChange, onSelect 
                   <p className="text-xs text-muted-foreground">No candidates match these filters.</p>
                 )}
                 {candidates.map((entry) => (
-                  <EntryButton key={entry.id} entry={entry} current={entry.id === currentId} onSelect={onSelect} />
+                  <EntryButton key={entry.id} entry={entry} rating={ratingOf(entry)} current={entry.id === currentId} onSelect={onSelect} />
                 ))}
               </>
             )}
@@ -89,10 +95,12 @@ function EntryGroup({ title, children }: { title: string; children: React.ReactN
 
 function EntryButton({
   entry,
+  rating,
   current,
   onSelect,
 }: {
   entry: ReviewEntry;
+  rating: RatingState | undefined;
   current: boolean;
   onSelect: (entry: ReviewEntry) => void;
 }) {
@@ -117,6 +125,7 @@ function EntryButton({
           ? entry.target.note
           : `${entry.candidate.knownAsteroid ? `Known asteroid ${entry.candidate.knownAsteroid}` : "Unidentified"} · ${entry.candidate.detections} epochs · SNR ${entry.candidate.snr.toFixed(1)}`}
       </span>
+      {ratingSummary(rating) && <span className="text-xs text-sky-300">{ratingSummary(rating)}</span>}
     </button>
   );
 }

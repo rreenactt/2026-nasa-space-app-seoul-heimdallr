@@ -19,6 +19,7 @@ import { SkySearchBox } from "./sky-search-box";
 import { SkyControls } from "./sky-controls";
 import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
 import type { Flight, SkyLayers } from "./sky-view";
+import { MostRated } from "./most-rated";
 import { TargetList } from "./target-list";
 import { findTestTarget, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
@@ -163,6 +164,7 @@ export function SkyExplorer({
           onFilterChange={setCandidateFilter}
           onSelect={goToEntry}
         />
+        <MostRated onSelect={goTo} />
       </div>
       <CursorReadout aiming={aiming} />
       <div className="absolute top-4 right-4 z-10">
