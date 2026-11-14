@@ -1,0 +1,24 @@
+# Test-only Postgres for the Vitest `db` project (DATABASE_URL in .env.test). Start and stop it with
+# `pnpm test:db:up` / `pnpm test:db:down`.
+# The development database is unrelated to it. Data lives only in memory and disappears when the container stops.
+# Change the image together with the CI service container (.github/workflows/ci.yml) and docker-compose.yaml.
+# The project name is `name` from package.json plus -test (passed by pnpm), so it never mixes with the development
+# Compose project.
+name: ${npm_package_name:?run it through pnpm test:db:up / test:db:down}-test
+
+services:
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "app_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
