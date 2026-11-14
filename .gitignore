@@ -57,6 +57,3 @@ CLAUDE.local.md
 *.fits.gz
 /data/cache/
 
-# python (scripts/)
-.venv/
-__pycache__/

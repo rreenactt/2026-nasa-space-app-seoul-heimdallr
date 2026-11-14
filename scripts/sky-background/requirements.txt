@@ -1,4 +1,0 @@
-numpy>=2.0
-pillow>=11.0
-astropy>=6.0
-astropy-healpix>=1.0
