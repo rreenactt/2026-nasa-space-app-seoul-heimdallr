@@ -5,14 +5,15 @@
 
 ## 담당
 
-- 추가 분석: Comet Breath, Sky Time Machine, Fake Planet Lab, Neighborhood in Motion (1차 구현)
+- 추가 분석 5개 모두 1차 구현: Comet Breath, Sky Time Machine, Fake Planet Lab, Neighborhood in Motion, Sky Sonata
 
 ## 진행 중
 
-- 브랜치 `feat/neighborhood-in-motion`: Neighborhood in Motion 1차 구현. 네 분석 모두 3D 하늘 위 버튼으로 열림, 분석 패널(5장)과 연결 전
+- 브랜치 `feat/sky-sonata`(Neighborhood in Motion 포함): 다섯 분석 모두 3D 하늘 위 버튼으로 열림, 분석 패널(5장)과 연결 전
 
 ## 완료
 
+- Sky Sonata: 규칙 시험(좌우·높이·밝기, 같은 A/B → 같은 소리) 통과, 키보드·정지 동작 확인
 - Neighborhood in Motion: 21개 천체, Barnard's Star 최근접 11,736년·1.155 pc(문헌과 일치), SPHEREx D6에서 Ross 128·Barnard 중심이 모델과 1.5″·4.1″
 - 세 분석 1차 구현, 실제 데이터 검증(Barnard's Star 25년 이동 10.39″/년 = Gaia, 3I/ATLAS 12월 스펙트럼 24점)
 - DR1 컷아웃 경로 확인: AWS 공개 버킷 바이트 범위 읽기 (`PLAN.md` 14장 메모)
