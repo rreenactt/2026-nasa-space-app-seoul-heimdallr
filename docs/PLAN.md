@@ -386,7 +386,7 @@ flowchart LR
 - **Next.js에서는 클라이언트에서만 불러온다.** Aladin Lite를 쓰는 모듈 맨 위에 `import "client-only"`를 두고 (`AGENTS.md` 규칙), Client Component 안에서 `next/dynamic`(`ssr: false`)으로 별도 청크로 불러온다.
 - **Aladin Lite 이벤트 (3.8.2 소스로 확인):** `mouseMove` → `{ra, dec, x, y}` (투영 밖이면 ra·dec가 null), `click` → `{ra, dec, x, y, isDragging}` (ICRS), `zoomChanged` → 가로 시야(도). 화면 좌표 → RA/Dec 변환은 `pix2world`.
 - **Aladin Lite의 `log` 옵션은 끈다.** 기본값이 켜져 있어 CDS에 사용 통계를 보낸다.
-- **CDS 장애 중에는 2MASS 컬러로 대체한다 ([결정 #25](decisions.md)).** CDS가 2026-11-09부터 사이버 보안 사고로 Aladin 하늘 이미지·hips2fits·SIMBAD를 막았고, SPHEREx 컬러 HiPS는 다른 기관 미러에도 없다. 그동안 하늘 화면은 IRSA가 미러한 2MASS 컬러 HiPS(`https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color`)를 쓰고, 화면에 "SPHEREx가 아닌 임시 배경"임을 표시한다 (절대 원칙 4). 설정은 `app/_components/sky/constants.ts`의 `SKY_SURVEY` 한 줄이다. CDS가 복구되면 `SKY_SURVEY`만 되돌리면 된다.
+- **CDS 장애 중에는 2MASS 컬러로 대체한다 ([결정 #25](decisions.md)).** CDS가 2026-11-09부터 사이버 보안 사고로 Aladin 하늘 이미지·hips2fits·SIMBAD를 막았고, SPHEREx 컬러 HiPS는 다른 기관 미러에도 없다. 그동안 하늘 화면은 IRSA가 미러한 2MASS 컬러 HiPS(`https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color`)를 쓰고, 화면에 "SPHEREx가 아닌 임시 배경"임을 표시한다 (절대 원칙 4). 설정은 `app/_components/sky/constants.ts`의 `SKY_SURVEY` 한 줄이다. CDS가 복구되면 `SKY_SURVEY`만 되돌리면 된다. 같은 IRSA 미러의 DSS2 컬러(가시광선 0.4–0.6μm)가 보기에는 더 익숙하지만, SPHEREx 파장(0.75–5μm) 밖이라 은하면처럼 먼지가 많은 곳이 분석 패널과 다르게 보여서 쓰지 않는다. 2MASS(1.2–2.2μm)는 SPHEREx 파장 안이다 (2026-11-14 검토, 허한결 결정).
 
 | 도구 | 용도 | 라이선스 |
 | --- | --- | --- |
