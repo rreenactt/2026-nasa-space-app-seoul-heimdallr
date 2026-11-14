@@ -1,7 +1,7 @@
 import type { AutoOpenAnalysis } from "./_components/analyses/additional-analyses";
 import { TARGET_FOV } from "./_components/sky/constants";
 import { SkyExplorer } from "./_components/sky/sky-explorer";
-import { parseSelection, type SkySelection } from "./_components/sky/sky-selection";
+import { parseSelection, parseView, type SkySelection } from "./_components/sky/sky-selection";
 import { findTestTarget } from "./_components/sky/test-targets";
 import type { SoundSettings } from "./_lib/sonata/mapping";
 
@@ -31,8 +31,8 @@ function parseSonata(value: string | string[] | undefined) {
 
 /**
  * Shared links use `/?ra=&dec=&fov=` (degrees; fov is the sky view): the sky opens at that point with the analysis
- * panel, where the additional analyses are. Older `?stm=` and `?sonata=` links open the panel at their point and
- * then that analysis.
+ * panel, where the additional analyses are. `/?view=ra,dec,fov` opens the sky there with no panel. Older `?stm=` and
+ * `?sonata=` links open the panel at their point and then that analysis.
  */
 export default async function Home({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
@@ -54,7 +54,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     <main className="relative flex flex-1 flex-col">
       <SkyExplorer
         initialSelection={initialSelection}
-        initialView={initialSelection ? { ra: initialSelection.ra, dec: initialSelection.dec, fov: initialSelection.fov } : undefined}
+        initialView={
+          initialSelection
+            ? { ra: initialSelection.ra, dec: initialSelection.dec, fov: initialSelection.fov }
+            : (parseView(params) ?? undefined)
+        }
         autoOpen={autoOpen}
       />
     </main>

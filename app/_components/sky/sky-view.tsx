@@ -1,18 +1,24 @@
 import "client-only";
 
-import A, { type Aladin } from "aladin-lite";
+import A, { type Aladin, type Catalog } from "aladin-lite";
+import { cn } from "cn";
 import { useEffect, useRef } from "react";
 import { AIM_FOV, CUTOUT_ARCMIN, MAX_FOV, MIN_FOV, SKY_SURVEY } from "./constants";
 import constellationLines from "./data/constellation-lines.json";
 import { angularDistance, type EquatorialCoordinates, normalizeRa, type SkyView } from "./sky-coordinates";
 import { TEST_TARGETS, type TestTarget } from "./test-targets";
+import { setView } from "./view-store";
 
 /** A request to fly the view somewhere; a new `id` starts a new flight. */
 export type Flight = SkyView & { id: number };
 
+/** Overlays that can be switched off; the sky image itself always shows. */
+export type SkyLayers = { pins: boolean; constellations: boolean; grid: boolean };
+
 type SkyViewProps = {
   initialView: SkyView;
   flight: Flight | null;
+  layers: SkyLayers;
   onCursorMove: (cursor: EquatorialCoordinates | null) => void;
   onFovChange: (fov: number) => void;
   /** A click (not a drag) at any field of view, with the test target when it landed on that target's pin. */
@@ -42,11 +48,21 @@ const CONSTELLATION_LINES = (constellationLines as ConstellationData).features.f
  * wide view looks like a first-person sky, and HiPS tiles sharpen continuously as the view zooms in: no hand-off, no
  * visible boundary.
  */
-export default function SkyView({ initialView, flight, onCursorMove, onFovChange, onSelect, onError }: SkyViewProps) {
+export default function SkyView({
+  initialView,
+  flight,
+  layers,
+  onCursorMove,
+  onFovChange,
+  onSelect,
+  onError,
+}: SkyViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const reticle = useRef<HTMLDivElement>(null);
   const linesCanvas = useRef<HTMLCanvasElement>(null);
   const aladinRef = useRef<Aladin | null>(null);
+  const pinsRef = useRef<Catalog | null>(null);
+  const layersRef = useRef(layers);
   const pendingFlight = useRef<Flight | null>(null);
   /** Cancels the flight in progress, if any. */
   const stopFlight = useRef<() => void>(() => {});
@@ -109,12 +125,18 @@ export default function SkyView({ initialView, flight, onCursorMove, onFovChange
         // resized.
         let drawnFor = "";
         let placedFor = "";
+        let reportedFor = "";
         const onFrame = () => {
           frame = requestAnimationFrame(onFrame);
           const [centerRa, centerDec] = aladin.getRaDec();
           const [width] = aladin.getFov();
           const canvas = linesCanvas.current;
-          const key = `${centerRa} ${centerDec} ${width} ${element.clientWidth} ${element.clientHeight}`;
+          const viewKey = `${centerRa} ${centerDec} ${width}`;
+          if (viewKey !== reportedFor) {
+            reportedFor = viewKey;
+            setView({ ra: centerRa, dec: centerDec, fov: width });
+          }
+          const key = `${viewKey} ${element.clientWidth} ${element.clientHeight}`;
           if (canvas && key !== drawnFor) {
             drawnFor = key;
             drawConstellations(canvas, aladin, element.clientWidth, element.clientHeight);
@@ -146,6 +168,8 @@ export default function SkyView({ initialView, flight, onCursorMove, onFovChange
         });
         pins.addSources(TEST_TARGETS.map((target) => A.source(target.ra, target.dec, { name: target.name })));
         aladin.addCatalog(pins);
+        pinsRef.current = pins;
+        applyLayers(aladin, pins, layersRef.current);
 
         aladin.on("mouseMove", (event) => {
           if (event.ra === null || event.dec === null) {
@@ -157,7 +181,7 @@ export default function SkyView({ initialView, flight, onCursorMove, onFovChange
         aladin.on("click", (event) => {
           if (event.isDragging) return;
           const [currentFov] = aladin.getFov();
-          const target = targetNear(aladin, event.x, event.y);
+          const target = layersRef.current.pins ? targetNear(aladin, event.x, event.y) : undefined;
           if (target) callbacks.current.onSelect(target, currentFov, target);
           else callbacks.current.onSelect({ ra: event.ra, dec: event.dec }, currentFov);
         });
@@ -181,6 +205,7 @@ export default function SkyView({ initialView, flight, onCursorMove, onFovChange
       cancelAnimationFrame(frame);
       stopFlight.current();
       aladinRef.current = null;
+      pinsRef.current = null;
       element.removeEventListener("pointermove", trackPointer);
       element.removeEventListener("pointerleave", hideReticle);
       element.removeEventListener("wheel", interrupt, { capture: true });
@@ -189,6 +214,11 @@ export default function SkyView({ initialView, flight, onCursorMove, onFovChange
       element.replaceChildren();
     };
   }, []);
+
+  useEffect(() => {
+    layersRef.current = layers;
+    if (aladinRef.current && pinsRef.current) applyLayers(aladinRef.current, pinsRef.current, layers);
+  }, [layers]);
 
   useEffect(() => {
     if (!flight) return;
@@ -205,7 +235,11 @@ export default function SkyView({ initialView, flight, onCursorMove, onFovChange
   return (
     <div className="absolute inset-0">
       <div ref={container} className="h-full w-full" />
-      <canvas ref={linesCanvas} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
+      <canvas
+        ref={linesCanvas}
+        aria-hidden
+        className={cn("pointer-events-none absolute inset-0 h-full w-full", !layers.constellations && "hidden")}
+      />
       {/* Aiming square the size of the analysis cutout; clicking opens the analysis panel for that point. */}
       <div
         ref={reticle}
@@ -214,6 +248,12 @@ export default function SkyView({ initialView, flight, onCursorMove, onFovChange
       />
     </div>
   );
+}
+
+function applyLayers(aladin: Aladin, pins: Catalog, layers: SkyLayers) {
+  if (layers.pins) pins.show();
+  else pins.hide();
+  aladin.setCooGrid({ enabled: layers.grid });
 }
 
 function drawConstellations(canvas: HTMLCanvasElement, aladin: Aladin, width: number, height: number) {
