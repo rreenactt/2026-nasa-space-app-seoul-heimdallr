@@ -8,9 +8,11 @@
 | `summary.md` | High-Level Summary | 영어 50–200단어 | 초안 |
 | `details.md` | Project Details | 작동 방식, 설계 이유, 도구, 한계, 다음 계획 | 초안 |
 | `ai-usage.md` | Use of SI | [`docs/memory/ai-usage.md`](../memory/ai-usage.md)를 정리 | 초안 |
-| `data.md` | Space Agency Data | 챌린지 Resources의 NASA 자료 최소 1개 | 초안 |
+| `data.md` | Space Agency Data | NASA 자료 최소 1개 + 파트너 기관 자료, 데이터가 준 영감 | 초안 |
 | `references.md` | References | 데이터·도구·코드·이미지 출처, 링크, 라이선스, SPHEREx 감사 문구 | 초안 |
 
-- **Project Demo:** 7장 슬라이드 공개 링크 1개 (목차 초안: `slides.md`)
-- **Final Project:** 배포된 웹사이트 + 이 레포
+- **Project Name:** HEIMDALLR (칸 위에 따로 입력)
+- **Project Demo:** 7장 이하 슬라이드(제목 장 포함) 또는 30초 이하 영상(영어 자막) 중 하나, 공개 링크 1개 (목차 초안: `slides.md`). 파일 업로드 없음.
+- **Final Project:** 배포된 웹사이트 + 이 레포 (데모와 별도 링크)
+- 이미지(JPG·PNG·GIF, 10MB 이하)는 Project Details 칸에 직접 올릴 수 있다.
 - 모든 링크는 로그아웃 상태에서 열리는지 확인한다.

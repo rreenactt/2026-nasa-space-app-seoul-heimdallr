@@ -3,6 +3,21 @@
 > 제출 항목: References. 데이터·도구·코드·이미지 출처, 링크, 라이선스, 감사 문구. 초안 2026-11-15 (Claude Code 작성, 사람 검토 전).
 > 감사 문구는 지어내지 않는다. `[TODO: paste]` 칸에는 링크한 공식 페이지의 문구를 그대로 붙여넣는다.
 > 라이선스는 `package.json`의 버전 기준으로 다시 확인한다.
+> 제출 직전 "Confirm All Work is Original" 확인은 외부 자료가 Space Agency Data 칸과 이 칸에 모두 적혀 있다는 뜻이다 (서울 D-Day PDF 31쪽). 아래 목록을 모두 지운 뒤 제출한다.
+
+## 제출 전 채울 것
+
+- [ ] SPHEREx 감사 문구 전문 (IRSA SPHEREx 페이지)
+- [ ] CDS HiPS 감사 문구 (CDS 페이지)
+- [ ] IRSA 감사 문구
+- [ ] 2MASS 감사 문구 (IRSA 2MASS 페이지)
+- [ ] WISE 감사 문구와 논문 (IRSA WISE 페이지)
+- [ ] NEOWISE 감사 문구 (NEOWISE 페이지)
+- [ ] Gaia DR3 감사 문구 전문 (Gaia DR3 credit 페이지)
+- [ ] 3I/ATLAS 논문 제목 (Lisse et al. 2025b, 2026)
+- [ ] 레포 GitHub URL
+- [ ] 소프트웨어 라이선스를 `package.json` 버전 기준으로 재확인
+- [ ] 슬라이드·README에 쓴 이미지·아이콘 중 외부 출처가 있으면 추가
 
 ---
 
