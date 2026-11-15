@@ -19,7 +19,6 @@ import {
   type CandidateFilter,
   MOVEMENT_CANDIDATES,
   findReviewEntry,
-  nextReviewEntry,
   type ReviewEntry,
   reviewQueue,
 } from "./review-queue";
@@ -215,19 +214,14 @@ export function SkyExplorer({
     [goTo, openPanel, zoomTo],
   );
 
-  // A list entry flies there and opens the panel like a pin; "Next" in the panel walks the same order.
+  // A list entry flies there and opens the panel like a pin; N and P walk the same order.
   const goToEntry = useCallback(
     (entry: ReviewEntry) => (entry.kind === "test" ? goTo(entry.point, entry.target) : goTo(entry.point)),
     [goTo],
   );
   const currentEntry = selection ? findReviewEntry(queue, selection) : undefined;
-  const nextEntry = selection ? nextReviewEntry(queue, currentEntry) : undefined;
-  const next = useMemo(
-    () => (nextEntry ? { name: nextEntry.name, go: () => goToEntry(nextEntry) } : undefined),
-    [nextEntry, goToEntry],
-  );
 
-  // Opening the queue, Next, or a shared candidate link turns candidates back on (decision #40).
+  // Opening the queue, N/P, or a shared candidate link turns candidates back on (decision #40).
   const showCandidates = useCallback(
     () => setOverlays((value) => (value.candidates ? value : { ...value, candidates: true })),
     [setOverlays],
@@ -457,7 +451,7 @@ export function SkyExplorer({
       )}
       <SkyIntro enabled={!initialSelection && !initialView} />
       <ShortcutSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} next={next} />
+      <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} />
     </div>
   );
 }

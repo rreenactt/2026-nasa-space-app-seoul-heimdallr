@@ -97,11 +97,3 @@ export function findReviewEntry(
     return Math.hypot(dRa, dec - point.dec) <= toleranceDeg;
   });
 }
-
-/** The entry after the current one, wrapping around; the first entry when the current point is not in the queue. */
-export function nextReviewEntry(queue: ReviewEntry[], current: ReviewEntry | undefined): ReviewEntry | undefined {
-  if (queue.length === 0) return undefined;
-  const index = current ? queue.findIndex((entry) => entry.id === current.id) : -1;
-  const next = queue[(index + 1) % queue.length];
-  return next.id === current?.id ? undefined : next;
-}

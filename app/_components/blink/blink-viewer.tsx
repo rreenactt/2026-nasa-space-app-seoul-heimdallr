@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -94,23 +93,27 @@ export function BlinkViewer() {
   const [showGaia, setShowGaia] = useState(true);
 
   const count = usable.length;
-  const at = Math.min(idx, Math.max(0, count - 1));
+  // In Difference the first visit is the reference, so only later visits are shown (visit 1 − visit 1 is blank).
+  const lo = mode === "difference" && count > 1 ? 1 : 0;
+  const clampIdx = useCallback((i: number) => Math.max(lo, Math.min(i, count - 1)), [lo, count]);
+  const at = count ? clampIdx(idx) : 0;
   const current: VisitFrame | undefined = usable[at];
   const canPlay = count > 1 && mode !== "stack";
   useEffect(() => {
     // Not while another tab covers the viewer: nobody is watching.
     if (!playing || !canPlay || !visible) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % count), 1000 / fps);
+    const t = setInterval(() => setIdx((i) => (clampIdx(i) + 1 > count - 1 ? lo : clampIdx(i) + 1)), 1000 / fps);
     return () => clearInterval(t);
-  }, [playing, fps, count, canPlay, visible]);
+  }, [playing, fps, count, canPlay, visible, clampIdx, lo]);
 
   const step = useCallback(
     (delta: number) => {
       if (count < 2) return;
       setPlaying(false);
-      setIdx((i) => (Math.min(i, count - 1) + delta + count) % count);
+      const n = count - lo;
+      setIdx((i) => lo + ((clampIdx(i) - lo + delta + n) % n));
     },
-    [count],
+    [count, lo, clampIdx],
   );
 
   // Space play/pause, ←/→ previous/next visit, 1/2/3 view mode — only while the viewer is the visible tab.
@@ -174,38 +177,46 @@ export function BlinkViewer() {
   const data = mode === "stack" ? stackData : mode === "difference" ? diffData : current?.data ?? null;
   const center = skyToGrid(grid, grid.ra, grid.dec);
   const pxPerArcsec = grid.n / (grid.fovArcmin * 60);
-  // Visit labels under the slider: all of them when they fit, otherwise about eight spread evenly.
-  const labelEvery = Math.max(1, Math.ceil(count / 8));
 
   return (
     <div className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-2 text-xs">
-      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Detector">
-        <span className="mr-1 text-muted-foreground">Detector</span>
-        {p.detectors.map((d) => {
-          const few = d.visits < 2;
-          return (
-            <button
-              key={d.detector}
-              type="button"
-              onClick={() => {
-                setDetector(d.detector);
-                setIdx(0);
-              }}
-              aria-pressed={d.detector === detector}
-              title={`${d.exposures} exposures in ${d.visits} visit${d.visits === 1 ? "" : "s"}${few ? " · one visit cannot be blinked on its own" : ""}`}
-              className={cn(
-                "rounded border px-2 py-1",
-                d.detector === detector ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
-                few && d.detector !== detector && "opacity-55",
-              )}
-            >
-              <span className="font-medium">{d.detector}</span>{" "}
-              <span className="opacity-75">
-                {d.emMinUm.toFixed(2)}–{d.emMaxUm.toFixed(2)} µm · {d.visits} visit{d.visits === 1 ? "" : "s"}
-              </span>
-            </button>
-          );
-        })}
+      <div className="grid gap-1">
+        {/* On a phone the six bands stay on one line and scroll sideways, so the image keeps its room. */}
+        <div className="flex items-center gap-1.5 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 sm:flex-wrap" role="group" aria-label="Wavelength band (SPHEREx detector)">
+          <span className="mr-1 shrink-0 text-muted-foreground">Wavelength band</span>
+          {p.detectors.map((d) => {
+            const few = d.visits < 2;
+            const on = d.detector === detector;
+            return (
+              <button
+                key={d.detector}
+                type="button"
+                onClick={() => {
+                  setDetector(d.detector);
+                  setIdx(0);
+                }}
+                aria-pressed={on}
+                title={`SPHEREx detector ${d.detector}: ${d.exposures} exposures in ${d.visits} visit${d.visits === 1 ? "" : "s"}${few ? ". One visit cannot be blinked on its own" : ""}`}
+                className={cn(
+                  "flex shrink-0 items-baseline gap-1.5 rounded border px-2 py-1",
+                  on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
+                  few && !on && "opacity-55",
+                )}
+              >
+                <span className="font-medium">
+                  {d.emMinUm.toFixed(2)}–{d.emMaxUm.toFixed(2)} µm
+                </span>
+                <span className="text-[10px] opacity-70">
+                  {d.detector} · {d.visits} visit{d.visits === 1 ? "" : "s"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Each band is one SPHEREx detector (D1–D6), not a date. Every date below is compared in the same band. Dates are
+          in UTC.
+        </p>
       </div>
 
       {/* The image is as large as the shorter side of this box allows (cqmin); zoom scrolls inside it. Hatching sits only
@@ -230,12 +241,21 @@ export function BlinkViewer() {
             <text x={grid.n - 9} y={7} fill="#fff" fillOpacity={0.7} fontSize={5}>N↑</text>
             <text x={2} y={grid.n - 3} fill="#fff" fillOpacity={0.7} fontSize={5}>←E</text>
           </svg>
-          <div className="absolute top-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 font-mono text-[11px] text-white">
-            {mode === "stack"
-              ? `Stack of ${count} visit(s)`
-              : mode === "difference"
-                ? `Visit ${current?.visit.index} − visit ${first?.visit.index}`
-                : `Visit ${current?.visit.index} · ${current?.mid ? mjdDate(current.mid) : ""}`}
+          <div className="absolute top-2 left-2 grid gap-0.5 rounded bg-black/70 px-2 py-1 text-white">
+            <span className="font-mono text-sm font-medium">
+              {mode === "stack"
+                ? `Mean of ${count} visit${count === 1 ? "" : "s"}`
+                : mode === "difference"
+                  ? `${fmtDate(current?.mid)} − ${fmtDate(first?.mid)}`
+                  : fmtDate(current?.mid)}
+            </span>
+            <span className="text-[11px] text-white/75">
+              {mode === "stack"
+                ? `${fmtDate(first?.mid)} → ${fmtDate(usable[count - 1]?.mid)}`
+                : mode === "difference"
+                  ? `Visit ${current?.visit.index} minus visit ${first?.visit.index} · ${fmtElapsed(current?.mid, first?.mid)} apart`
+                  : `Visit ${at + 1} of ${count}${at > 0 ? ` · +${fmtElapsed(current?.mid, first?.mid)} since the first` : " · first visit"}`}
+            </span>
           </div>
         </div>
         {(loadingFrames || !count) && (
@@ -248,7 +268,7 @@ export function BlinkViewer() {
 
       <div className="grid gap-2">
         {mode !== "stack" && count > 1 && (
-          <div className="flex items-start gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button size="icon-sm" variant="outline" onClick={() => step(-1)} aria-label="Previous visit (←)" title="Previous visit (←)">
               <ChevronLeftIcon />
             </Button>
@@ -258,39 +278,15 @@ export function BlinkViewer() {
             <Button size="icon-sm" variant="outline" onClick={() => step(1)} aria-label="Next visit (→)" title="Next visit (→)">
               <ChevronRightIcon />
             </Button>
-            {/* Position among the visits shown (usable); the visit number stays the plan's, as in the exposure list. */}
-            <div className="grid min-w-0 flex-1 gap-1 pt-2">
-              <Slider
-                min={0}
-                max={count - 1}
-                step={1}
-                value={[at]}
-                onValueChange={(v) => {
-                  setPlaying(false);
-                  setIdx(Array.isArray(v) ? v[0] : v);
-                }}
-                aria-label="Visit"
-              />
-              <div className="relative h-4 font-mono text-[10px] text-muted-foreground">
-                {usable.map((u, k) =>
-                  k % labelEvery === 0 || k === count - 1 ? (
-                    <span
-                      key={u.visit.index}
-                      className={cn("absolute -translate-x-1/2 whitespace-nowrap", k === at && "text-foreground")}
-                      style={{ left: `calc(8px + (100% - 16px) * ${k / (count - 1)})` }}
-                    >
-                      {u.mid ? mjdMonth(u.mid) : `V${u.visit.index}`}
-                    </span>
-                  ) : null,
-                )}
-              </div>
-            </div>
-            <span
-              className="w-24 shrink-0 pt-1.5 text-right"
-              title={count < visits.length ? `${visits.length - count} of ${visits.length} visits have no frame within the wavelength tolerance` : undefined}
-            >
-              {at + 1} / {count} · Visit {current?.visit.index ?? 0}
-            </span>
+            <VisitTimeline
+              visits={usable}
+              at={at}
+              onPick={(k) => {
+                setPlaying(false);
+                setIdx(k);
+              }}
+            />
+            <ExposureSpan visit={current} total={visits.length} shown={count} />
           </div>
         )}
 
@@ -331,7 +327,8 @@ export function BlinkViewer() {
             </>
           )}
           {count < 2 && <span>Difference needs two or more visits.</span>}
-          <span className="ml-auto">
+          {/* Keys mean nothing on a touch screen. */}
+          <span className="ml-auto max-sm:hidden">
             <Kbd>Space</Kbd> play · <Kbd>←</Kbd> <Kbd>→</Kbd> step · <Kbd>1</Kbd>–<Kbd>3</Kbd> mode
           </span>
         </div>
@@ -341,6 +338,107 @@ export function BlinkViewer() {
           {mode === "difference" ? "PSF and background changes leave residuals too." : "screen brightness is for viewing only."}
         </p>
       </div>
+    </div>
+  );
+}
+
+/** UTC date of an MJD, or a dash when the visit has no usable frame time. */
+function fmtDate(mjd: number | null | undefined) {
+  return mjd == null ? "—" : mjdDate(mjd);
+}
+
+/** Time between two MJDs in the unit a reader thinks in: hours, days, months or years. */
+function fmtElapsed(a: number | null | undefined, b: number | null | undefined) {
+  if (a == null || b == null) return "—";
+  const days = Math.abs(a - b);
+  if (days < 1) return `${Math.round(days * 24)} h`;
+  if (days < 60) return `${Math.round(days)} days`;
+  if (days < 730) return `${(days / 30.44).toFixed(1)} months`;
+  return `${(days / 365.25).toFixed(1)} years`;
+}
+
+/**
+ * Visits placed by their real observation time, so a one-month gap and a five-month gap look different. Each dot is
+ * the mean time of the exposures combined into that visit's frame.
+ */
+function VisitTimeline({ visits, at, onPick }: { visits: VisitFrame[]; at: number; onPick: (k: number) => void }) {
+  const mids = visits.map((v) => v.mid);
+  const t0 = mids[0] ?? 0;
+  const t1 = mids[mids.length - 1] ?? t0;
+  const span = t1 - t0 || 1;
+  const pos = (k: number) => (mids[k] == null ? k / Math.max(1, visits.length - 1) : (mids[k]! - t0) / span);
+  // Date labels are about 64px wide: keep the shown visit, then the ends, then the rest, skipping any that would touch.
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const gap = width ? 80 / width : 1;
+  const kept: number[] = [];
+  for (const k of [at, 0, visits.length - 1, ...visits.map((_, i) => i)]) {
+    if (!kept.includes(k) && kept.every((j) => Math.abs(pos(j) - pos(k)) >= gap)) kept.push(k);
+  }
+  const labelled = (k: number) => kept.includes(k);
+  return (
+    <div ref={ref} className="relative h-10 min-w-40 flex-1" role="group" aria-label="Visits by observation date">
+      <div className="absolute inset-x-2 top-2.5 h-px bg-border" />
+      {visits.map((v, k) => {
+        const on = k === at;
+        const left = `calc(8px + (100% - 16px) * ${pos(k)})`;
+        return (
+          <div key={v.visit.index}>
+            <button
+              type="button"
+              onClick={() => onPick(k)}
+              aria-pressed={on}
+              aria-label={`Visit ${k + 1} of ${visits.length}, ${fmtDate(v.mid)}`}
+              title={`Visit ${k + 1} · ${fmtDate(v.mid)}`}
+              className={cn(
+                "absolute top-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
+                on ? "size-3.5 bg-primary ring-4 ring-primary/25" : "size-2.5 bg-muted-foreground hover:bg-foreground",
+              )}
+              style={{ left }}
+            />
+            {labelled(k) && (
+              <span
+                className={cn(
+                  "absolute top-5 font-mono text-[10px] whitespace-nowrap",
+                  k === 0 || k === visits.length - 1 ? "" : "-translate-x-1/2",
+                  on ? "text-foreground" : "text-muted-foreground",
+                )}
+                style={k === 0 ? { left: 0 } : k === visits.length - 1 ? { right: 0 } : { left }}
+              >
+                {fmtDate(v.mid)}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** What the shown frame is made of: how many exposures, taken over which days (UTC). */
+function ExposureSpan({ visit, total, shown }: { visit: VisitFrame | undefined; total: number; shown: number }) {
+  const used = visit?.frames.filter((f) => f.grid) ?? [];
+  const start = used.length ? Math.min(...used.map((f) => f.exposure.tStart)) : null;
+  const end = used.length ? Math.max(...used.map((f) => f.exposure.tEnd)) : null;
+  const sameDay = start != null && end != null && fmtDate(start) === fmtDate(end);
+  return (
+    <div
+      className="w-full shrink-0 leading-tight sm:w-44 sm:text-right"
+      title={shown < total ? `${total - shown} of ${total} visits have no frame in this band and are not shown` : undefined}
+    >
+      <p className="font-medium">
+        {used.length} exposure{used.length === 1 ? "" : "s"} combined
+      </p>
+      <p className="font-mono text-[10px] text-muted-foreground">
+        {start == null ? "—" : sameDay ? fmtDate(start) : `${fmtDate(start)} → ${fmtDate(end).slice(5)}`}
+      </p>
     </div>
   );
 }
