@@ -778,7 +778,7 @@ shortcuts.previous,Previous place,이전 장소,Shortcut sheet row for P: flies 
 shortcuts.queue,Open or fold the review queue,검토 목록 열기/접기,Shortcut sheet row for Q
 shortcuts.title,Keyboard shortcuts,키보드 단축키,Title of the keyboard shortcut sheet
 shortcuts.zoom,Zoom in or out,확대/축소,Shortcut sheet row for + and −
-sky.backgroundNotice,"Temporary background: 2MASS, not SPHEREx",임시 배경: SPHEREx가 아닌 2MASS 이미지,Warning under the sky and on the About page: the sky background is a stand-in (2MASS) while the SPHEREx imagery is unreachable
+sky.backgroundNotice,"Temporary background: 2MASS, not SPHEREx",임시 배경: SPHEREx가 아닌 2MASS 이미지,This view panel: the sky background is a stand-in (2MASS) while the SPHEREx imagery is unreachable (decision #60: not shown on the sky screen or About)
 sonata.announceIdle,"Press a play button, or click a star in either image.",재생 버튼을 누르거나 이미지에서 별을 클릭하세요,Sky Sonata Listen tab: live text before anything plays
 sonata.brightestLabel,"Brightest brightness, mJy (loudest)","가장 밝은 밝기, mJy (가장 큰 소리)",aria-label of the upper brightness input
 sonata.brightestN,{n} brightest,가장 밝은 {n}개,Sky Sonata settings: sources per scan value

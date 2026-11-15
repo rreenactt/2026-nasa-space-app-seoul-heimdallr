@@ -517,12 +517,8 @@ export function SkyExplorer({
         )}
         {/* The credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
         <div className="absolute right-4 bottom-[29px] text-right [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]">
-          {SKY_SURVEY.notice && (
-            <p className="text-xs leading-4 text-signal">
-              {SKY_SURVEY.noticeKey ? t(SKY_SURVEY.noticeKey) : SKY_SURVEY.notice}
-            </p>
-          )}
-          <p className="mt-0.5 text-[11px] leading-[15px] text-ash">{SKY_SURVEY.credit}</p>
+          {/* The credit names the background; "not SPHEREx" is said in the This view panel (decision #60). */}
+          <p className="text-[11px] leading-[15px] text-ash">{SKY_SURVEY.credit}</p>
         </div>
       </div>
       {error && (
