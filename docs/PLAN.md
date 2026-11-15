@@ -237,7 +237,7 @@ flowchart LR
 | 기법 | 한 줄 설명 | 화면 배치 |
 | --- | --- | --- |
 | [Sky Time Machine](analyses/sky-time-machine.md) | 2MASS부터 SPHEREx까지 25년 적외선 하늘을 한 슬라이더로 비교 | 추가 분석 목록 |
-| [Fake Planet Lab](analyses/fake-planet-lab.md) | 우주선 흔적·유령상·포화·잔상을 레이어로 보여주는 오탐 판별 | 추가 분석 목록 |
+| [Fake Planet Lab](analyses/fake-planet-lab.md) | 우주선 흔적·유령상·포화·잔상을 레이어로 보여주는 오탐 판별, 같은 파장끼리 방문 간 밝기 비교 | 추가 분석 목록 |
 | [Neighborhood in Motion](analyses/neighborhood-in-motion.md) | 근접 천체를 3D 공간에서 수천 년 앞뒤로 이동 | 추가 분석 목록 (조건부) |
 | [Sky Sonata](analyses/sky-sonata.md) | 하늘의 변화를 소리로 듣는 접근성 도구 | 추가 분석 목록 |
 | [Comet Breath](analyses/comet-breath.md) | 성간 혜성 3I/ATLAS의 시기별 분자 방출 비교 | 특별 대상 페이지 권장 · **배치 논의 필요** |
