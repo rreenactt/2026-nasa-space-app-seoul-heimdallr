@@ -14,14 +14,15 @@ const querySchema = z
   .object({
     ra: z.coerce.number().min(0).max(360),
     dec: z.coerce.number().min(-90).max(90),
-    radius: z.coerce.number().min(0.01).max(1.5),
+    radius: z.coerce.number().min(0.01).max(3),
     minPm: z.coerce.number().min(20).max(5000),
   })
   .strict();
 
 /**
  * GET /api/sky/fast-stars — Gaia DR3 stars faster than `minPm` (mas/yr) in a cone, for the sky screen's
- * experimental fast-moving-stars layer. Wider than /api/sky/gaia (one zoomed-in sky view, not one cutout).
+ * star guide (decision #48). Wider than /api/sky/gaia: up to a 3° radius covers a 5° view (about 3–9 s on the ESA
+ * archive, measured 2026-11-15).
  */
 export async function GET(request: NextRequest) {
   const q = parseQuery(request.nextUrl, querySchema);

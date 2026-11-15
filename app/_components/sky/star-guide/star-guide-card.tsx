@@ -5,12 +5,7 @@ import { cn } from "cn";
 import type { GaiaStar } from "@/app/_lib/sky/types";
 import { SKY_SURVEY } from "../constants";
 import { formatDec, formatRa } from "../sky-coordinates";
-import { GUIDE_MAX_FOV, GUIDE_MIN_PM, SPHEREX_EPOCH, SPHEREX_PIXEL_ARCSEC, type StarGuideState, totalPm } from "./use-star-guide";
-
-/** Light years from a Gaia parallax (mas); null when the parallax is too small to say. */
-function lightYears(parallax: number | null) {
-  return parallax && parallax > 1 ? 3261.56 / parallax : null;
-}
+import { GUIDE_MAX_FOV, GUIDE_MIN_PM, lightYears, SPHEREX_EPOCH, SPHEREX_PIXEL_ARCSEC, type StarGuideState, totalPm } from "./use-star-guide";
 
 function formatLy(ly: number) {
   return ly < 100 ? `${ly.toFixed(ly < 10 ? 1 : 0)} light-years` : `${Math.round(ly / 10) * 10} light-years`;

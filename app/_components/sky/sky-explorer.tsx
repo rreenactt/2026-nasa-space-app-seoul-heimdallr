@@ -95,7 +95,7 @@ export function SkyExplorer({
         opened,
         selected: flyingTo ?? selection,
       });
-      paintStarGuide(context, frame, starGuide.state, guideHighlight);
+      return paintStarGuide(context, frame, starGuide.state, guideHighlight);
     },
     [overlays, opened, selection, flyingTo, starGuide.state, guideHighlight],
   );

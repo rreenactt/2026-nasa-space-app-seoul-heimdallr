@@ -12,8 +12,8 @@ import type { SettledSky } from "../sky-view";
  * watch a star move. Known stars, not candidates: it teaches where motion can be seen, it does not find anything new.
  */
 
-/** The guide looks only at this field of view (degrees) or narrower; the Gaia cone query allows a 1.5° radius. */
-export const GUIDE_MAX_FOV = 2;
+/** The guide looks only at this field of view (degrees) or narrower; the Gaia cone query allows a 3° radius. */
+export const GUIDE_MAX_FOV = 5;
 /**
  * Slowest motion listed, mas/yr. 0.2″/yr is about one 6.2″ SPHEREx pixel over the 27 years between 2MASS (about 1999)
  * and SPHEREx (2025–26), so every star listed visibly moves in the Sky Time Machine comparison.
@@ -36,7 +36,7 @@ type Cone = { key: string; ra: number; dec: number; radius: number };
 function coneFor(view: SettledSky): Cone | null {
   if (view.fov > GUIDE_MAX_FOV) return null;
   const halfDiagonal = (view.fov / 2) * Math.hypot(1, view.height / Math.max(view.width, 1));
-  const radius = Math.min(Math.ceil(halfDiagonal * 1.05 * 100) / 100, 1.5);
+  const radius = Math.min(Math.ceil(halfDiagonal * 1.05 * 100) / 100, 3);
   const ra = Number(normalizeRa(view.ra).toFixed(3));
   const dec = Number(view.dec.toFixed(3));
   return { key: `${ra} ${dec} ${radius}`, ra, dec, radius };
@@ -51,6 +51,11 @@ export function positionAt(star: GaiaStar, year: number): [number, number] {
 
 export function totalPm(star: GaiaStar) {
   return Math.hypot(star.pmra, star.pmdec);
+}
+
+/** Light years from a Gaia parallax (mas); null when the parallax is too small to say. */
+export function lightYears(parallax: number | null) {
+  return parallax && parallax > 1 ? 3261.56 / parallax : null;
 }
 
 /** Whether a star's position now falls inside the view (flat-sky approximation, fine below a few degrees). */
