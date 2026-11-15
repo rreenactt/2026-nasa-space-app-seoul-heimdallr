@@ -1,6 +1,7 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { MISSION_ORDER, MISSIONS } from "@/app/_lib/sky/missions";
 import type { Epoch, SkyGrid } from "@/app/_lib/sky/types";
 import { buildModel, mjdToDecimalYear, skyAt } from "@/app/_lib/nim/motion";
@@ -19,7 +20,8 @@ export type AnalysisId = "sky-time-machine" | "fake-planet-lab" | "neighborhood-
 export interface Progress {
   done: number;
   total: number;
-  step: string;
+  /** What is downloading now, shown beside the counts. */
+  step: MessageKey;
   failed: number;
 }
 
@@ -61,7 +63,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
   let done = 0;
   let failed = 0;
   let total = 1;
-  let step = "Searching";
+  let step: MessageKey = "analyses.stepSearching";
   const report = () => onProgress({ done, total, step, failed });
   const tick = (ok: boolean) => {
     done++;
@@ -73,7 +75,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
   if (id === "sky-time-machine") {
     const grid: SkyGrid = { ra, dec, fovArcmin: ctx.stmFovArcmin, n: STM_GRID_N };
     total = MISSION_ORDER.length;
-    step = "Searching 2MASS, WISE, NEOWISE, SPHEREx";
+    step = "analyses.stepStmSearch";
     report();
     const results = await Promise.all(
       MISSION_ORDER.map((m) =>
@@ -88,7 +90,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
       for (const e of results[i]?.epochs ?? []) if (e.band === MISSIONS[m].defaultBand) epochs.push(e);
     });
     total += epochs.length;
-    step = "Reading and aligning images";
+    step = "analyses.stepStmRead";
     report();
     await runTasks(
       epochs.map((e) => () => qc.fetchQuery({ queryKey: stmFrameKey(e.id, grid), queryFn: () => fetchEpochFrame(e, grid), retry: false, ...SKY_SESSION })),
@@ -100,7 +102,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
   }
 
   if (id === "fake-planet-lab" || id === "sky-sonata") {
-    step = "Searching SPHEREx";
+    step = "analyses.stepSpherexSearch";
     const search = await qc.fetchQuery(spherexSearchQuery(ra, dec));
     tick(true);
     const ex = search.exposures;
@@ -113,14 +115,14 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
       picks = [visits[0]?.[Math.floor(visits[0].length / 2)], visits.length > 1 ? last[Math.floor(last.length / 2)] : undefined].filter((e): e is NonNullable<typeof e> => Boolean(e));
     }
     total += picks.length;
-    step = "Reading SPHEREx images";
+    step = "analyses.stepSpherexRead";
     report();
     await runTasks(picks.map((e) => () => qc.fetchQuery(spherexFrameQuery(e, ra, dec))), PARALLEL, tick, signal);
     return;
   }
 
   if (id === "neighborhood-in-motion") {
-    step = "Querying Gaia DR3";
+    step = "analyses.stepGaia";
     total = 3;
     const cat = await qc.fetchQuery(catalogQuery());
     tick(true);
@@ -133,7 +135,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
       report();
       return;
     }
-    step = "Searching SPHEREx at the model position";
+    step = "analyses.stepModelSearch";
     report();
     const p = skyAt(m, 2025.8);
     const search = await qc.fetchQuery(spherexSearchQuery(p.ra, p.dec));
@@ -142,7 +144,7 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
     const det = dets.includes("D6") ? "D6" : dets[0];
     const visits = visitsOf(search.exposures.filter((e) => e.detector === det));
     const e = visits[0]?.[Math.floor(visits[0].length / 2)];
-    step = "Reading the SPHEREx image";
+    step = "analyses.stepSpherexReadOne";
     report();
     if (e) {
       const at = skyAt(m, mjdToDecimalYear((e.tStart + e.tEnd) / 2));
@@ -152,12 +154,12 @@ export async function prefetchAnalysis(id: AnalysisId, ctx: PrefetchContext) {
   }
 
   if (id === "comet-breath") {
-    step = "Reading the 3I/ATLAS observation list";
+    step = "analyses.stepCometList";
     total = 2;
     const idx = await qc.fetchQuery(observationsQuery());
     tick(true);
     const first = idx.entries.filter((e) => e.period === "2025-08" && e.detector === "D3")[0];
-    step = "Reading the first 3I/ATLAS image";
+    step = "analyses.stepCometFirst";
     report();
     if (first) {
       const center = { ra: first.cometRa, dec: first.cometDec };

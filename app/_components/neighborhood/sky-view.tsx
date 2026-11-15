@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/app/_i18n/i18n-provider";
 import { closestApproach, modelStatus, skyAt } from "@/app/_lib/nim/motion";
 import { STATUS_COLOR } from "./map-3d";
 import { formatYear, RANGES, useNim } from "./nim-state";
@@ -20,6 +21,7 @@ function trackSegments(points: { ra: number; dec: number }[]) {
 }
 
 export function SkyView({ observationYears }: { observationYears: number[] }) {
+  const t = useT();
   const { objects, models, selected, selectedId, setSelectedId, year, mode } = useNim();
   const range = RANGES[mode];
   const steps = 120;
@@ -51,7 +53,7 @@ export function SkyView({ observationYears }: { observationYears: number[] }) {
   return (
     <div className="grid gap-4 pt-2">
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px] rounded-md bg-slate-950" role="img" aria-label="All-sky map of the nearby objects">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px] rounded-md bg-slate-950" role="img" aria-label={t("nim.skyMapAria")}>
           {[-60, -30, 0, 30, 60].map((d) => (
             <g key={d}>
               <line x1={0} x2={W} y1={sy(d)} y2={sy(d)} stroke="#1e293b" />
@@ -83,14 +85,14 @@ export function SkyView({ observationYears }: { observationYears: number[] }) {
           })}
         </svg>
         <p className="mt-1 text-xs text-muted-foreground">
-          Direction as seen from the solar-system barycenter at {formatYear(year)} (equirectangular, RA increasing to the left). Lines show each model path over the selected range — not observations.
+          {t("nim.skyMapCaption", { year: formatYear(year) })}
         </p>
       </div>
 
       {m && selected && ref && (
         <div className="grid gap-4 md:grid-cols-2">
           <figure className="grid gap-1">
-            <svg viewBox={`0 0 ${L} ${L}`} className="w-full max-w-sm rounded-md bg-slate-950" role="img" aria-label={`Sky track of ${selected.name}`}>
+            <svg viewBox={`0 0 ${L} ${L}`} className="w-full max-w-sm rounded-md bg-slate-950" role="img" aria-label={t("nim.trackAria", { name: selected.name })}>
               <line x1={L / 2} x2={L / 2} y1={8} y2={L - 8} stroke="#1e293b" />
               <line x1={8} x2={L - 8} y1={L / 2} y2={L / 2} stroke="#1e293b" />
               <polyline points={local.map((p) => `${lx(p.e)},${ly(p.n)}`).join(" ")} fill="none" stroke="#7dd3fc" strokeWidth={1.5} />
@@ -106,11 +108,11 @@ export function SkyView({ observationYears }: { observationYears: number[] }) {
               <text x={6} y={16} fill="#94a3b8" fontSize={10}>±{(extent * unit.f).toFixed(unit.l === "″" ? 1 : 2)}{unit.l}</text>
             </svg>
             <figcaption className="text-xs text-muted-foreground">
-              {selected.name}: model track on the sky around its {formatYear(year)} position (white). Squares: dates with a SPHEREx exposure listed in the SPHEREx tab (model positions, not measurements).
+              {t("nim.trackCaption", { name: selected.name, year: formatYear(year) })}
             </figcaption>
           </figure>
           <figure className="grid gap-1">
-            <svg viewBox="0 0 460 180" className="w-full rounded-md bg-slate-950" role="img" aria-label={`Distance of ${selected.name} over time`}>
+            <svg viewBox="0 0 460 180" className="w-full rounded-md bg-slate-950" role="img" aria-label={t("nim.distanceAria", { name: selected.name })}>
               <polyline points={dist.map((p) => `${DX(p.y)},${DY(p.d)}`).join(" ")} fill="none" stroke="#7dd3fc" strokeWidth={1.5} />
               <line x1={DX(year)} x2={DX(year)} y1={14} y2={150} stroke="#fff" strokeOpacity={0.5} />
               {ca && ca.year >= range.min && ca.year <= range.max && <circle cx={DX(ca.year)} cy={DY(ca.distancePc)} r={4} fill="#fbbf24" />}
@@ -121,8 +123,9 @@ export function SkyView({ observationYears }: { observationYears: number[] }) {
               <text x={4} y={150} fill="#94a3b8" fontSize={10}>0</text>
             </svg>
             <figcaption className="text-xs text-muted-foreground">
-              Distance from the Sun under the straight-line model. {ca && `Closest approach (model): ${formatYear(ca.year)}, ${ca.distancePc.toFixed(3)} pc (${(ca.distancePc * 3.26156).toFixed(2)} ly).`}
-              {selected.radialVelocity ? "" : " Radial velocity not measured — this curve depends on the assumed value."}
+              {t("nim.distanceCaption")}{" "}
+              {ca && t("nim.closestApproachModel", { year: formatYear(ca.year), distance: ca.distancePc.toFixed(3), ly: (ca.distancePc * 3.26156).toFixed(2) })}
+              {selected.radialVelocity ? "" : ` ${t("nim.distanceRvAssumed")}`}
             </figcaption>
           </figure>
         </div>

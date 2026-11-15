@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/app/_i18n/i18n-provider";
 import "./sky-intro.css";
 
 const WORD = "HEIMDALLR";
@@ -29,6 +30,7 @@ const LETTER_ON = [400, 720, 480, 560, 820, 900, 620, 1060, 980];
  * Skippable; skipped for reduced motion, for shared links, and after the first time in a browser session.
  */
 export function SkyIntro({ enabled }: { enabled: boolean }) {
+  const t = useT();
   const [show, setShow] = useState(false);
   const [revealing, setRevealing] = useState(false);
   const word = useRef<HTMLParagraphElement>(null);
@@ -120,7 +122,7 @@ export function SkyIntro({ enabled }: { enabled: boolean }) {
               </span>
             ))}
           </p>
-          <p className="sky-intro-purpose font-ui text-ash">Find what moves in SPHEREx images</p>
+          <p className="sky-intro-purpose font-ui text-ash">{t("intro.purpose")}</p>
         </div>
       </div>
       <button
@@ -128,7 +130,7 @@ export function SkyIntro({ enabled }: { enabled: boolean }) {
         onClick={() => setShow(false)}
         className="sky-intro-skip absolute font-ui text-smoke hover:text-ash"
       >
-        Skip intro
+        {t("intro.skip")}
       </button>
     </div>
   );

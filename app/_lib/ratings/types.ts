@@ -1,11 +1,13 @@
-/** Rating choices in the API (decision #12) and their UI labels. */
+import type { MessageKey } from "@/app/_i18n/message-keys";
+
+/** Rating choices in the API (decision #12) and their UI labels as translation keys (Moving / Not moving / Noise or artifact). */
 export const RATING_CHOICES = ["moving", "not-moving", "noise-or-artifact"] as const;
 export type RatingChoiceId = (typeof RATING_CHOICES)[number];
 
-export const RATING_LABELS: Record<RatingChoiceId, string> = {
-  moving: "Moving",
-  "not-moving": "Not moving",
-  "noise-or-artifact": "Noise or artifact",
+export const RATING_KEYS: Record<RatingChoiceId, MessageKey> = {
+  moving: "review.moving",
+  "not-moving": "review.notMoving",
+  "noise-or-artifact": "review.noiseOrArtifact",
 };
 
 /** Below this many ratings the point shows "Too few ratings" (PLAN.md chapter 8). */

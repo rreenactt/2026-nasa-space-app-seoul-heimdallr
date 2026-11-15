@@ -2,6 +2,7 @@
 
 import { SearchIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { headerActionClass } from "../site/site-header";
 import { ShareButton } from "../site/share-button";
 import { type MenuEntry, SiteMenu } from "../site/site-menu";
@@ -21,12 +22,13 @@ type SkyHeaderActionsProps = {
 
 /** Search, Share and Menu in the header of the sky screen. */
 export function SkyHeaderActions({ onTarget, onPoint, searchOpen, onSearchOpenChange, menuGroups }: SkyHeaderActionsProps) {
+  const t = useT();
   return (
     <>
       <Popover open={searchOpen} onOpenChange={onSearchOpenChange}>
         <PopoverTrigger className={headerActionClass}>
           <SearchIcon aria-hidden />
-          Search
+          {t("search.label")}
         </PopoverTrigger>
         <PopoverContent align="end" sideOffset={10} className="w-auto rounded-sm border-0 bg-ink/90 p-2 ring-0">
           <SkySearchBox

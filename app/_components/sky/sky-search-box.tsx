@@ -3,6 +3,8 @@
 import { SearchIcon } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { apiGet } from "@/lib/ky";
 import { useCandidateUpdates } from "./candidates-context";
 import type { CandidateLookup } from "./review-queue";
@@ -16,7 +18,7 @@ type SkySearchBoxProps = {
 };
 
 /** A name the database had no candidate for, or could not be asked about: the user chooses to go to its position. */
-type NameNote = { point: EquatorialCoordinates; text: string; failed: boolean };
+type NameNote = { point: EquatorialCoordinates; text: MessageKey; failed: boolean };
 
 /** A candidate name is truncated from its position, so the candidate can sit up to about 1.5″ away (as the server). */
 const NAME_RADIUS_DEG = 3 / 3600;
@@ -27,8 +29,9 @@ const NAME_RADIUS_DEG = 3 / 3600;
  * since the page loaded is found or not, and the page's candidate list is brought in line with the answer.
  */
 export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MessageKey | null>(null);
   const [looking, setLooking] = useState(false);
   const [note, setNote] = useState<NameNote | null>(null);
   const lookup = useRef(0);
@@ -57,12 +60,12 @@ export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
         point: result.point,
         failed: false,
         text: name.twoMass
-          ? "No candidate with this name in the latest batch. A 2MASS name gives the 1997–2001 position, so a fast-moving star may sit elsewhere now."
-          : "No candidate with this name in the latest batch.",
+          ? "search.noCandidate2Mass"
+          : "search.noCandidate",
       });
     } catch {
       if (id !== lookup.current) return;
-      setNote({ point: name.point, failed: true, text: "Could not reach the candidate list just now." });
+      setNote({ point: name.point, failed: true, text: "search.lookupFailed" });
     } finally {
       if (id === lookup.current) setLooking(false);
     }
@@ -108,8 +111,8 @@ export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
             if (event.key === "Escape") event.currentTarget.blur();
           }}
           list={listId}
-          placeholder="Candidate, 2MASS name, test target or RA Dec"
-          aria-label="Search the sky by candidate name, 2MASS name, test target name or coordinates"
+          placeholder={t("search.placeholder")}
+          aria-label={t("search.inputLabel")}
           aria-invalid={error !== null}
           aria-describedby={error ? errorId : undefined}
           autoComplete="off"
@@ -123,23 +126,23 @@ export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
       </datalist>
       {error && (
         <p id={errorId} role="alert" className="mt-2 rounded-md bg-black/70 px-3 py-2 text-xs text-amber-200">
-          {error}
+          {t(error)}
         </p>
       )}
       {looking && (
         <p role="status" className="mt-2 rounded-md bg-black/70 px-3 py-2 text-xs text-ash">
-          Looking up the latest batch…
+          {t("search.looking")}
         </p>
       )}
       {note && (
         <div role="status" className="mt-2 grid gap-1.5 rounded-md bg-black/70 px-3 py-2 text-xs">
-          <p className={note.failed ? "text-amber-200" : "text-ash"}>{note.text}</p>
+          <p className={note.failed ? "text-amber-200" : "text-ash"}>{t(note.text)}</p>
           <button
             type="button"
             className="justify-self-start font-medium text-paper hover:underline"
             onClick={() => onPoint(note.point)}
           >
-            Go to that position
+            {t("search.goToPosition")}
           </button>
         </div>
       )}

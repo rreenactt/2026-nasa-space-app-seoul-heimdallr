@@ -1,4 +1,5 @@
 import { propagate } from "@/app/_lib/sky/wcs";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import type { EquatorialCoordinates } from "./sky-coordinates";
 
 /** Epoch the SPHEREx DR1 observations of the test targets centre on (visits run 2025-05 → 2026-05). */
@@ -20,8 +21,9 @@ export type TestTarget = EquatorialCoordinates & {
   epoch: string;
   /** Where the position comes from. */
   source: string;
-  /** Why the team tests with it. */
+  /** Why the team tests with it (English; screens show `t(noteKey)`). */
   note: string;
+  noteKey: MessageKey;
   /** Catalog proper motion. Every test target has one: none of them is fixed on the sky. */
   motion: TargetMotion;
   /**
@@ -31,7 +33,7 @@ export type TestTarget = EquatorialCoordinates & {
    */
   spherexPosition: EquatorialCoordinates & { epoch: string; source: string };
   /** Detector the analysis panel opens with for this target only (the general default is the most exposures). */
-  defaultDetector?: { detector: string; reason: string };
+  defaultDetector?: { detector: string; reason: string; reasonKey: MessageKey };
 };
 
 /**
@@ -48,6 +50,7 @@ const PINS: Omit<TestTarget, "spherexPosition">[] = [
     epoch: "2016.0",
     source: "Gaia DR3 4472832130942575872",
     note: "One of the fastest-moving stars on the sky, about 10.4″ per year to the north.",
+    noteKey: "testTargets.barnardNote",
     motion: { ra: 269.44850252544, dec: 4.73942005111, epoch: 2016.0, pmRaMasYr: -801.551, pmDecMasYr: 10362.394, source: "Gaia DR3 proper motion" },
   },
   {
@@ -58,6 +61,7 @@ const PINS: Omit<TestTarget, "spherexPosition">[] = [
     epoch: "2016.0",
     source: "Gaia DR3 6412596012146801152",
     note: "Nearby brown dwarf pair, about 4.7″ per year. Bright in the infrared, faint in visible light.",
+    noteKey: "testTargets.epsIndBNote",
     motion: { ra: 331.07645259656, dec: -56.79381206688, epoch: 2016.0, pmRaMasYr: 3981.977, pmDecMasYr: -2466.832, source: "Gaia DR3 proper motion" },
   },
   {
@@ -68,6 +72,7 @@ const PINS: Omit<TestTarget, "spherexPosition">[] = [
     epoch: "≈2010",
     source: "AllWISE designation J085510.83−071442.5",
     note: "The coldest known brown dwarf, about 8″ per year. Not in Gaia; may be too faint for SPHEREx.",
+    noteKey: "testTargets.wise0855Note",
     // Not in Gaia: Spitzer position at MJD 56839.7 and proper motion from Luhman & Esplin 2014 (arXiv:1409.5899),
     // the same values as app/_lib/nim/catalog.ts.
     motion: {
@@ -78,7 +83,11 @@ const PINS: Omit<TestTarget, "spherexPosition">[] = [
       pmDecMasYr: 700,
       source: "Luhman & Esplin 2014 position and proper motion",
     },
-    defaultDetector: { detector: "D6", reason: "a Y dwarf is nearly dark below 4 µm and brightest near 4.6 µm" },
+    defaultDetector: {
+      detector: "D6",
+      reason: "a Y dwarf is nearly dark below 4 µm and brightest near 4.6 µm",
+      reasonKey: "testTargets.wise0855DetectorReason",
+    },
   },
   {
     id: "rw-aur",
@@ -88,6 +97,7 @@ const PINS: Omit<TestTarget, "spherexPosition">[] = [
     epoch: "2016.0",
     source: "Gaia DR3 156430822114424576 (RW Aur A)",
     note: "Young star whose brightness changes; tests a source that varies while it moves far less than a SPHEREx pixel (about 0.03″ per year).",
+    noteKey: "testTargets.rwAurNote",
     motion: { ra: 76.95608119553, dec: 30.4012045891, epoch: 2016.0, pmRaMasYr: 2.64, pmDecMasYr: -27.4, source: "Gaia DR3 proper motion" },
   },
   {
@@ -98,6 +108,7 @@ const PINS: Omit<TestTarget, "spherexPosition">[] = [
     epoch: "2016.0",
     source: "Gaia DR3 1648328016354496384",
     note: "Mira variable; tests a bright source that varies while it moves far less than a SPHEREx pixel (about 0.02″ per year).",
+    noteKey: "testTargets.rDraNote",
     motion: { ra: 248.16737836729, dec: 66.75500674547, epoch: 2016.0, pmRaMasYr: -20.64, pmDecMasYr: 6.15, source: "Gaia DR3 proper motion" },
   },
 ];

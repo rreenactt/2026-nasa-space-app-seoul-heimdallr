@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import type { EquatorialCoordinates } from "./sky-coordinates";
 import { TEST_TARGETS, type TestTarget } from "./test-targets";
 
@@ -5,7 +6,8 @@ export type SkySearchResult =
   | { kind: "target"; target: TestTarget }
   | { kind: "name"; name: SkyName }
   | { kind: "point"; point: EquatorialCoordinates }
-  | { kind: "error"; message: string };
+  /** The message is a translation key; the search box shows it in the chosen language. */
+  | { kind: "error"; message: MessageKey };
 
 /**
  * A name that spells its own position (Jhhmmss.s±ddmmss): a candidate name, or a 2MASS designation, whose digits run
@@ -70,7 +72,7 @@ const COORDINATE_CHARS = /^[+\-−–]?\d[\d\s.,:+\-−–hdms°′″'"]*$/i;
  */
 export function parseSkySearch(query: string): SkySearchResult {
   const text = query.trim();
-  if (!text) return { kind: "error", message: "Type a test target name or coordinates." };
+  if (!text) return { kind: "error", message: "search.errorEmpty" };
 
   const target = findTargetByName(text);
   if (target) return { kind: "target", target };
@@ -81,15 +83,14 @@ export function parseSkySearch(query: string): SkySearchResult {
   if (!COORDINATE_CHARS.test(text)) {
     return {
       kind: "error",
-      message:
-        "Only test targets, candidates and names with coordinates (J…) can be found for now. Try coordinates, for example 269.4485 4.7394.",
+      message: "search.errorUnknownName",
     };
   }
 
   const point = parseCoordinates(text);
   return point
     ? { kind: "point", point }
-    : { kind: "error", message: "Could not read those coordinates. Use RA then Dec, for example 17 57 48.5 +04 41 36." };
+    : { kind: "error", message: "search.errorCoordinates" };
 }
 
 function findTargetByName(text: string): TestTarget | undefined {

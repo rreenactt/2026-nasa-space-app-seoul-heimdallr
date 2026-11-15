@@ -9,11 +9,12 @@ import { ARCSEC2_TO_SR } from "@/app/_lib/comet/photometry";
 import type { NativeFrame } from "@/app/_lib/fpl/checks";
 import { decodeBits } from "@/app/_lib/fpl/flags";
 import type { FplExposure } from "@/app/_lib/fpl/types";
-import { COMPARE, describePair, isDifference, matchSources, pairEvents, pairsForRun, type SourcePair } from "@/app/_lib/sonata/compare";
+import { COMPARE, isDifference, matchSources, pairEvents, pairsForRun, type SourcePair } from "@/app/_lib/sonata/compare";
 import { eventFor, frequencyFor, gainFor, panFor, scanEvents, selectSources, type SoundEvent, type SoundSettings } from "@/app/_lib/sonata/mapping";
 import { skyLevel, type SonataSource } from "@/app/_lib/sonata/sources";
 import type { SkyGrid } from "@/app/_lib/sky/types";
 import { gridToSky } from "@/app/_lib/sky/wcs";
+import { type Translate, useT } from "@/app/_i18n/i18n-provider";
 import { mjdIso } from "../fake-planet-lab/fpl-state";
 import { LayeredCanvas, useIndexMap } from "../fake-planet-lab/layered-canvas";
 import { sharedDisplayRange } from "../fake-planet-lab/use-fpl-data";
@@ -42,8 +43,28 @@ interface Props {
   changedAt: string | null;
 }
 
-const fmtPan = (p: number) => (Math.abs(p) < 0.1 ? "centre" : p < 0 ? `${Math.round(-p * 100)}% left` : `${Math.round(p * 100)}% right`);
-const fmtFlux = (s: SonataSource | null) => (!s ? "not found" : s.quality === "saturated" ? "saturated" : `${s.fluxMjy!.toFixed(2)} mJy`);
+const fmtPan = (t: Translate, p: number) =>
+  Math.abs(p) < 0.1 ? t("sonata.panCentre") : p < 0 ? t("sonata.panLeft", { n: Math.round(-p * 100) }) : t("sonata.panRight", { n: Math.round(p * 100) });
+const fmtFlux = (t: Translate, s: SonataSource | null) =>
+  !s ? t("sonata.notFound") : s.quality === "saturated" ? t("sonata.saturated") : `${s.fluxMjy!.toFixed(2)} mJy`;
+
+/** Same wording as describePair (app/_lib/sonata/compare.ts), translated. */
+function describePair(t: Translate, p: SourcePair): string {
+  switch (p.kind) {
+    case "same":
+      return t("sonata.pairSame");
+    case "brighter-in-b":
+      return t("sonata.pairBrighter", { ratio: p.ratio!.toFixed(1) });
+    case "fainter-in-b":
+      return t("sonata.pairFainter", { ratio: p.ratio!.toFixed(2) });
+    case "only-a":
+      return t("sonata.pairOnlyA");
+    case "only-b":
+      return t("sonata.pairOnlyB");
+    case "saturated":
+      return t("sonata.pairSaturated");
+  }
+}
 
 /** Pairs played in one comparison run (the audio engine holds 24 notes, two per pair). */
 const MAX_RUN_PAIRS = 12;
@@ -57,10 +78,11 @@ const PAIR_COLOR: Record<SourcePair["kind"], string> = {
 };
 
 export function ListenPanel(props: Props) {
+  const t = useT();
   const { audio, ensureAudio, grid, frames, sources, settings } = props;
   const hasB = Boolean(frames.B);
   const [cursor, setCursor] = useState({ i: Math.round((grid.n - 1) / 2), r: Math.round((grid.n - 1) / 2) });
-  const [announce, setAnnounce] = useState("Press a play button, or click a star in either image.");
+  const [announce, setAnnounce] = useState(() => t("sonata.announceIdle"));
   const [playhead, setPlayhead] = useState<{ tag: Tag; at: number } | null>(null);
   const [current, setCurrent] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
@@ -78,7 +100,7 @@ export function ListenPanel(props: Props) {
   const single = useMemo(() => [...selectSources(sources.A, grid, settings).played].sort((p, q) => p.g!.i - q.g!.i), [sources.A, grid, settings]);
 
   const clearSchedules = useCallback(() => {
-    for (const t of timers.current) window.clearTimeout(t);
+    for (const timer of timers.current) window.clearTimeout(timer);
     timers.current = [];
     if (raf.current) cancelAnimationFrame(raf.current);
     raf.current = null;
@@ -99,7 +121,7 @@ export function ListenPanel(props: Props) {
     const sky = tag === "A" ? skyA : skyB;
     if (!frame || !map || !sky) return null;
     const src = map[Math.round(r) * grid.n + Math.round(i)];
-    if (src == null || src < 0) return { flux: null as number | null, reason: "outside this exposure" };
+    if (src == null || src < 0) return { flux: null as number | null, reason: t("sonata.reasonOutside") };
     const p = frame.payload;
     const W = p.width;
     const x = src % W;
@@ -116,7 +138,7 @@ export function ListenPanel(props: Props) {
       sum += frame.image[k] - frame.zodi[k] - sky.median;
       n++;
     }
-    if (n < 5) return { flux: null, reason: "unusable pixels (flagged or saturated)" };
+    if (n < 5) return { flux: null, reason: t("sonata.reasonUnusable") };
     const omega = (p.header.omegaMedianArcsec2 ?? 37.8) * ARCSEC2_TO_SR;
     return { flux: sum * (9 / n) * 1e9 * omega, reason: null as string | null };
   };
@@ -136,19 +158,19 @@ export function ListenPanel(props: Props) {
       const start = k * COMPARE.gapSeconds;
       if (pr.flux == null) {
         events.push({ sourceId: null, x, y: 1, start, duration: 0.07, frequency: 110, pan: 0, gain: 0.2, wave: "square" });
-        parts.push(`${tag}: no usable data (${pr.reason})`);
+        parts.push(t("sonata.pointNoData", { tag, reason: String(pr.reason) }));
       } else {
         events.push(eventFor(null, x, y, pr.flux, settings, start));
-        parts.push(`${tag}: ${pr.flux.toFixed(2)} mJy, loudness ${Math.round(gainFor(pr.flux, settings) * 100)}%`);
+        parts.push(t("sonata.pointFlux", { tag, flux: pr.flux.toFixed(2), gain: Math.round(gainFor(pr.flux, settings) * 100) }));
       }
     }
     stop();
     audio().play(events);
-    setAnnounce(`RA ${ra.toFixed(4)}, Dec ${dec.toFixed(4)} · ${Math.round(frequencyFor(y, settings))} Hz, ${fmtPan(panFor(x, settings))}. ${parts.join(" · ")}.`);
+    setAnnounce(t("sonata.pointAnnounce", { ra: ra.toFixed(4), dec: dec.toFixed(4), hz: Math.round(frequencyFor(y, settings)), pan: fmtPan(t, panFor(x, settings)), parts: parts.join(" · ") }));
   };
 
   const pairSentence = (p: SourcePair, k: number, n: number) =>
-    `Source ${k + 1} of ${n}: ${describePair(p)}. A: ${fmtFlux(p.a)} · B: ${fmtFlux(p.b)}. ${Math.round(frequencyFor(p.y, settings))} Hz, ${fmtPan(panFor(p.x, settings))}.`;
+    t("sonata.pairSentence", { k: k + 1, n, result: describePair(t, p), a: fmtFlux(t, p.a), b: fmtFlux(t, p.b), hz: Math.round(frequencyFor(p.y, settings)), pan: fmtPan(t, panFor(p.x, settings)) });
 
   const playPair = async (p: SourcePair) => {
     await ensureAudio();
@@ -175,7 +197,7 @@ export function ListenPanel(props: Props) {
         }, k * COMPARE.stepSeconds * 1000),
       );
     }
-    setAnnounce(`Comparing ${run.length} source(s), left to right. Each one plays twice: first as in A, then as in B. A low tick means it was not found.`);
+    setAnnounce(t("sonata.compareAnnounce", { n: run.length }));
   };
 
   const scan = async (which: Tag) => {
@@ -194,7 +216,7 @@ export function ListenPanel(props: Props) {
     };
     raf.current = requestAnimationFrame(tick);
     const sel = selectSources(sources[which], grid, settings);
-    setAnnounce(`Playing all of ${which}, left to right over ${settings.scanSeconds} seconds: the ${sel.played.length} brightest of ${sel.total} detected sources.`);
+    setAnnounce(t("sonata.scanAnnounce", { tag: which, s: settings.scanSeconds, played: sel.played.length, total: sel.total }));
   };
 
   const playSingle = async (k: number) => {
@@ -206,7 +228,7 @@ export function ListenPanel(props: Props) {
     setCurrent(e.src.id);
     setCursor({ i: Math.round(e.g!.i), r: Math.round(e.g!.r) });
     audio().play([eventFor(e.src, x, y, e.src.fluxMjy, settings)]);
-    setAnnounce(`Source ${k + 1} of ${single.length}: ${fmtFlux(e.src)}. ${Math.round(frequencyFor(y, settings))} Hz, ${fmtPan(panFor(x, settings))}.`);
+    setAnnounce(t("sonata.singleSentence", { k: k + 1, n: single.length, flux: fmtFlux(t, e.src), hz: Math.round(frequencyFor(y, settings)), pan: fmtPan(t, panFor(x, settings)) }));
   };
 
   const step = (by: number) => {
@@ -265,17 +287,17 @@ export function ListenPanel(props: Props) {
     return (
       <div key={tag} className="grid content-start gap-1">
         <div className="flex items-baseline justify-between gap-2 text-xs">
-          <span className="font-medium">Observation {tag}</span>
+          <span className="font-medium">{t("sonata.observationTag", { tag })}</span>
           <span className="text-muted-foreground">{exp ? mjdIso(exp.tStart).slice(0, 10) : ""}</span>
         </div>
         {props.loading[tag] ? (
-          <div className="flex aspect-square items-center justify-center gap-2 rounded-md border border-dashed text-xs text-muted-foreground"><Spinner /> Reading the exposure…</div>
+          <div className="flex aspect-square items-center justify-center gap-2 rounded-md border border-dashed text-xs text-muted-foreground"><Spinner /> {t("sonata.readingExposure")}</div>
         ) : frame ? (
           <div
             tabIndex={0}
             role="application"
-            aria-roledescription="sky sound explorer"
-            aria-label={`Observation ${tag}. Arrow keys move the cursor and play the sky under it${hasB ? ", first in A and then in B" : ""} (Shift for small steps). Enter plays it again. N and P go to the next or previous source.`}
+            aria-roledescription={t("sonata.explorerRole")}
+            aria-label={t(hasB ? "sonata.explorerLabelAB" : "sonata.explorerLabel", { tag })}
             onKeyDown={onKey}
             className="relative rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring"
           >
@@ -301,7 +323,7 @@ export function ListenPanel(props: Props) {
             )}
           </div>
         ) : (
-          <div className="flex aspect-square items-center justify-center rounded-md border border-dashed p-3 text-center text-xs text-destructive">{props.errors[tag] ?? "Choose an observation."}</div>
+          <div className="flex aspect-square items-center justify-center rounded-md border border-dashed p-3 text-center text-xs text-destructive">{props.errors[tag] ?? t("sonata.chooseObservation")}</div>
         )}
       </div>
     );
@@ -310,41 +332,47 @@ export function ListenPanel(props: Props) {
   return (
     <div className="grid gap-4 pt-2 text-sm">
       <section className="grid gap-2 rounded-lg border p-3">
-        <h3 className="text-sm font-medium">{hasB ? "Hear what differs between A and B" : "Listen to this observation"}</h3>
+        <h3 className="text-sm font-medium">{hasB ? t("sonata.titleCompare") : t("sonata.titleListen")}</h3>
         {hasB ? (
           <>
             <p className="text-xs text-muted-foreground">
-              Each source plays twice in a row: first as it is in A, then as it is in B, at the same pitch and on the same side. If the second note is
-              louder, it is brighter in B. A low tick means it was not found.
+              {t("sonata.compareIntro")}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" onClick={() => comparePairs(false)} disabled={!pairs.length}>
-                <ArrowLeftRightIcon /> Compare source by source
+                <ArrowLeftRightIcon /> {t("sonata.compareBySource")}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => comparePairs(true)} disabled={!differences.length}>
-                <PlayIcon /> Only the differences ({differences.length})
+                <PlayIcon /> {t("sonata.onlyDifferences", { n: differences.length })}
               </Button>
-              <Button size="sm" variant="outline" onClick={stop}><SquareIcon /> Stop</Button>
+              <Button size="sm" variant="outline" onClick={stop}><SquareIcon /> {t("sonata.stop")}</Button>
             </div>
             <p className="text-xs">
               {pairs.length === 0
-                ? "No source is clear enough in either exposure to compare (S/N 10 or more is needed)."
-                : `${count("same")} about the same · ${count("brighter-in-b")} brighter in B · ${count("fainter-in-b")} fainter in B · ${count("only-a")} only in A · ${count("only-b")} only in B${count("saturated") ? ` · ${count("saturated")} saturated` : ""}.`}
+                ? t("sonata.noPairs")
+                : t(count("saturated") ? "sonata.countsSaturated" : "sonata.counts", {
+                    same: count("same"),
+                    brighter: count("brighter-in-b"),
+                    fainter: count("fainter-in-b"),
+                    onlyA: count("only-a"),
+                    onlyB: count("only-b"),
+                    saturated: count("saturated"),
+                  })}
             </p>
             {props.waveMismatch && differences.length > 0 && (
               <p className="text-xs text-amber-700 dark:text-amber-400">
-                A and B see this field at different wavelengths, so these differences can come from the colour of the sources, not from a change in the sky.
+                {t("sonata.waveMismatchNote")}
               </p>
             )}
           </>
         ) : (
           <>
             <p className="text-xs text-muted-foreground">
-              Additional analysis needed: there is no second observation to compare with here. Higher in the image is a higher note, brighter is louder, left and right follow the image.
+              {t("sonata.singleIntro")}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" onClick={() => scan("A")} disabled={!frames.A}><PlayIcon /> Play left to right</Button>
-              <Button size="sm" variant="outline" onClick={stop}><SquareIcon /> Stop</Button>
+              <Button size="sm" onClick={() => scan("A")} disabled={!frames.A}><PlayIcon /> {t("sonata.playLeftToRight")}</Button>
+              <Button size="sm" variant="outline" onClick={stop}><SquareIcon /> {t("sonata.stop")}</Button>
             </div>
           </>
         )}
@@ -356,28 +384,28 @@ export function ListenPanel(props: Props) {
         {hasB && image("B")}
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Click anywhere in an image to hear that spot{hasB ? " in A and then in B" : ""}. × marks:{" "}
-        <span style={{ color: PAIR_COLOR.same }}>yellow</span> about the same,{" "}
+        {t(hasB ? "sonata.legendClickAB" : "sonata.legendClick")} {t("sonata.legendMarks")}{" "}
+        <span style={{ color: PAIR_COLOR.same }}>{t("sonata.colorYellow")}</span> {t("sonata.legendSame")},{" "}
         {hasB && (
           <>
-            <span style={{ color: PAIR_COLOR["brighter-in-b"] }}>pink</span> brighter or fainter, <span style={{ color: PAIR_COLOR["only-a"] }}>cyan</span> found in one only,{" "}
+            <span style={{ color: PAIR_COLOR["brighter-in-b"] }}>{t("sonata.colorPink")}</span> {t("sonata.legendBrighterFainter")}, <span style={{ color: PAIR_COLOR["only-a"] }}>{t("sonata.colorCyan")}</span> {t("sonata.legendOneOnly")},{" "}
           </>
         )}
-        <span style={{ color: PAIR_COLOR.saturated }}>orange</span> saturated (buzzy tone, brightness unreliable). Red tint: unusable pixels.
+        <span style={{ color: PAIR_COLOR.saturated }}>{t("sonata.colorOrange")}</span> {t("sonata.legendSaturated")}. {t("sonata.legendRedTint")}
       </p>
 
       {hasB && pairs.length > 0 && (
         <section className="grid gap-2 rounded-lg border p-3 text-xs">
-          <h3 className="text-sm font-medium">Sources, A against B</h3>
+          <h3 className="text-sm font-medium">{t("sonata.titleSourcesAB")}</h3>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>#</TableHead>
-                  <TableHead>Result</TableHead>
+                  <TableHead>{t("sonata.colResult")}</TableHead>
                   <TableHead className="text-right">A</TableHead>
                   <TableHead className="text-right">B</TableHead>
-                  <TableHead>Where</TableHead>
+                  <TableHead>{t("sonata.colWhere")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -388,34 +416,32 @@ export function ListenPanel(props: Props) {
                     <TableCell>
                       <span className="inline-flex items-center gap-1.5">
                         <span className="size-2 rounded-full" style={{ background: PAIR_COLOR[p.kind] }} />
-                        <span className={isDifference(p) ? "font-medium" : undefined}>{describePair(p)}</span>
+                        <span className={isDifference(p) ? "font-medium" : undefined}>{describePair(t, p)}</span>
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-mono">{fmtFlux(p.a)}</TableCell>
-                    <TableCell className="text-right font-mono">{fmtFlux(p.b)}</TableCell>
-                    <TableCell className="font-mono">{Math.round(frequencyFor(p.y, settings))} Hz · {fmtPan(panFor(p.x, settings))}</TableCell>
-                    <TableCell><Button size="xs" variant="outline" onClick={() => playPair(p)} aria-label={`Play source ${pairs.indexOf(p) + 1} in A, then in B`}><PlayIcon /> A → B</Button></TableCell>
+                    <TableCell className="text-right font-mono">{fmtFlux(t, p.a)}</TableCell>
+                    <TableCell className="text-right font-mono">{fmtFlux(t, p.b)}</TableCell>
+                    <TableCell className="font-mono">{Math.round(frequencyFor(p.y, settings))} Hz · {fmtPan(t, panFor(p.x, settings))}</TableCell>
+                    <TableCell><Button size="xs" variant="outline" onClick={() => playPair(p)} aria-label={t("sonata.playPairLabel", { n: pairs.indexOf(p) + 1 })}><PlayIcon /> A → B</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
           <p className="text-muted-foreground">
-            A source is listed when it reaches S/N {COMPARE.minSnr} in A or B. &quot;Brighter&quot; or &quot;fainter&quot; needs a factor of {COMPARE.minRatio} and {COMPARE.sigma}σ.
-            &quot;Only found&quot; means nothing above 5σ within {COMPARE.matchRadiusArcsec}″ in the other exposure. This is a list of differences to look at, not a detection
-            (rules {COMPARE.version}).
+            {t("sonata.listNote", { snr: COMPARE.minSnr, ratio: COMPARE.minRatio, sigma: COMPARE.sigma, radius: COMPARE.matchRadiusArcsec, version: COMPARE.version })}
           </p>
         </section>
       )}
 
       <details className="rounded-lg border p-3 text-xs">
-        <summary className="cursor-pointer text-sm font-medium select-none">Play a whole image, and sound settings</summary>
+        <summary className="cursor-pointer text-sm font-medium select-none">{t("sonata.playWholeSummary")}</summary>
         <div className="mt-3 grid gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => scan("A")} disabled={!frames.A}><PlayIcon /> Play all of A</Button>
-            {hasB && <Button size="sm" variant="outline" onClick={() => scan("B")}><PlayIcon /> Play all of B</Button>}
+            <Button size="sm" variant="outline" onClick={() => scan("A")} disabled={!frames.A}><PlayIcon /> {t("sonata.playAllA")}</Button>
+            {hasB && <Button size="sm" variant="outline" onClick={() => scan("B")}><PlayIcon /> {t("sonata.playAllB")}</Button>}
             <span className="text-muted-foreground">
-              Plays the {settings.maxSources} brightest sources from left to right. The blue line is the scan position: scan time, not observing time. Silence does not mean empty sky.
+              {t("sonata.scanNote", { n: settings.maxSources })}
             </span>
           </div>
           <SettingsForm {...props} />
@@ -424,7 +450,7 @@ export function ListenPanel(props: Props) {
 
       {!hasB && (
         <details className="rounded-lg border p-3 text-xs">
-          <summary className="cursor-pointer text-sm font-medium select-none">Sources as text ({single.length})</summary>
+          <summary className="cursor-pointer text-sm font-medium select-none">{t("sonata.sourcesAsText", { n: single.length })}</summary>
           <div className="mt-2 overflow-x-auto">
             <Table>
               <TableBody>
@@ -432,8 +458,8 @@ export function ListenPanel(props: Props) {
                   <TableRow key={e.src.id} className={e.src.id === current ? "bg-muted" : undefined}>
                     <TableCell>{k + 1}</TableCell>
                     <TableCell className="font-mono">{e.src.ra.toFixed(5)}, {e.src.dec.toFixed(5)}</TableCell>
-                    <TableCell className="text-right font-mono">{fmtFlux(e.src)}{e.src.snr ? ` (S/N ${e.src.snr.toFixed(0)})` : ""}</TableCell>
-                    <TableCell><Button size="xs" variant="outline" onClick={() => playSingle(k)} aria-label={`Play source ${k + 1}`}><PlayIcon /> Play</Button></TableCell>
+                    <TableCell className="text-right font-mono">{fmtFlux(t, e.src)}{e.src.snr ? ` (S/N ${e.src.snr.toFixed(0)})` : ""}</TableCell>
+                    <TableCell><Button size="xs" variant="outline" onClick={() => playSingle(k)} aria-label={t("sonata.playSourceLabel", { n: k + 1 })}><PlayIcon /> {t("sonata.play")}</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -468,28 +494,29 @@ function RangeInput({ id, label, min, max, step, value, text, onChange }: { id: 
 }
 
 function SettingsForm({ settings, onSettings, rangeAuto, changedAt }: Props) {
+  const t = useT();
   return (
     <fieldset className="grid gap-2 rounded-md border p-3 text-xs">
-      <legend className="px-1 font-medium">Sound rules (same for A and B)</legend>
-      <RangeInput id="ss-scan" label="Scan length" min={3} max={15} step={1} value={settings.scanSeconds} text={`${settings.scanSeconds} seconds`} onChange={(v) => onSettings({ scanSeconds: v })} />
-      <RangeInput id="ss-fmin" label="Lowest pitch (bottom edge)" min={110} max={440} step={10} value={settings.fMin} text={`${settings.fMin} Hz`} onChange={(v) => onSettings({ fMin: v })} />
-      <RangeInput id="ss-fmax" label="Highest pitch (top edge)" min={880} max={2640} step={20} value={settings.fMax} text={`${settings.fMax} Hz`} onChange={(v) => onSettings({ fMax: v })} />
-      <RangeInput id="ss-max" label="Sources per scan" min={5} max={40} step={1} value={settings.maxSources} text={`${settings.maxSources} brightest`} onChange={(v) => onSettings({ maxSources: v })} />
+      <legend className="px-1 font-medium">{t("sonata.soundRules")}</legend>
+      <RangeInput id="ss-scan" label={t("sonata.scanLength")} min={3} max={15} step={1} value={settings.scanSeconds} text={t("sonata.seconds", { n: settings.scanSeconds })} onChange={(v) => onSettings({ scanSeconds: v })} />
+      <RangeInput id="ss-fmin" label={t("sonata.lowestPitch")} min={110} max={440} step={10} value={settings.fMin} text={`${settings.fMin} Hz`} onChange={(v) => onSettings({ fMin: v })} />
+      <RangeInput id="ss-fmax" label={t("sonata.highestPitch")} min={880} max={2640} step={20} value={settings.fMax} text={`${settings.fMax} Hz`} onChange={(v) => onSettings({ fMax: v })} />
+      <RangeInput id="ss-max" label={t("sonata.sourcesPerScan")} min={5} max={40} step={1} value={settings.maxSources} text={t("sonata.brightestN", { n: settings.maxSources })} onChange={(v) => onSettings({ maxSources: v })} />
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={settings.mono} onChange={(e) => onSettings({ mono: e.target.checked })} />
-        Mono (no left/right; use the scan timing and the text instead)
+        {t("sonata.mono")}
       </label>
       <div className="flex flex-wrap items-center gap-2">
-        <span>Brightness range</span>
-        <input aria-label="Faintest brightness, mJy (quietest)" type="number" step="any" className="h-7 w-20 rounded border bg-transparent px-1 font-mono" value={Number(settings.fluxLo.toPrecision(3))} onChange={(e) => Number(e.target.value) > 0 && onSettings({ fluxLo: Number(e.target.value) })} />
+        <span>{t("sonata.brightnessRange")}</span>
+        <input aria-label={t("sonata.faintestLabel")} type="number" step="any" className="h-7 w-20 rounded border bg-transparent px-1 font-mono" value={Number(settings.fluxLo.toPrecision(3))} onChange={(e) => Number(e.target.value) > 0 && onSettings({ fluxLo: Number(e.target.value) })} />
         <span>–</span>
-        <input aria-label="Brightest brightness, mJy (loudest)" type="number" step="any" className="h-7 w-20 rounded border bg-transparent px-1 font-mono" value={Number(settings.fluxHi.toPrecision(3))} onChange={(e) => Number(e.target.value) > 0 && onSettings({ fluxHi: Number(e.target.value) })} />
+        <input aria-label={t("sonata.brightestLabel")} type="number" step="any" className="h-7 w-20 rounded border bg-transparent px-1 font-mono" value={Number(settings.fluxHi.toPrecision(3))} onChange={(e) => Number(e.target.value) > 0 && onSettings({ fluxHi: Number(e.target.value) })} />
         <span>mJy</span>
       </div>
       <p className="text-muted-foreground">
-        {rangeAuto ? "Set automatically from the faintest and brightest sources of A and B together — never per image." : "Set by you; A and B still share it."} Loudness is log-compressed for listening; twice the brightness does not sound twice as loud. Exact values are in the text list.
+        {rangeAuto ? t("sonata.rangeAuto") : t("sonata.rangeManual")} {t("sonata.loudnessNote")}
       </p>
-      {changedAt && <p className="text-amber-700 dark:text-amber-400">Rules changed at {changedAt}. Replay both A and B before comparing them.</p>}
+      {changedAt && <p className="text-amber-700 dark:text-amber-400">{t("sonata.rulesChanged", { time: changedAt })}</p>}
     </fieldset>
   );
 }

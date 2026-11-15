@@ -4,7 +4,9 @@ import A, { type Aladin } from "aladin-lite";
 import { useEffect, useRef } from "react";
 import { AIM_FOV, CUTOUT_ARCMIN, MAX_FOV, MIN_FOV, SKY_SURVEY } from "./constants";
 import { angularDistance, type EquatorialCoordinates, normalizeRa, type SkyView } from "./sky-coordinates";
-import { drawSkyLines } from "./sky-lines";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
+import { type ConstellationLabel, drawSkyLines } from "./sky-lines";
 import { TEST_TARGETS, type TestTarget } from "./test-targets";
 import { setView } from "./view-store";
 
@@ -95,6 +97,9 @@ export default function SkyView({
   const markCanvas = useRef<HTMLCanvasElement>(null);
   const painterRef = useRef(painter);
   const painterVersion = useRef(0);
+  const t = useT();
+  /** Constellation labels in the chosen language; the version makes the lines redraw when the language changes. */
+  const labelRef = useRef<{ label: ConstellationLabel; version: number }>({ label: (_id, name) => name, version: 0 });
   const aladinRef = useRef<Aladin | null>(null);
   const layersRef = useRef(layers);
   const pendingFlight = useRef<Flight | null>(null);
@@ -106,6 +111,12 @@ export default function SkyView({
   useEffect(() => {
     callbacks.current = { onCursorMove, onFovChange, onFlightEnd, onSelect, onError, onSettle };
   });
+  useEffect(() => {
+    labelRef.current = {
+      label: (id, name) => (id.length <= 3 ? t(`constellation.${id}` as MessageKey) : name),
+      version: labelRef.current.version + 1,
+    };
+  }, [t]);
   useEffect(() => {
     painterRef.current = painter;
     painterVersion.current += 1;
@@ -212,7 +223,7 @@ export default function SkyView({
           }
           const key = `${viewKey} ${element.clientWidth} ${element.clientHeight}`;
           const { constellations, constellationNames, grid } = layersRef.current;
-          const linesKey = `${key} ${constellations} ${constellationNames} ${grid}`;
+          const linesKey = `${key} ${constellations} ${constellationNames} ${grid} ${labelRef.current.version}`;
           if (canvas && linesKey !== drawnFor) {
             drawnFor = linesKey;
             const context = prepareCanvas(canvas, element.clientWidth, element.clientHeight);
@@ -232,6 +243,7 @@ export default function SkyView({
                 },
                 { constellations, constellationNames, grid },
                 lineFont(),
+                labelRef.current.label,
               );
             }
           }

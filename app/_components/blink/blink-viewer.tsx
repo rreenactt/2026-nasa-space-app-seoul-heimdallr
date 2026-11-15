@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { type Translate, useT } from "@/app/_i18n/i18n-provider";
 import { skyToGrid } from "@/app/_lib/sky/wcs";
 import { useAnalyses } from "../analyses/analyses-context";
 import { BLINK_FOV_ARCMIN, mjdDate, mjdMonth, useBlink, type VisitFrame } from "./blink-context";
@@ -83,6 +84,7 @@ function keyOwnedByControl(event: KeyboardEvent) {
 const MODE_KEYS: Record<string, Mode> = { "1": "blink", "2": "difference", "3": "stack" };
 
 export function BlinkViewer() {
+  const t = useT();
   const { plan, usable, visits, grid, detector, setDetector, loadingFrames, frames, gaia } = useBlink();
   const visible = useAnalyses().view === "blink";
   const [mode, setMode] = useState<Mode>("blink");
@@ -102,8 +104,8 @@ export function BlinkViewer() {
   useEffect(() => {
     // Not while another tab covers the viewer: nobody is watching.
     if (!playing || !canPlay || !visible) return;
-    const t = setInterval(() => setIdx((i) => (clampIdx(i) + 1 > count - 1 ? lo : clampIdx(i) + 1)), 1000 / fps);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setIdx((i) => (clampIdx(i) + 1 > count - 1 ? lo : clampIdx(i) + 1)), 1000 / fps);
+    return () => clearInterval(timer);
   }, [playing, fps, count, canPlay, visible, clampIdx, lo]);
 
   const step = useCallback(
@@ -163,16 +165,16 @@ export function BlinkViewer() {
   // Gaia DR3 stars (G < 16) moved to the shown visit's date.
   const gaiaNow = mode === "stack" || !current ? null : gaia.get(current.visit.index);
 
-  if (plan.isPending) return <Status text="Finding observations → reading cutouts → matching wavelength → aligning…" spinner />;
+  if (plan.isPending) return <Status text={t("blink.planning")} spinner />;
   if (plan.isError) {
     return (
-      <Status text={`Could not build the comparison: ${plan.error.message}`}>
-        <Button size="sm" variant="outline" onClick={() => plan.refetch()}>Try again</Button>
+      <Status text={t("blink.planFailed", { message: plan.error.message })}>
+        <Button size="sm" variant="outline" onClick={() => plan.refetch()}>{t("analyses.tryAgain")}</Button>
       </Status>
     );
   }
   const p = plan.data;
-  if (p.status === "no-observations") return <Status text="No SPHEREx DR1 observation covers this point yet." />;
+  if (p.status === "no-observations") return <Status text={t("blink.noObservationsYet")} />;
 
   const data = mode === "stack" ? stackData : mode === "difference" ? diffData : current?.data ?? null;
   const center = skyToGrid(grid, grid.ra, grid.dec);
@@ -182,8 +184,8 @@ export function BlinkViewer() {
     <div className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-2 text-xs">
       <div className="grid gap-1">
         {/* On a phone the six bands stay on one line and scroll sideways, so the image keeps its room. */}
-        <div className="flex items-center gap-1.5 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 sm:flex-wrap" role="group" aria-label="Wavelength band (SPHEREx detector)">
-          <span className="mr-1 shrink-0 text-muted-foreground">Wavelength band</span>
+        <div className="flex items-center gap-1.5 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 sm:flex-wrap" role="group" aria-label={t("blink.bandGroup")}>
+          <span className="mr-1 shrink-0 text-muted-foreground">{t("blink.band")}</span>
           {p.detectors.map((d) => {
             const few = d.visits < 2;
             const on = d.detector === detector;
@@ -196,7 +198,7 @@ export function BlinkViewer() {
                   setIdx(0);
                 }}
                 aria-pressed={on}
-                title={`SPHEREx detector ${d.detector}: ${d.exposures} exposures in ${d.visits} visit${d.visits === 1 ? "" : "s"}${few ? ". One visit cannot be blinked on its own" : ""}`}
+                title={t(few ? "blink.detectorTitleFew" : "blink.detectorTitle", { detector: d.detector, exposures: d.exposures, visits: d.visits })}
                 className={cn(
                   "flex shrink-0 items-baseline gap-1.5 rounded border px-2 py-1",
                   on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
@@ -207,16 +209,13 @@ export function BlinkViewer() {
                   {d.emMinUm.toFixed(2)}–{d.emMaxUm.toFixed(2)} µm
                 </span>
                 <span className="text-[10px] opacity-70">
-                  {d.detector} · {d.visits} visit{d.visits === 1 ? "" : "s"}
+                  {t(d.visits === 1 ? "blink.detectorVisitsOne" : "blink.detectorVisitsOther", { detector: d.detector, n: d.visits })}
                 </span>
               </button>
             );
           })}
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          Each band is one SPHEREx detector (D1–D6), not a date. Every date below is compared in the same band. Dates are
-          in UTC.
-        </p>
+        <p className="text-[11px] text-muted-foreground">{t("blink.bandNote")}</p>
       </div>
 
       {/* The image is as large as the shorter side of this box allows (cqmin); zoom scrolls inside it. Hatching sits only
@@ -244,7 +243,7 @@ export function BlinkViewer() {
           <div className="absolute top-2 left-2 grid gap-0.5 rounded bg-black/70 px-2 py-1 text-white">
             <span className="font-mono text-sm font-medium">
               {mode === "stack"
-                ? `Mean of ${count} visit${count === 1 ? "" : "s"}`
+                ? t(count === 1 ? "blink.meanOne" : "blink.meanOther", { n: count })
                 : mode === "difference"
                   ? `${fmtDate(current?.mid)} − ${fmtDate(first?.mid)}`
                   : fmtDate(current?.mid)}
@@ -253,15 +252,17 @@ export function BlinkViewer() {
               {mode === "stack"
                 ? `${fmtDate(first?.mid)} → ${fmtDate(usable[count - 1]?.mid)}`
                 : mode === "difference"
-                  ? `Visit ${current?.visit.index} minus visit ${first?.visit.index} · ${fmtElapsed(current?.mid, first?.mid)} apart`
-                  : `Visit ${at + 1} of ${count}${at > 0 ? ` · +${fmtElapsed(current?.mid, first?.mid)} since the first` : " · first visit"}`}
+                  ? t("blink.diffCaption", { a: current?.visit.index ?? "", b: first?.visit.index ?? "", elapsed: fmtElapsed(current?.mid, first?.mid, t) })
+                  : at > 0
+                    ? t("blink.visitSince", { n: at + 1, count, elapsed: fmtElapsed(current?.mid, first?.mid, t) })
+                    : t("blink.visitFirst", { n: at + 1, count })}
             </span>
           </div>
         </div>
         {(loadingFrames || !count) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50 text-white">
             {loadingFrames ? <Spinner /> : null}
-            <span>{loadingFrames ? `Reading cutouts (${frames.filter((f) => !f.loading).length}/${frames.length})…` : "No frame passed the checks for this detector."}</span>
+            <span>{loadingFrames ? t("blink.readingCutouts", { done: frames.filter((f) => !f.loading).length, total: frames.length }) : t("blink.noFrame")}</span>
           </div>
         )}
       </div>
@@ -269,13 +270,13 @@ export function BlinkViewer() {
       <div className="grid gap-2">
         {mode !== "stack" && count > 1 && (
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="icon-sm" variant="outline" onClick={() => step(-1)} aria-label="Previous visit (←)" title="Previous visit (←)">
+            <Button size="icon-sm" variant="outline" onClick={() => step(-1)} aria-label={t("blink.prevVisit")} title={t("blink.prevVisit")}>
               <ChevronLeftIcon />
             </Button>
-            <Button size="icon-sm" variant="outline" onClick={() => setPlaying(!playing)} aria-label={playing ? "Pause (Space)" : "Play (Space)"} title={playing ? "Pause (Space)" : "Play (Space)"}>
+            <Button size="icon-sm" variant="outline" onClick={() => setPlaying(!playing)} aria-label={t(playing ? "blink.pause" : "blink.play")} title={t(playing ? "blink.pause" : "blink.play")}>
               {playing ? <PauseIcon /> : <PlayIcon />}
             </Button>
-            <Button size="icon-sm" variant="outline" onClick={() => step(1)} aria-label="Next visit (→)" title="Next visit (→)">
+            <Button size="icon-sm" variant="outline" onClick={() => step(1)} aria-label={t("blink.nextVisit")} title={t("blink.nextVisit")}>
               <ChevronRightIcon />
             </Button>
             <VisitTimeline
@@ -291,51 +292,52 @@ export function BlinkViewer() {
         )}
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as Mode)} aria-label="View mode">
-            <ToggleGroupItem value="blink" title="Blink (1)">Blink</ToggleGroupItem>
-            <ToggleGroupItem value="difference" disabled={count < 2} title={count < 2 ? "Needs two or more visits" : "Difference (2)"}>Difference</ToggleGroupItem>
-            <ToggleGroupItem value="stack" title="Stack (3)">Stack</ToggleGroupItem>
+          <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as Mode)} aria-label={t("blink.viewMode")}>
+            <ToggleGroupItem value="blink" title={t("blink.blinkTitle")}>{t("blink.blink")}</ToggleGroupItem>
+            <ToggleGroupItem value="difference" disabled={count < 2} title={t(count < 2 ? "blink.needsTwoVisits" : "blink.differenceTitle")}>
+              {t("blink.difference")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="stack" title={t("blink.stackTitle")}>{t("blink.stack")}</ToggleGroupItem>
           </ToggleGroup>
-          <ControlGroup label="Speed" disabled={!canPlay}>
-            <ToggleGroup variant="outline" size="sm" spacing={0} value={[String(fps)]} onValueChange={(v) => v[0] && setFps(Number(v[0]))} aria-label="Blink speed" disabled={!canPlay}>
+          <ControlGroup label={t("blink.speed")} disabled={!canPlay}>
+            <ToggleGroup variant="outline" size="sm" spacing={0} value={[String(fps)]} onValueChange={(v) => v[0] && setFps(Number(v[0]))} aria-label={t("blink.speedLabel")} disabled={!canPlay}>
               {[0.5, 1, 2].map((s) => (
                 <ToggleGroupItem key={s} value={String(s)}>{s}/s</ToggleGroupItem>
               ))}
             </ToggleGroup>
           </ControlGroup>
-          <ControlGroup label="Zoom">
-            <ToggleGroup variant="outline" size="sm" spacing={0} value={[String(zoom)]} onValueChange={(v) => v[0] && setZoom(Number(v[0]))} aria-label="Zoom">
+          <ControlGroup label={t("blink.zoom")}>
+            <ToggleGroup variant="outline" size="sm" spacing={0} value={[String(zoom)]} onValueChange={(v) => v[0] && setZoom(Number(v[0]))} aria-label={t("blink.zoom")}>
               {[1, 2, 4].map((z) => (
                 <ToggleGroupItem key={z} value={String(z)}>{z}×</ToggleGroupItem>
               ))}
             </ToggleGroup>
           </ControlGroup>
           <Label className="flex items-center gap-1.5 text-xs font-normal">
-            <Switch size="sm" checked={showGaia} onCheckedChange={setShowGaia} /> Gaia DR3 (G &lt; 16) at each visit&apos;s date
+            <Switch size="sm" checked={showGaia} onCheckedChange={setShowGaia} /> {t("blink.gaiaToggle")}
           </Label>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground" aria-label="Legend">
-          <LegendItem swatch={<span className="text-sm leading-none" style={{ color: POINT_COLOR }}>⌖</span>}>Selected point</LegendItem>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground" aria-label={t("blink.legend")}>
+          <LegendItem swatch={<span className="text-sm leading-none" style={{ color: POINT_COLOR }}>⌖</span>}>{t("blink.legendPoint")}</LegendItem>
           {showGaia && mode !== "stack" && (
-            <LegendItem swatch={<span className="size-2.5 rounded-full border" style={{ borderColor: GAIA_COLOR }} />}>Gaia star at this date</LegendItem>
+            <LegendItem swatch={<span className="size-2.5 rounded-full border" style={{ borderColor: GAIA_COLOR }} />}>{t("blink.legendGaia")}</LegendItem>
           )}
           {mode === "difference" && (
             <>
-              <LegendItem swatch={<span className="size-2.5 rounded-sm bg-[#eb6834]" />}>Brighter than first visit</LegendItem>
-              <LegendItem swatch={<span className="size-2.5 rounded-sm bg-[#2a78d6]" />}>Fainter</LegendItem>
+              <LegendItem swatch={<span className="size-2.5 rounded-sm bg-[#eb6834]" />}>{t("blink.legendBrighter")}</LegendItem>
+              <LegendItem swatch={<span className="size-2.5 rounded-sm bg-[#2a78d6]" />}>{t("blink.legendFainter")}</LegendItem>
             </>
           )}
-          {count < 2 && <span>Difference needs two or more visits.</span>}
+          {count < 2 && <span>{t("blink.differenceNeedsTwo")}</span>}
           {/* Keys mean nothing on a touch screen. */}
           <span className="ml-auto max-sm:hidden">
-            <Kbd>Space</Kbd> play · <Kbd>←</Kbd> <Kbd>→</Kbd> step · <Kbd>1</Kbd>–<Kbd>3</Kbd> mode
+            <Kbd>Space</Kbd> {t("blink.keyPlay")} · <Kbd>←</Kbd> <Kbd>→</Kbd> {t("blink.keyStep")} · <Kbd>1</Kbd>–<Kbd>3</Kbd> {t("blink.keyMode")}
           </span>
         </div>
 
         <p className="text-muted-foreground">
-          {BLINK_FOV_ARCMIN}′ fixed sky grid centred on the point (not on any object) · same stretch for every visit · zodiacal light (ZODI) removed ·{" "}
-          {mode === "difference" ? "PSF and background changes leave residuals too." : "screen brightness is for viewing only."}
+          {t(mode === "difference" ? "blink.footnoteDifference" : "blink.footnote", { fov: BLINK_FOV_ARCMIN })}
         </p>
       </div>
     </div>
@@ -348,13 +350,13 @@ function fmtDate(mjd: number | null | undefined) {
 }
 
 /** Time between two MJDs in the unit a reader thinks in: hours, days, months or years. */
-function fmtElapsed(a: number | null | undefined, b: number | null | undefined) {
+function fmtElapsed(a: number | null | undefined, b: number | null | undefined, t: Translate) {
   if (a == null || b == null) return "—";
   const days = Math.abs(a - b);
-  if (days < 1) return `${Math.round(days * 24)} h`;
-  if (days < 60) return `${Math.round(days)} days`;
-  if (days < 730) return `${(days / 30.44).toFixed(1)} months`;
-  return `${(days / 365.25).toFixed(1)} years`;
+  if (days < 1) return t("blink.elapsedHours", { n: Math.round(days * 24) });
+  if (days < 60) return t("blink.elapsedDays", { n: Math.round(days) });
+  if (days < 730) return t("blink.elapsedMonths", { n: (days / 30.44).toFixed(1) });
+  return t("blink.elapsedYears", { n: (days / 365.25).toFixed(1) });
 }
 
 /**
@@ -362,6 +364,7 @@ function fmtElapsed(a: number | null | undefined, b: number | null | undefined) 
  * the mean time of the exposures combined into that visit's frame.
  */
 function VisitTimeline({ visits, at, onPick }: { visits: VisitFrame[]; at: number; onPick: (k: number) => void }) {
+  const t = useT();
   const mids = visits.map((v) => v.mid);
   const t0 = mids[0] ?? 0;
   const t1 = mids[mids.length - 1] ?? t0;
@@ -384,7 +387,7 @@ function VisitTimeline({ visits, at, onPick }: { visits: VisitFrame[]; at: numbe
   }
   const labelled = (k: number) => kept.includes(k);
   return (
-    <div ref={ref} className="relative h-10 min-w-40 flex-1" role="group" aria-label="Visits by observation date">
+    <div ref={ref} className="relative h-10 min-w-40 flex-1" role="group" aria-label={t("blink.timeline")}>
       <div className="absolute inset-x-2 top-2.5 h-px bg-border" />
       {visits.map((v, k) => {
         const on = k === at;
@@ -395,8 +398,8 @@ function VisitTimeline({ visits, at, onPick }: { visits: VisitFrame[]; at: numbe
               type="button"
               onClick={() => onPick(k)}
               aria-pressed={on}
-              aria-label={`Visit ${k + 1} of ${visits.length}, ${fmtDate(v.mid)}`}
-              title={`Visit ${k + 1} · ${fmtDate(v.mid)}`}
+              aria-label={t("blink.visitAria", { n: k + 1, total: visits.length, date: fmtDate(v.mid) })}
+              title={t("blink.visitTitle", { n: k + 1, date: fmtDate(v.mid) })}
               className={cn(
                 "absolute top-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
                 on ? "size-3.5 bg-primary ring-4 ring-primary/25" : "size-2.5 bg-muted-foreground hover:bg-foreground",
@@ -424,6 +427,7 @@ function VisitTimeline({ visits, at, onPick }: { visits: VisitFrame[]; at: numbe
 
 /** What the shown frame is made of: how many exposures, taken over which days (UTC). */
 function ExposureSpan({ visit, total, shown }: { visit: VisitFrame | undefined; total: number; shown: number }) {
+  const t = useT();
   const used = visit?.frames.filter((f) => f.grid) ?? [];
   const start = used.length ? Math.min(...used.map((f) => f.exposure.tStart)) : null;
   const end = used.length ? Math.max(...used.map((f) => f.exposure.tEnd)) : null;
@@ -431,10 +435,10 @@ function ExposureSpan({ visit, total, shown }: { visit: VisitFrame | undefined; 
   return (
     <div
       className="w-full shrink-0 leading-tight sm:w-44 sm:text-right"
-      title={shown < total ? `${total - shown} of ${total} visits have no frame in this band and are not shown` : undefined}
+      title={shown < total ? t("blink.visitsHidden", { n: total - shown, total }) : undefined}
     >
       <p className="font-medium">
-        {used.length} exposure{used.length === 1 ? "" : "s"} combined
+        {t(used.length === 1 ? "blink.exposuresOne" : "blink.exposuresOther", { n: used.length })}
       </p>
       <p className="font-mono text-[10px] text-muted-foreground">
         {start == null ? "—" : sameDay ? fmtDate(start) : `${fmtDate(start)} → ${fmtDate(end).slice(5)}`}
@@ -476,11 +480,12 @@ function Status({ text, spinner, children }: { text: string; spinner?: boolean; 
 
 /** Right-panel summary (PLAN.md ch. 5): visits, period, detector and wavelength, status, and per-visit details. */
 export function BlinkSummary() {
+  const t = useT();
   const { plan, usable, visits, detector, frames } = useBlink();
-  if (plan.isPending) return <p className="text-muted-foreground">Finding SPHEREx observations…</p>;
+  if (plan.isPending) return <p className="text-muted-foreground">{t("blink.findingObservations")}</p>;
   if (plan.isError) return <p className="text-destructive">{plan.error.message}</p>;
   const p = plan.data;
-  if (p.status === "no-observations") return <p className="text-muted-foreground">No SPHEREx DR1 observation covers this point.</p>;
+  if (p.status === "no-observations") return <p className="text-muted-foreground">{t("blink.noObservations")}</p>;
   const mids = usable.map((u) => u.mid!).sort((a, b) => a - b);
   const loaded = !frames.some((f) => f.loading);
   const visitsWithData = loaded ? usable.length : visits.filter((v) => v.visit.exposures.some((e) => !e.excluded)).length;
@@ -490,41 +495,47 @@ export function BlinkSummary() {
     <div className="grid gap-2">
       {additional ? (
         <div className="grid gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-          <p className="text-sm font-medium">Additional analysis needed</p>
-          <p>Only one SPHEREx visit, so SPHEREx images alone cannot be compared. Run an additional analysis to compare with earlier surveys.</p>
+          <p className="text-sm font-medium">{t("blink.additionalNeeded")}</p>
+          <p>{t("blink.additionalNeededBody")}</p>
           <RecommendedAnalysis />
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">Comparable</Badge>
-          <span className="text-xs text-muted-foreground">Two or more SPHEREx visits on the same detector and wavelength.</span>
+          <Badge variant="secondary">{t("blink.comparable")}</Badge>
+          <span className="text-xs text-muted-foreground">{t("blink.comparableNote")}</span>
         </div>
       )}
       <p className="font-mono">
-        {visitsWithData} visit{visitsWithData === 1 ? "" : "s"}
-        {loaded && visits.length > visitsWithData && ` (${visits.length - visitsWithData} of ${visits.length} without a ${detector} frame in tolerance)`}
+        {t(visitsWithData === 1 ? "blink.visitsOne" : "blink.visitsOther", { n: visitsWithData })}
+        {loaded &&
+          visits.length > visitsWithData &&
+          ` ${t("blink.visitsMissing", { missing: visits.length - visitsWithData, total: visits.length, detector: detector ?? "" })}`}
         {mids.length > 0 && ` · ${mjdMonth(mids[0])}${mids.length > 1 ? ` → ${mjdMonth(mids[mids.length - 1])}` : ""}`} · {detector}{" "}
         {p.referenceWavelengthUm != null && `${p.referenceWavelengthUm.toFixed(3)} µm`}
       </p>
       <details className="text-xs">
-        <summary className="cursor-pointer select-none">How frames are matched</summary>
+        <summary className="cursor-pointer select-none">{t("blink.howMatched")}</summary>
         <p className="mt-1 text-muted-foreground">
-          Frames in a visit are combined only within {p.toleranceUm != null ? `±${p.toleranceUm.toFixed(3)} µm` : "the tolerance"} of {p.referenceWavelengthUm?.toFixed(3)} µm ({p.toleranceRule}); the wavelength is re-read from each file.
+          {p.toleranceUm != null
+            ? t("blink.matchedRule", { tolerance: `±${p.toleranceUm.toFixed(3)} µm`, ref: p.referenceWavelengthUm?.toFixed(3) ?? "", rule: p.toleranceRule })
+            : t("blink.matchedRuleNoTolerance", { ref: p.referenceWavelengthUm?.toFixed(3) ?? "", rule: p.toleranceRule })}
         </p>
       </details>
       <details className="text-xs">
-        <summary className="cursor-pointer select-none">Observations ({frames.length} frames used, {visits.reduce((n, v) => n + v.visit.exposures.filter((e) => e.excluded).length, 0)} skipped)</summary>
+        <summary className="cursor-pointer select-none">
+          {t("blink.observations", { used: frames.length, skipped: visits.reduce((n, v) => n + v.visit.exposures.filter((e) => e.excluded).length, 0) })}
+        </summary>
         <ul className="mt-1 grid gap-1">
           {visits.map((v) => (
             <li key={v.visit.index}>
-              <span className="font-medium">Visit {v.visit.index}</span> · {mjdDate(v.visit.start)} → {mjdDate(v.visit.end)}
-              {v.frames.length === 0 && <span className="text-muted-foreground"> · no {detector} frame within the wavelength tolerance</span>}
+              <span className="font-medium">{t("blink.visit", { n: v.visit.index })}</span> · {mjdDate(v.visit.start)} → {mjdDate(v.visit.end)}
+              {v.frames.length === 0 && <span className="text-muted-foreground"> · {t("blink.noFrameInTolerance", { detector: detector ?? "" })}</span>}
               <ul className="pl-3">
                 {v.frames.map((f) => (
                   <li key={f.exposure.key} className="font-mono">
-                    {f.exposure.obsId} · {f.wavelengthUm != null ? `${f.wavelengthUm.toFixed(3)} µm` : f.loading ? "reading…" : "—"}
-                    {f.flagsAtTarget.length > 0 && ` · flags at point: ${f.flagsAtTarget.join("+")}`}
-                    {f.dropped && <span className="text-amber-600"> · dropped: {f.dropped}</span>}
+                    {f.exposure.obsId} · {f.wavelengthUm != null ? `${f.wavelengthUm.toFixed(3)} µm` : f.loading ? t("blink.reading") : "—"}
+                    {f.flagsAtTarget.length > 0 && ` · ${t("blink.flagsAtPoint", { flags: f.flagsAtTarget.join("+") })}`}
+                    {f.dropped && <span className="text-amber-600"> · {t("blink.dropped", { reason: t(f.dropped.key, f.dropped.values) })}</span>}
                     {f.error && <span className="text-destructive"> · {f.error}</span>}{" "}
                     {f.frame && <a href={f.frame.payload.fileUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">IRSA</a>}
                   </li>
@@ -540,28 +551,30 @@ export function BlinkSummary() {
 
 /** One-visit points: Sky Time Machine compares positions with 2MASS and WISE, so it is the first thing to try. */
 function RecommendedAnalysis() {
+  const t = useT();
   const { jobs, run } = useAnalyses();
   const job = jobs["sky-time-machine"];
   return (
     <Button size="sm" variant="secondary" className="w-fit" disabled={job.status === "running"} onClick={() => run("sky-time-machine")}>
       <PlayIcon />
-      {job.status === "running" ? "Sky Time Machine downloading…" : "Compare with earlier surveys (Sky Time Machine)"}
+      {t(job.status === "running" ? "blink.stmDownloading" : "blink.compareEarlier")}
     </Button>
   );
 }
 
 /** Shown instead of the panel until every image the blink viewer needs has arrived. */
 export function BlinkLoading() {
+  const t = useT();
   const { progress } = useBlink();
   const pct = Math.round((progress.done / Math.max(1, progress.total)) * 100);
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center" aria-live="polite">
       <Spinner />
       <div className="grid w-full max-w-md gap-2">
-        <Progress value={pct} aria-label="Loading the SPHEREx images for this point" />
-        <p className="text-sm">{progress.step}</p>
+        <Progress value={pct} aria-label={t("blink.loadingLabel")} />
+        <p className="text-sm">{t(progress.step.key, progress.step.values)}</p>
         <p className="text-xs text-muted-foreground">
-          {progress.done} / {progress.total} done · {progress.total - progress.done} left. Everything is downloaded first so the blink plays without waiting.
+          {t("blink.loadingProgress", { done: progress.done, total: progress.total, left: progress.total - progress.done })}
         </p>
       </div>
     </div>

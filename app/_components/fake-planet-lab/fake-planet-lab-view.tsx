@@ -7,19 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { useFixedTarget } from "../analyses/fixed-target";
 import { BrightnessTab } from "./brightness-tab";
 import { FPL_EXAMPLES, FplStateProvider, useFpl, type FplTarget } from "./fpl-state";
+import { targetName, targetNote } from "./fpl-text";
 import { FlagGuideTab, ProvenanceTab, RecordsTab } from "./guide-tabs";
 import { InspectTab } from "./inspect-tab";
 
 type Tab = "inspect" | "brightness" | "flags" | "records" | "provenance";
-const TABS: { id: Tab; label: string; icon: React.ComponentType }[] = [
-  { id: "inspect", label: "Inspect", icon: MicroscopeIcon },
-  { id: "brightness", label: "Brightness", icon: SunDimIcon },
-  { id: "flags", label: "Flag guide", icon: BookOpenIcon },
-  { id: "records", label: "Records", icon: ClipboardListIcon },
-  { id: "provenance", label: "Provenance", icon: ScrollTextIcon },
+const TABS: { id: Tab; label: MessageKey; icon: React.ComponentType }[] = [
+  { id: "inspect", label: "fpl.tabInspect", icon: MicroscopeIcon },
+  { id: "brightness", label: "fpl.tabBrightness", icon: SunDimIcon },
+  { id: "flags", label: "fpl.tabFlags", icon: BookOpenIcon },
+  { id: "records", label: "fpl.tabRecords", icon: ClipboardListIcon },
+  { id: "provenance", label: "fpl.tabProvenance", icon: ScrollTextIcon },
 ];
 
 /**
@@ -35,6 +38,7 @@ export function FakePlanetLabView({ initialTarget }: { initialTarget?: FplTarget
 }
 
 function TargetBar() {
+  const t = useT();
   const { target, setTarget } = useFpl();
   const [ra, setRa] = useState(target.ra.toFixed(5));
   const [dec, setDec] = useState(target.dec.toFixed(5));
@@ -43,22 +47,22 @@ function TargetBar() {
     <div className="grid gap-2 rounded-lg border bg-muted/30 p-3">
       <div className="flex flex-wrap items-end gap-2">
         <div className="grid gap-1">
-          <Label className="text-xs">Example</Label>
+          <Label className="text-xs">{t("fpl.example")}</Label>
           <NativeSelect
             size="sm"
             value={example?.name ?? ""}
             onChange={(e) => {
-              const t = FPL_EXAMPLES.find((x) => x.name === e.target.value);
-              if (!t) return;
-              setTarget(t);
-              setRa(t.ra.toFixed(5));
-              setDec(t.dec.toFixed(5));
+              const ex = FPL_EXAMPLES.find((x) => x.name === e.target.value);
+              if (!ex) return;
+              setTarget(ex);
+              setRa(ex.ra.toFixed(5));
+              setDec(ex.dec.toFixed(5));
             }}
           >
-            <NativeSelectOption value="">Custom position</NativeSelectOption>
+            <NativeSelectOption value="">{t("fpl.customPosition")}</NativeSelectOption>
             {FPL_EXAMPLES.map((e) => (
               <NativeSelectOption key={e.name} value={e.name}>
-                {e.name}
+                {targetName(t, e.name)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -79,15 +83,16 @@ function TargetBar() {
             if (r >= 0 && r < 360 && Math.abs(d) <= 90) setTarget({ name: "Custom position", ra: r, dec: d, note: "" });
           }}
         >
-          Go
+          {t("fpl.go")}
         </Button>
       </div>
-      {example?.note && <p className="text-xs text-muted-foreground">{example.note}</p>}
+      {example?.note && <p className="text-xs text-muted-foreground">{targetNote(t, example)}</p>}
     </div>
   );
 }
 
 function Body() {
+  const t = useT();
   const [tab, setTabState] = useState<Tab>("inspect");
   const ref = useRef<HTMLDivElement>(null);
   const fixed = useFixedTarget();
@@ -106,7 +111,7 @@ function Body() {
           {TABS.map(({ id, label, icon: Icon }) => (
             <TabsTrigger key={id} value={id}>
               <Icon />
-              {label}
+              {t(label)}
             </TabsTrigger>
           ))}
         </TabsList>
