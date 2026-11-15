@@ -75,7 +75,7 @@ export function AdditionalAnalyses() {
   ];
 
   return (
-    <ul className="grid gap-2">
+    <ul className="grid">
       {items.map((it) => {
         const title = t(ANALYSIS_TITLES[it.id]);
         const j = jobs[it.id];
@@ -83,9 +83,9 @@ export function AdditionalAnalyses() {
         const left = j.status === "running" ? eta(j.progress, j.startedAt) : null;
         const isOpen = opened.includes(it.id);
         return (
-          <li key={it.id} className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-3 rounded-md border p-3">
+          <li key={it.id} className="grid grid-cols-[56px_minmax(0,1fr)] items-start gap-2.5 border-t py-2.5 first:border-t-0 first:pt-0">
             <AnalysisIllustration id={it.id} className="h-auto w-full rounded-sm bg-muted/40 p-1 text-muted-foreground" />
-            <div className="grid min-w-0 gap-2">
+            <div className="grid min-w-0 gap-1.5">
               <div className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
                 <Badge variant={it.badge.ready ? "secondary" : "outline"}>{t(it.badge.label)}</Badge>

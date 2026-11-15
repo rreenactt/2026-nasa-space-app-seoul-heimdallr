@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { AudioLinesIcon, HistoryIcon, ImagesIcon, MicroscopeIcon, OrbitIcon, SparklesIcon, XIcon, type LucideIcon } from "lucide-react";
+import { AudioLinesIcon, HistoryIcon, ImagesIcon, MicroscopeIcon, OrbitIcon, PanelRightCloseIcon, PanelRightOpenIcon, SparklesIcon, XIcon, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
 import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/app/_i18n/i18n-provider";
@@ -41,7 +41,7 @@ export const ANALYSIS_TITLES: Record<AnalysisId, MessageKey> = {
   "comet-breath": "analyses.titleCometBreath",
 };
 
-/** One line under the tabs: what the open analysis shows and what it is not. */
+/** Tooltip of each tab: what the analysis shows and what it is not. */
 const DESCRIPTIONS: Record<AnalysisId, MessageKey> = {
   "sky-time-machine": "analyses.descSkyTimeMachine",
   "fake-planet-lab": "analyses.descFakePlanetLab",
@@ -95,7 +95,7 @@ const ICONS: Record<PanelView, LucideIcon> = {
  * outputs). With no analysis open there is nothing to switch between, so the tab strip is not shown at all. Hidden
  * tabs stay mounted so an analysis keeps its state when you switch back; closing a tab unmounts it.
  */
-export function PanelViews({ blink }: { blink: React.ReactNode }) {
+export function PanelViews({ blink, wide, onToggleWide }: { blink: React.ReactNode; wide: boolean; onToggleWide: () => void }) {
   const t = useT();
   const { opened, view, setView, close } = useAnalyses();
   const tabs: PanelView[] = ["blink", ...opened];
@@ -107,7 +107,7 @@ export function PanelViews({ blink }: { blink: React.ReactNode }) {
   return (
     <div className={cn("grid h-full min-h-0", opened.length ? "grid-rows-[auto_minmax(0,1fr)]" : "grid-rows-[minmax(0,1fr)]")}>
       {opened.length > 0 && (
-        <div role="tablist" aria-label={t("analyses.leftView")} className="flex min-w-0 items-center gap-1 overflow-x-auto border-b bg-muted/20 px-3 py-1.5">
+        <div role="tablist" aria-label={t("analyses.leftView")} className="flex min-w-0 items-end gap-1 border-b px-3 pt-1">
           {tabs.map((tab) => {
             const active = tab === view;
             const Icon = ICONS[tab];
@@ -116,8 +116,8 @@ export function PanelViews({ blink }: { blink: React.ReactNode }) {
               <div
                 key={tab}
                 className={cn(
-                  "flex h-8 shrink-0 items-center rounded-md text-xs transition-colors",
-                  active ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  "-mb-px flex h-9 min-w-0 items-center border-b text-xs transition-colors",
+                  active ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 <button
@@ -125,10 +125,11 @@ export function PanelViews({ blink }: { blink: React.ReactNode }) {
                   role="tab"
                   aria-selected={active}
                   onClick={() => setView(tab)}
-                  className={cn("flex h-full items-center gap-1.5 font-medium", tab === "blink" ? "px-3" : "pr-1 pl-3")}
+                  title={tab === "blink" ? undefined : t(DESCRIPTIONS[tab])}
+                  className={cn("flex h-full min-w-0 items-center gap-1.5 font-medium", tab === "blink" ? "px-2.5" : "pr-1 pl-2.5")}
                 >
-                  <Icon className="size-3.5" aria-hidden />
-                  {title}
+                  <Icon className="size-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{title}</span>
                 </button>
                 {tab !== "blink" && (
                   <button
@@ -136,7 +137,7 @@ export function PanelViews({ blink }: { blink: React.ReactNode }) {
                     onClick={() => close(tab)}
                     aria-label={t("analyses.closeTab", { title })}
                     title={t("common.close")}
-                    className="mr-1 grid size-5 place-items-center rounded hover:bg-muted"
+                    className="mr-1 grid size-5 shrink-0 place-items-center rounded hover:bg-muted"
                   >
                     <XIcon className="size-3" />
                   </button>
@@ -144,6 +145,17 @@ export function PanelViews({ blink }: { blink: React.ReactNode }) {
               </div>
             );
           })}
+          {/* More room for the analysis: hides the summary column (wide screens only, where the two sit side by side). */}
+          <button
+            type="button"
+            onClick={onToggleWide}
+            aria-pressed={wide}
+            aria-label={t(wide ? "analyses.showSummary" : "analyses.hideSummary")}
+            title={t(wide ? "analyses.showSummary" : "analyses.hideSummary")}
+            className="mb-1.5 ml-auto grid size-7 shrink-0 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground max-lg:hidden"
+          >
+            {wide ? <PanelRightOpenIcon className="size-4" /> : <PanelRightCloseIcon className="size-4" />}
+          </button>
         </div>
       )}
 
@@ -153,8 +165,7 @@ export function PanelViews({ blink }: { blink: React.ReactNode }) {
         </section>
         <FixedTargetContext.Provider value>
           {opened.map((id) => (
-            <section key={id} role="tabpanel" className={cn("h-full min-h-0 flex-col gap-3 p-4", view === id ? "flex" : "hidden")}>
-              <p className="text-xs text-muted-foreground">{t(DESCRIPTIONS[id])}</p>
+            <section key={id} role="tabpanel" className={cn("@container h-full min-h-0 flex-col gap-3 p-4", view === id ? "flex" : "hidden")}>
               {(shown.has(id) || view === id) && <AnalysisBody id={id} active={view === id} />}
             </section>
           ))}

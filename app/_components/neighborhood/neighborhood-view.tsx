@@ -37,7 +37,7 @@ export function NeighborhoodView({ focus }: { focus?: NimFocus }) {
 function ObjectList() {
   const { objects, selectedId, setSelectedId, models, year } = useNim();
   return (
-    <ul className="grid max-h-[60dvh] content-start gap-0.5 overflow-y-auto pr-1 text-xs">
+    <ul className="grid max-h-[min(52dvh,32rem)] content-start gap-0.5 overflow-y-auto pr-1 text-xs">
       {objects.map((o) => {
         const st = modelStatus(o).level;
         const d = models.get(o.id) ? skyAt(models.get(o.id)!, year).distancePc : NaN;
@@ -64,7 +64,7 @@ function TimeBar() {
   const { year, setYear, mode, setMode } = useNim();
   const r = RANGES[mode];
   return (
-    <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
+    <div className="grid gap-2 border-b pb-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as RangeMode)}>
           <ToggleGroupItem value="near">{t("nim.modeNear")}</ToggleGroupItem>
@@ -98,7 +98,7 @@ function Body() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
-      {focusNote && <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs">{t(focusNote.key, focusNote.values)}</p>}
+      {focusNote && <p className="text-xs text-muted-foreground">{t(focusNote.key, focusNote.values)}</p>}
       <TimeBar />
       <div className="grid gap-3 md:grid-cols-[14rem_minmax(0,1fr)]">
         <div className="grid content-start gap-2">
@@ -116,7 +116,7 @@ function Body() {
             <TabsTrigger value="data"><DatabaseIcon /> {t("nim.tabData")}</TabsTrigger>
           </TabsList>
           <TabsContent value="map">
-            <div className="relative mt-2 aspect-[16/10] w-full overflow-hidden rounded-md">
+            <div className="relative mt-2 h-[min(52dvh,32rem)] w-full overflow-hidden rounded-md border">
               <Map3D
                 objects={objects}
                 models={models}

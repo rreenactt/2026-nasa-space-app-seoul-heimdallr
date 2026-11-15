@@ -330,8 +330,9 @@ export function ListenPanel(props: Props) {
   };
 
   return (
-    <div className="grid gap-4 pt-2 text-sm">
-      <section className="grid gap-2 rounded-lg border p-3">
+    <div className="grid gap-4 pt-2 text-sm @4xl:grid-cols-[minmax(0,1fr)_21rem] @4xl:items-start">
+      {/* With room, the controls sit beside the images (column 2) so both stay on screen while a comparison plays. */}
+      <section className="grid gap-2 rounded-lg border p-3 @4xl:col-start-2 @4xl:row-span-2 @4xl:row-start-1">
         <h3 className="text-sm font-medium">{hasB ? t("sonata.titleCompare") : t("sonata.titleListen")}</h3>
         {hasB ? (
           <>
@@ -395,7 +396,7 @@ export function ListenPanel(props: Props) {
       </p>
 
       {hasB && pairs.length > 0 && (
-        <section className="grid gap-2 rounded-lg border p-3 text-xs">
+        <section className="grid gap-2 rounded-lg border p-3 text-xs @4xl:col-span-2">
           <h3 className="text-sm font-medium">{t("sonata.titleSourcesAB")}</h3>
           <div className="overflow-x-auto">
             <Table>
@@ -434,7 +435,7 @@ export function ListenPanel(props: Props) {
         </section>
       )}
 
-      <details className="rounded-lg border p-3 text-xs">
+      <details className="rounded-lg border p-3 text-xs @4xl:col-span-2">
         <summary className="cursor-pointer text-sm font-medium select-none">{t("sonata.playWholeSummary")}</summary>
         <div className="mt-3 grid gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -449,7 +450,7 @@ export function ListenPanel(props: Props) {
       </details>
 
       {!hasB && (
-        <details className="rounded-lg border p-3 text-xs">
+        <details className="rounded-lg border p-3 text-xs @4xl:col-span-2">
           <summary className="cursor-pointer text-sm font-medium select-none">{t("sonata.sourcesAsText", { n: single.length })}</summary>
           <div className="mt-2 overflow-x-auto">
             <Table>

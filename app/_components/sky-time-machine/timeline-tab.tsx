@@ -34,7 +34,7 @@ export function TimelineStrip({ value, onSelect, highlight }: { value?: string |
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="group" aria-label={t("stm.timelineLabel")}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[420px]" role="group" aria-label={t("stm.timelineLabel")}>
         {ticks.map((tick) => {
           const tx = left + ((tick - y0) / (y1 - y0)) * (W - left - 8);
           return (
@@ -112,7 +112,9 @@ export function TimelineTab() {
   const elapsed = useMemo(() => (current && prev ? current.timeStart - prev.timeStart : null), [current, prev]);
 
   return (
-    <div className="grid gap-3 pt-2">
+    <div className="grid gap-x-5 gap-y-3 pt-2 @3xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] @3xl:items-start">
+      <FrameView epoch={current} />
+      <div className="grid min-w-0 gap-3">
       <TimelineStrip value={current?.id} onSelect={(e) => setCurrentId(e.id)} />
       <div className="flex flex-wrap items-center gap-2">
         <Button size="icon-sm" variant="outline" disabled={idx <= 0} onClick={() => prev && setCurrentId(prev.id)} aria-label={t("stm.prevDate")}>
@@ -147,8 +149,6 @@ export function TimelineTab() {
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_16rem]">
-        <FrameView epoch={current} />
         {current && (
           <dl className="grid content-start gap-x-3 gap-y-1 text-xs [grid-template-columns:auto_1fr]">
             <dt className="text-muted-foreground">{t("stm.telescope")}</dt>
@@ -176,11 +176,11 @@ export function TimelineTab() {
             )}
           </dl>
         )}
-      </div>
       <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
         <Badge variant="outline">{t("stm.badgeBrightness")}</Badge>
         <Badge variant="outline">{t("stm.badgeGrid")}</Badge>
         <Badge variant="outline">{t("stm.badgeHatched")}</Badge>
+      </div>
       </div>
     </div>
   );

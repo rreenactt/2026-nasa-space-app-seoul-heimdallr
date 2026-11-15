@@ -71,8 +71,8 @@ export function ImageExplorer() {
   };
 
   return (
-    <div className="flex flex-col gap-4 pt-2">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-col gap-3 pt-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <ToggleGroup
           variant="outline"
           size="sm"
@@ -185,7 +185,7 @@ function PanelPair(props: {
   const rangeA = useMemo(() => (valuesA ? percentileRange(valuesA, 1, props.display.clipHigh) : undefined), [valuesA, props.display.clipHigh]);
 
   return (
-    <div className={props.b ? "grid gap-3 sm:grid-cols-2" : "mx-auto grid w-full max-w-md gap-3"}>
+    <div className={props.b ? "grid gap-3 sm:grid-cols-2" : "grid w-full gap-3"}>
       <FramePanel entry={props.a} center={props.centerA} display={props.display} tag="A" mode={props.mode} />
       {props.b && props.centerB && (
         <FramePanel
@@ -259,8 +259,10 @@ function FramePanel({
   const wave = photometry?.wavelengthUm != null ? { wavelength: photometry.wavelengthUm, bandwidth: photometry.bandwidthUm ?? 0 } : null;
   const waveMismatch = referenceWave && wave ? Math.abs(referenceWave.wavelength - wave.wavelength) > Math.max(referenceWave.bandwidth, wave.bandwidth) : false;
 
+  // Its own size container: one frame has room to put the numbers beside the image, two frames side by side do not.
   return (
-    <div className="flex flex-col gap-2">
+    <div className="@container">
+    <div className="grid gap-x-5 gap-y-2 @xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] @xl:items-start">
       <FitsCanvas
         frame={decoded}
         values={values}
@@ -271,7 +273,7 @@ function FramePanel({
         aperture={display.showAperture && mode === "comet" ? aperture : undefined}
         label={`${tag} · ${formatUtc(entry.utcStart)} · ${entry.detector}`}
       />
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+      <dl className="grid grid-cols-[auto_1fr] content-start gap-x-3 gap-y-1.5 text-xs">
         <dt className="text-muted-foreground">{t("comet.waveAtComet")}</dt>
         <dd className="font-mono">
           {wave ? t("comet.waveValue", { wavelength: wave.wavelength.toFixed(3), bandwidth: wave.bandwidth.toFixed(3) }) : "—"}
@@ -302,6 +304,7 @@ function FramePanel({
           {(rangeOverride ?? ownRange).lo.toFixed(3)} – {(rangeOverride ?? ownRange).hi.toFixed(3)} {decoded.payload.header.bunit}
         </dd>
       </dl>
+    </div>
     </div>
   );
 }

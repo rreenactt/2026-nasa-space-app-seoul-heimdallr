@@ -23,7 +23,7 @@ export function ObservationTimeline() {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3">
+    <div className="grid gap-x-4 gap-y-2 border-b pb-3 @3xl:grid-cols-[auto_minmax(0,1fr)] @3xl:items-center">
       <div className="flex flex-wrap items-center gap-2">
         <ToggleGroup
           variant="outline"
@@ -67,7 +67,7 @@ export function ObservationTimeline() {
       </div>
 
       {selected && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-muted-foreground @3xl:col-span-2">
           <span className="text-foreground">{formatUtc(selected.utcStart)}</span>
           <span>{selected.obsId}</span>
           <span>{selected.detector}</span>

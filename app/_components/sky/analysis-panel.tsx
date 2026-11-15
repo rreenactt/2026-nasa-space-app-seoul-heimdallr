@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useT } from "@/app/_i18n/i18n-provider";
 import { AdditionalAnalyses } from "../analyses/additional-analyses";
-import { AnalysesProvider, type AutoOpenAnalysis } from "../analyses/analyses-context";
+import { cn } from "cn";
+import { AnalysesProvider, useAnalyses, type AutoOpenAnalysis } from "../analyses/analyses-context";
 import { PanelViews } from "../analyses/analysis-views";
 import { BLINK_FOV_ARCMIN, BlinkProvider } from "../blink/blink-context";
 import { BlinkGate, BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
@@ -44,7 +45,7 @@ export function AnalysisPanel({ selection, onClose, autoOpen, onGoTo }: Analysis
       {/* Inside the frame (56px band on top, 12px at the sides and bottom; Figma "I · Frame states · Analysis open"),
           over the sky the frame darkens by 45%. The panel fills the frame with a 16px inset, so the images get as much
           room as the screen allows. */}
-      <DialogContent initialFocus={headerRef} className="dark top-[calc(50%+24px)] grid h-[calc(100dvh-72px)] w-[calc(100vw-16px)] max-w-none sm:top-[calc(50%+22px)] sm:h-[calc(100dvh-100px)] sm:w-[calc(100vw-56px)] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
+      <DialogContent initialFocus={headerRef} className="analysis-skin dark top-[calc(50%+24px)] grid h-[calc(100dvh-72px)] w-[calc(100vw-16px)] max-w-none sm:top-[calc(50%+22px)] sm:h-[calc(100dvh-100px)] sm:w-[calc(100vw-56px)] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
         {/* Keyed by the point: "Next" swaps the place while the panel stays open, and every part starts fresh. */}
         {selection && (
           <PanelBody key={`${selection.ra} ${selection.dec}`} selection={selection} autoOpen={autoOpen} headerRef={headerRef} onGoTo={onGoTo} />
@@ -78,7 +79,7 @@ function PanelBody({
     <>
       <DialogHeader ref={headerRef} tabIndex={-1} className="border-b px-4 pt-4 pb-3 outline-none sm:px-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pr-8">
-          <DialogTitle className="text-lg">{target?.name ?? candidate?.id ?? t("panel.selectedPoint")}</DialogTitle>
+          <DialogTitle className="text-xl font-light tracking-[-0.01em]">{target?.name ?? candidate?.id ?? t("panel.selectedPoint")}</DialogTitle>
           <RatingBadge point={selection} />
           <div className="ml-auto">
             <CopyLinkButton />
@@ -135,13 +136,8 @@ function PanelBody({
           <BlinkGate>
             {/* Wide screens: images left, summary right, each scrolling on its own. Narrower than 1024px: one column
                 (images, then summary, rating and analyses) and the whole panel scrolls. */}
-            <div className="min-h-0 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(340px,2fr)] lg:overflow-hidden">
-              <div className="h-[min(calc(100vw+400px),calc(100dvh-140px))] min-h-[560px] border-b lg:h-auto lg:min-h-0 lg:border-r lg:border-b-0">
-                <PanelViews blink={<BlinkViewer />} />
-              </div>
-
-              <div className="min-h-0 lg:overflow-y-auto">
-                <div className="grid gap-6 p-4 sm:p-6">
+            <PanelColumns>
+                <div className="grid gap-5 p-4 sm:p-5">
                   {target && <p className="text-sm">{t(target.noteKey)}</p>}
                   {candidate && <CandidateNote candidate={candidate} />}
 
@@ -161,12 +157,30 @@ function PanelBody({
                     {t("panel.credits", { background: SKY_SURVEY.shortName })}
                   </p>
                 </div>
-              </div>
-            </div>
+            </PanelColumns>
           </BlinkGate>
         </AnalysesProvider>
       </BlinkProvider>
     </>
+  );
+}
+
+/**
+ * Wide screens: the views on the left, and the summary, rating and analyses list in a fixed column on the right, each
+ * scrolling on its own. An open analysis can take the whole width (the button at the end of its tab strip); with no
+ * analysis open the summary always shows. Narrower than 1024px: one column and the whole panel scrolls.
+ */
+function PanelColumns({ children }: { children: React.ReactNode }) {
+  const { opened } = useAnalyses();
+  const [wideChoice, setWide] = useState(false);
+  const wide = wideChoice && opened.length > 0;
+  return (
+    <div className={cn("min-h-0 overflow-y-auto lg:grid lg:overflow-hidden", wide ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]")}>
+      <div className={cn("h-[min(calc(100vw+400px),calc(100dvh-140px))] min-h-[560px] border-b lg:h-auto lg:min-h-0 lg:border-b-0", !wide && "lg:border-r")}>
+        <PanelViews blink={<BlinkViewer />} wide={wide} onToggleWide={() => setWide((w) => !w)} />
+      </div>
+      <div className={cn("min-h-0 lg:overflow-y-auto", wide && "lg:hidden")}>{children}</div>
+    </div>
   );
 }
 

@@ -53,8 +53,7 @@ export function MotionTab() {
 
   return (
     <div className="grid gap-3 pt-2">
-      <TimelineStrip value={current?.id} highlight={marks.map((m) => m.epochId)} onSelect={(e) => setCurrentId(e.id)} />
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid gap-x-5 gap-y-3 @3xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] @3xl:items-start">
         <FrameView
           epoch={current}
           onPick={(p) => {
@@ -63,7 +62,8 @@ export function MotionTab() {
             setNote(null);
           }}
         />
-        <div className="grid content-start gap-3 text-xs">
+        <div className="grid min-w-0 content-start gap-3 text-xs">
+          <TimelineStrip value={current?.id} highlight={marks.map((m) => m.epochId)} onSelect={(e) => setCurrentId(e.id)} />
           <ol className="list-decimal space-y-1 pl-4 text-muted-foreground">
             <li>{t("stm.motionStep1")}</li>
             <li>{t("stm.motionStep2")}</li>

@@ -16,6 +16,7 @@ analyses.filesDone,{n} files in {seconds} s,"파일 {n}개, {seconds} s","Additi
 analyses.filesFailed,{n} failed (shown inside),{n}개 실패 (분석 안에 표시),"Additional analyses list: after analyses.filesDone, files that failed to download"
 analyses.fplNote,SPHEREx search and up to 3 exposures of this point.,SPHEREx 검색과 이 지점의 노출 최대 3장,Additional analyses list: detail under the Fake Planet Lab summary (what Run downloads)
 analyses.fplSummary,"Is a dot real or a defect? Quality flags, uncertainty and other observations for any spot you click.","이 점은 진짜일까요, 결함일까요? 클릭한 곳의 품질 플래그, 불확도, 다른 관측을 보여줘요.",Additional analyses list: expandable one-line summary of Fake Planet Lab
+analyses.hideSummary,Hide the summary column,요약 숨기기,Button at the end of the analysis tab strip (aria-label and tooltip): gives the open analysis the whole panel width
 analyses.leftView,Left view,왼쪽 화면,aria-label of the tab strip on the left of the analysis panel (images and opened analyses)
 analyses.nearbyOnly,Nearby objects only,가까운 천체만,Additional analyses list badge (Neighborhood in Motion): it only covers nearby stars
 analyses.nimNoteInMap,{name} is in the map and will be selected.,지도에 있는 천체 · 열면 {name} 선택,Additional analyses list: detail under Neighborhood in Motion when the test target is in its catalog
@@ -29,6 +30,7 @@ analyses.progress,"{step} · {done} / {total} done, {left} left. Opens when read
 analyses.progressEta,"{step} · {done} / {total} done, {left} left · about {seconds} s. Opens when ready.","{step} · {done} / {total} 완료, {left}개 남음 · 약 {seconds} s. 다 받으면 열려요.","Same as analyses.progress, with the estimated seconds left"
 analyses.run,Run,실행,"Additional analyses list button: downloads the analysis, then opens it as a tab"
 analyses.show,Show,보기,Additional analyses list button after download: shows the analysis tab on the left
+analyses.showSummary,Show the summary column,요약 보기,Button at the end of the analysis tab strip (aria-label and tooltip): brings back the summary and rating column
 analyses.showingLeft,Showing on the left,왼쪽에 표시 중,Additional analyses list button while that analysis is the visible tab
 analyses.sonataNote,SPHEREx search and two observations (A and B) of this point.,"SPHEREx 검색과 이 지점의 관측 2개 (A, B)",Additional analyses list: detail under the Sky Sonata summary (what Run downloads)
 analyses.sonataSummary,"Hear the sky: position becomes left/right and pitch, brightness becomes loudness. Keyboard-first.","하늘을 소리로 들어요. 위치는 좌우와 음높이로, 밝기는 소리 크기로 바뀌어요. 키보드로 먼저 조작하도록 만들었어요.",Additional analyses list: expandable summary of Sky Sonata
@@ -396,6 +398,7 @@ fpl.checkRepeat,Other observations,다른 관측,Fake Planet Lab check name: is 
 fpl.checkShape,Shape vs PSF,PSF와 모양 비교,Fake Planet Lab check name: dot shape compared with the point-spread function
 fpl.checkSnr,Signal vs noise,신호 대 잡음,Fake Planet Lab check name (check id snr)
 fpl.checkValidity,Data validity,데이터 유효성,Fake Planet Lab check name (check id validity)
+fpl.chooseExposures,Choose exposures ({n} of {total} in use),노출 고르기 ({total}장 중 {n}장 사용),Fake Planet Lab Inspect tab: summary line that opens the list of exposures of the chosen detector; {n} is how many are selected and {total} how many exist
 fpl.clickDot,Click a dot on any image to inspect that position. Checks run on the original pixels of the primary observation (★).,이미지의 점을 클릭하면 그 위치를 살펴봐요. 검사는 기준 관측(★)의 원래 픽셀로 해요.,Fake Planet Lab check panel before a point is picked
 fpl.colBit,Bit,비트,Fake Planet Lab Flag guide table column
 fpl.colChange,Change (mag),변화 (mag),Fake Planet Lab Brightness comparison table column
