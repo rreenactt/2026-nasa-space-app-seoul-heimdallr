@@ -303,7 +303,7 @@ function ratedEntry(place: MostRatedPlace, candidates: MovementCandidate[]): Rev
 }
 
 /**
- * The "Most rated" tab (decision #57, Figma "I · Review, Most rated tab"): the sky cells with the most ratings. Only the
+ * The "Most rated" tab (decision #58, Figma "I · Review, Most rated tab"): the sky cells with the most ratings. Only the
  * count is public; how people rated shows only where this browser rated too (decision #6). A cell holding a candidate
  * is named after it and opens at the candidate's SPHEREx position. Rows pick and open like the review order (#49).
  */

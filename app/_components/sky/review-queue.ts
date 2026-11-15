@@ -56,7 +56,7 @@ export type CandidateBatch =
     };
 
 /**
- * One stop in the review order: a test target or a movement candidate, or (in the "Most rated" tab, decision #57) a
+ * One stop in the review order: a test target or a movement candidate, or (in the "Most rated" tab, decision #58) a
  * rated sky cell with no candidate in the list.
  */
 export type ReviewEntry =

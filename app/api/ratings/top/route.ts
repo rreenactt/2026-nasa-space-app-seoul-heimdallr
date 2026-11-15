@@ -29,7 +29,7 @@ async function candidatesByCell(hpxIndexes: number[]): Promise<Map<number, MostR
 
 /**
  * GET /api/ratings/top — the most rated sky cells with their rating counts (the Review queue's "Most rated" tab,
- * decision #57), each with the candidate it holds, if any.
+ * decision #58), each with the candidate it holds, if any.
  */
 export async function GET(request: NextRequest) {
   const cells = await mostRatedCells(RATING_RELEASE, MOST_RATED_LIMIT);

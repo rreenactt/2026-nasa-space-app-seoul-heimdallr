@@ -282,7 +282,7 @@ export function SkyExplorer({
     (entry: ReviewEntry) => (picked?.id === entry.id ? goToEntry(entry) : pick(entry)),
     [picked, goToEntry, pick],
   );
-  // The queue's "Most rated" tab hands over its own list, so Previous, Next, N and P walk what is on screen (#57).
+  // The queue's "Most rated" tab hands over its own list, so Previous, Next, N and P walk what is on screen (#58).
   const [stepList, setStepList] = useState<ReviewEntry[] | null>(null);
   const step = useCallback(
     (direction: 1 | -1) => {
