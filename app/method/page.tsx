@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageShell } from "../_components/site/page-shell";
+import { MethodNav } from "./_components/method-nav";
 
 export const metadata: Metadata = {
   title: "Method",
@@ -48,18 +49,7 @@ export default function MethodPage() {
         <p className="mt-3 max-w-2xl text-lg text-ash">How the comparison works, what it can find and what it cannot.</p>
       </div>
       <div className="mt-20 grid gap-10 px-14 md:grid-cols-[300px_minmax(0,760px)] md:gap-14">
-        <nav aria-label="On this page" className="md:sticky md:top-24 md:self-start">
-          <ol className="grid gap-2.5 text-sm">
-            {SECTIONS.map((section, index) => (
-              <li key={section.id}>
-                <a href={`#${section.id}`} className="text-ash transition-colors hover:text-paper">
-                  <span className="mr-3 font-data text-xs">{String(index + 1).padStart(2, "0")}</span>
-                  {section.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
+        <MethodNav sections={SECTIONS.map(({ id, title }) => ({ id, title }))} />
         <div className="grid gap-20 border-rule md:border-l md:pl-14">
           {SECTIONS.map((section) => (
             <section key={section.id} id={section.id} className="scroll-mt-24">

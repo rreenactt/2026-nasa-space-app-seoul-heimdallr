@@ -23,7 +23,7 @@ import {
   type ReviewEntry,
   reviewQueue,
 } from "./review-queue";
-import { EyeIcon, ListIcon } from "lucide-react";
+import { ListIcon } from "lucide-react";
 import { cn } from "cn";
 import { Keycap } from "../site/keycap";
 import { DEFAULT_OVERLAYS, type SkyOverlays, skyLayers } from "./overlays";
@@ -37,10 +37,10 @@ import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
 import type { Flight, SkyPainter } from "./sky-view";
 import { FovScale } from "./fov-scale";
 import { paintCandidates } from "./candidate-layer";
-import { recordPlace, usePlaceHistory } from "./place-history";
+import { clearPlaces, recordPlace, usePlaceHistory } from "./place-history";
 import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
 import { MostRated } from "./most-rated";
-import { findTestTarget, type TestTarget } from "./test-targets";
+import { findTestTarget, TEST_TARGETS, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
 
 // Aladin Lite touches browser APIs as soon as it loads, so the sky renders only on the client.
@@ -96,6 +96,14 @@ export function SkyExplorer({
   const [searchOpen, setSearchOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  // The About and Method pages link to the sky with #search to open the search box.
+  useEffect(() => {
+    if (window.location.hash !== "#search") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the address after mount
+    setSearchOpen(true);
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
   const foldQueue = useCallback(() => setQueueOpen(false), []);
   // A drag takes the view back: the queue folds and a flight in progress is abandoned (its panel does not open).
   const onDragStart = useCallback(() => {
@@ -228,6 +236,11 @@ export function SkyExplorer({
     setQueueOpen((open) => !open);
     showCandidates();
   }, [showCandidates]);
+  // "Open blink" in the queue: the place on screen, else the first in the review order.
+  const openCurrent = useCallback(() => {
+    const entry = currentEntry ?? queue.find((item) => item.kind === "candidate") ?? queue[0];
+    if (entry) goToEntry(entry);
+  }, [currentEntry, queue, goToEntry]);
   const step = useCallback(
     (direction: 1 | -1) => {
       if (queue.length === 0) return;
@@ -321,7 +334,33 @@ export function SkyExplorer({
             onPoint={goTo}
             searchOpen={searchOpen}
             onSearchOpenChange={setSearchOpen}
-            menuExtra={[{ label: "Keyboard shortcuts", key: "?", onSelect: () => setShortcutsOpen(true) }]}
+            menuGroups={[
+              [
+                { label: "Keyboard shortcuts", key: "?", onSelect: () => setShortcutsOpen(true) },
+                {
+                  label: "How to rate",
+                  onSelect: () => {
+                    setQueueOpen(true);
+                    setGuideOpen(true);
+                  },
+                },
+              ],
+              [
+                {
+                  label: "Test targets",
+                  items: TEST_TARGETS.map((target) => ({ label: target.name, onSelect: () => goToTarget(target) })),
+                },
+              ],
+              [
+                { label: "Data sources and credits", href: "/method#sources" },
+                {
+                  label: "Clear places you opened",
+                  hint: opened.length ? opened.length.toLocaleString("en-US") : undefined,
+                  disabled: opened.length === 0,
+                  onSelect: clearPlaces,
+                },
+              ],
+            ]}
           />
         }
       />
@@ -344,31 +383,42 @@ export function SkyExplorer({
                 onFilterChange={setCandidateFilter}
                 onSelect={goToEntry}
                 onOpenPlace={goTo}
+                onOpenCurrent={openCurrent}
+                onStep={step}
                 onClose={foldQueue}
               />
             </div>
             <div className="pointer-events-auto absolute top-4 right-4">
-              <RatingGuide />
+              <RatingGuide open={guideOpen} onOpenChange={setGuideOpen} />
             </div>
           </>
         ) : (
-          <div className="pointer-events-auto absolute top-3 left-4 flex flex-col items-start gap-2">
+          <div className="pointer-events-auto absolute top-3 left-6 flex flex-col items-start gap-2">
+            {/* Figma "I · Explore": 214 × 32 with the candidate count and the key at the right end. */}
             <button
               type="button"
               aria-expanded={false}
               onClick={toggleQueue}
-              className="flex h-8 items-center gap-2 rounded-sm bg-ink/80 px-2.5 text-[13px] font-medium text-paper transition-colors hover:bg-ink"
+              className="flex h-8 w-[214px] items-center gap-2 rounded-[2px] bg-ink/80 pr-2 pl-2.5 text-[13px] font-medium text-paper transition-colors hover:bg-ink"
             >
               <ListIcon className="size-4 stroke-[1.5]" aria-hidden />
               Review queue
-              <Keycap className="ml-3">Q</Keycap>
+              <span className="text-xs font-normal text-ash">{MOVEMENT_CANDIDATES.length.toLocaleString("en-US")}</span>
+              <Keycap className="ml-auto">Q</Keycap>
             </button>
             {/* Most rated places (from main, decision #35). Not in the Figma screens yet, so it sits under the button. */}
             <MostRated onSelect={goTo} />
           </div>
         )}
-        <div className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2">
+        {/* Centred on the screen rather than on this box (Figma: icons 20px from the edge, 34px apart). */}
+        <div
+          className={cn(
+            "pointer-events-auto absolute top-1/2 right-3.5 -translate-y-1/2 transition-[margin] duration-500 ease-out-expo",
+            framed ? "-mt-2" : "-mt-7",
+          )}
+        >
           <SkyTools
+            candidatesOff={!overlays.candidates}
             onZoom={zoomBy}
             onHome={goHome}
             fullscreen={fullscreen}
@@ -378,25 +428,23 @@ export function SkyExplorer({
             layersPanel={<ShowOnSky overlays={overlays} onChange={setOverlays} onClose={() => setLayersOpen(false)} />}
           />
         </div>
-        <CursorReadout aiming={aiming} />
-        <FovScale hidden={framed} />
-        {!overlays.candidates && (
+        <CursorReadout hidden={framed} />
+        <FovScale hidden={framed} aiming={aiming} />
+        {!overlays.candidates && !framed && (
           <button
             type="button"
             onClick={showCandidates}
-            className="absolute bottom-16 left-6 flex items-center gap-2 rounded-sm bg-ink/85 px-3 py-1.5 text-xs text-bone hover:text-paper"
+            className="pointer-events-auto absolute bottom-[52px] left-6 flex h-8 items-center gap-3 rounded-[2px] bg-ink/80 pr-2 pl-3 text-[13px] text-bone hover:text-paper"
           >
-            <EyeIcon className="size-3.5 stroke-[1.5]" aria-hidden />
             Candidates hidden
-            <span className="text-ash">·</span>
-            Show
+            <span className="font-medium text-paper">Show</span>
             <Keycap>C</Keycap>
           </button>
         )}
         {/* The credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
-        <div className="absolute right-4 bottom-9 max-w-md text-right text-xs leading-5">
-          {SKY_SURVEY.notice && <p className="font-medium text-signal">{SKY_SURVEY.notice}</p>}
-          <p className="text-ash">{SKY_SURVEY.credit}</p>
+        <div className="absolute right-4 bottom-[29px] text-right [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]">
+          {SKY_SURVEY.notice && <p className="text-xs leading-4 text-signal">{SKY_SURVEY.notice}</p>}
+          <p className="mt-0.5 text-[11px] leading-[15px] text-ash">{SKY_SURVEY.credit}</p>
         </div>
       </div>
       {error && (
@@ -414,12 +462,18 @@ export function SkyExplorer({
   );
 }
 
-function CursorReadout({ aiming }: { aiming: boolean }) {
+/** The coordinates under the pointer, bottom left while exploring (Figma "I · Explore"). */
+function CursorReadout({ hidden }: { hidden: boolean }) {
   const cursor = useCursor();
   return (
-    <div className="absolute bottom-4 left-6 grid gap-1 text-xs [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]">
-      <p className="text-ash">{aiming ? "Aiming. Click to analyze." : "Click to zoom in. Click a pin to analyze."}</p>
-      <p className="font-data tracking-[0.04em] text-bone/80">
+    <div
+      aria-hidden={hidden}
+      className={cn(
+        "absolute bottom-[21px] left-6 transition-opacity duration-300 [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]",
+        hidden && "opacity-0",
+      )}
+    >
+      <p className="font-data text-[11px] leading-[13px] tracking-[0.04em] text-bone/80">
         RA {cursor ? formatRa(cursor.ra) : "—"}&nbsp;&nbsp;&nbsp;Dec {cursor ? formatDec(cursor.dec) : "—"}
       </p>
     </div>

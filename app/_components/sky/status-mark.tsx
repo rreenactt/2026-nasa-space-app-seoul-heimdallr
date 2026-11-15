@@ -24,7 +24,13 @@ export function StatusMark({ kind, className }: { kind: MarkKind; className?: st
       )}
       {kind === "recommended" && <circle cx="6" cy="6" r="4.6" fill="none" className="stroke-paper" strokeWidth="1.2" />}
       {kind === "known" && <path d="M6 1v10M1 6h10" className="stroke-ash" strokeWidth="1.2" />}
-      {kind === "test" && <circle cx="6" cy="6" r="2" className="fill-paper" />}
+      {/* A ring with a dot, the same as the test target pins on the sky. */}
+      {kind === "test" && (
+        <>
+          <circle cx="6" cy="6" r="4.6" fill="none" className="stroke-bone" strokeWidth="1.1" />
+          <circle cx="6" cy="6" r="1.4" className="fill-bone" />
+        </>
+      )}
       {kind === "opened" && <rect x="1.5" y="1.5" width="9" height="9" fill="none" className="stroke-ash" strokeWidth="1" />}
     </svg>
   );

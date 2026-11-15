@@ -1,6 +1,6 @@
 import "client-only";
 
-import A, { type Aladin, type Catalog } from "aladin-lite";
+import A, { type Aladin } from "aladin-lite";
 import { cn } from "cn";
 import { useEffect, useRef } from "react";
 import { AIM_FOV, CUTOUT_ARCMIN, MAX_FOV, MIN_FOV, SKY_SURVEY } from "./constants";
@@ -80,7 +80,6 @@ export default function SkyView({
   const painterRef = useRef(painter);
   const painterVersion = useRef(0);
   const aladinRef = useRef<Aladin | null>(null);
-  const pinsRef = useRef<Catalog | null>(null);
   const layersRef = useRef(layers);
   const pendingFlight = useRef<Flight | null>(null);
   /** Cancels the flight in progress, if any. */
@@ -150,6 +149,7 @@ export default function SkyView({
         let paintedFor = "";
         let placedFor = "";
         let reportedFor = "";
+        let pointedFor = "";
         const onFrame = () => {
           frame = requestAnimationFrame(onFrame);
           const [centerRa, centerDec] = aladin.getRaDec();
@@ -182,6 +182,16 @@ export default function SkyView({
               });
             }
           }
+          // The sky under a still pointer changes while the view drags, zooms or flies, and Aladin sends mouseMove only
+          // when the pointer itself moves, so the readout is worked out here from the pointer and the current view.
+          const pointKey = pointer ? `${viewKey} ${pointer.x} ${pointer.y}` : "none";
+          if (pointKey !== pointedFor) {
+            pointedFor = pointKey;
+            const world = pointer ? aladin.pix2world(pointer.x, pointer.y) : null;
+            callbacks.current.onCursorMove(
+              world && Number.isFinite(world[0]) && Number.isFinite(world[1]) ? { ra: ((world[0] % 360) + 360) % 360, dec: world[1] } : null,
+            );
+          }
           const square = reticle.current;
           if (!square) return;
           // The square fades in and out (CSS opacity transition) but its size tracks the zoom exactly.
@@ -198,27 +208,9 @@ export default function SkyView({
         };
         onFrame();
 
-        const pins = A.catalog({
-          name: "Test targets",
-          shape: "circle",
-          sourceSize: 14,
-          color: "#fcd34d",
-          displayLabel: true,
-          labelColumn: "name",
-          labelFont: "12px sans-serif",
-        });
-        pins.addSources(TEST_TARGETS.map((target) => A.source(target.ra, target.dec, { name: target.name })));
-        aladin.addCatalog(pins);
-        pinsRef.current = pins;
-        applyLayers(aladin, pins, layersRef.current);
+        // Test target pins and their names are drawn by the painter (candidate-layer.ts), in the site type.
+        applyLayers(aladin, layersRef.current);
 
-        aladin.on("mouseMove", (event) => {
-          if (event.ra === null || event.dec === null) {
-            callbacks.current.onCursorMove(null);
-            return;
-          }
-          callbacks.current.onCursorMove({ ra: event.ra, dec: event.dec });
-        });
         aladin.on("click", (event) => {
           if (event.isDragging) return;
           const [currentFov] = aladin.getFov();
@@ -247,7 +239,6 @@ export default function SkyView({
       cancelAnimationFrame(frame);
       stopFlight.current();
       aladinRef.current = null;
-      pinsRef.current = null;
       element.removeEventListener("pointermove", trackPointer);
       element.removeEventListener("pointerleave", hideReticle);
       element.removeEventListener("wheel", interrupt, { capture: true });
@@ -259,7 +250,7 @@ export default function SkyView({
 
   useEffect(() => {
     layersRef.current = layers;
-    if (aladinRef.current && pinsRef.current) applyLayers(aladinRef.current, pinsRef.current, layers);
+    if (aladinRef.current) applyLayers(aladinRef.current, layers);
   }, [layers]);
 
   useEffect(() => {
@@ -293,9 +284,7 @@ export default function SkyView({
   );
 }
 
-function applyLayers(aladin: Aladin, pins: Catalog, layers: SkyLayers) {
-  if (layers.pins) pins.show();
-  else pins.hide();
+function applyLayers(aladin: Aladin, layers: SkyLayers) {
   aladin.setCooGrid({ enabled: layers.grid });
 }
 
