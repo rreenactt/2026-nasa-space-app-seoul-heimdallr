@@ -52,4 +52,4 @@
 
 ## Acknowledgments (Project Details 끝에 붙임)
 
-- 출처: SPHEREx는 IRSA SPHEREx 페이지, IRSA는 https://irsa.ipac.caltech.edu/ack.html, 2MASS는 https://ipac.caltech.edu/dois, WISE·NEOWISE는 AllWISE Explanatory Supplement 1.6b, Gaia는 ESA Gaia DR3 credit 안내의 표준 문구. 2026-11-15에 확인.
+- 출처: SPHEREx는 IRSA SPHEREx 페이지, IRSA는 https://irsa.ipac.caltech.edu/ack.html, 2MASS는 https://ipac.caltech.edu/dois, WISE·NEOWISE는 AllWISE Explanatory Supplement 1.6b, Gaia는 ESA 표준 문구(2026-11-15 ESA 문서 서버가 응답하지 않아 원문 대조 못 함, 접속되면 확인). 나머지는 2026-11-15에 공식 페이지와 대조.
