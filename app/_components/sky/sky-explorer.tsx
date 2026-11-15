@@ -438,7 +438,9 @@ export function SkyExplorer({
       <SkyFrame on={framed} dim={selection !== null} />
       <SiteHeader
         className={cn(
-          "absolute inset-x-0 top-0 z-20 transition-opacity duration-300",
+          // Steps aside over 300 ms while dragging, and comes back quicker (150 ms) once the drag ends.
+          "absolute inset-x-0 top-0 z-20 transition-opacity",
+          dragging && !framed && !searchOpen ? "duration-300" : "duration-150",
           framed || searchOpen
             ? "opacity-100"
             : dragging
@@ -664,7 +666,7 @@ function useStoredOverlays() {
 }
 
 /**
- * True while the sky is being dragged and for 600 ms after release, so the header can step aside. A drag (not a
+ * True while the sky is being dragged and for 150 ms after release, so the header can step aside. A drag (not a
  * click) also calls onDragStart, which folds the queue: dragging means looking around (decision #38).
  */
 function useSkyDrag(onDragStart: () => void) {
@@ -689,7 +691,7 @@ function useSkyDrag(onDragStart: () => void) {
       start = null;
       if (!active) return;
       active = false;
-      timer = setTimeout(() => setDragging(false), 600);
+      timer = setTimeout(() => setDragging(false), 150);
     };
     window.addEventListener("pointerdown", down, true);
     window.addEventListener("pointermove", move, true);
