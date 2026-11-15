@@ -1,7 +1,7 @@
 "use client";
 
 import { InfoIcon, LayersIcon, LocateFixedIcon, MaximizeIcon, MinimizeIcon, MinusIcon, PlusIcon, ScanSearchIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useState } from "react";
+import { Fragment, type ReactElement, type ReactNode, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "cn";
@@ -292,10 +292,14 @@ export function ShowOnSky({
       </div>
       <div className="px-[18px] pt-2 pb-1.5">
         {OTHER_LAYERS.map(({ key, label, sub }) => (
-          <Row key={key} dim={sub && !overlays[sub]} className={sub && "pl-4"}>
-            {label}
-            <SkySwitch checked={overlays[key]} label={label} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
-          </Row>
+          <Fragment key={key}>
+            <Row dim={sub && !overlays[sub]} className={sub && "pl-4"}>
+              {label}
+              <SkySwitch checked={overlays[key]} label={label} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
+            </Row>
+            {/* Grid RA labels are in hours, as everywhere else on the screen (Figma "Coordinate grid hint"). */}
+            {key === "grid" && <p className="-mt-1 mb-0.5 text-[11.5px] text-ash">RA in hours: 1h = 15°</p>}
+          </Fragment>
         ))}
         <p className="mt-1 flex items-center gap-2 text-[11px] text-smoke">
           Show or hide candidates
