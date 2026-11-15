@@ -25,22 +25,15 @@ export type SkyPaintFrame = {
 /** Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes. */
 export type SkyPainter = (context: CanvasRenderingContext2D, frame: SkyPaintFrame) => void;
 
-/** The view has held still for SETTLE_MS: its state, a way to read the sky picture, and screen-to-sky conversion. */
-export type SettledSky = {
-  ra: number;
-  dec: number;
-  fov: number;
+/** The view after it has held still for SETTLE_MS. */
+export type SettledSky = SkyView & {
   /** Size of the view in CSS pixels. */
   width: number;
   height: number;
-  /** The sky picture as drawn (without our overlay canvases), at CSS-pixel size; null when it cannot be read. */
-  capture: () => Promise<ImageData | null>;
-  /** Sky position of a screen point (CSS pixels), or null outside the projection. */
-  toSky: (x: number, y: number) => EquatorialCoordinates | null;
 };
 
 /** How long the view must hold still before onSettle runs. */
-export const SETTLE_MS = 1500;
+export const SETTLE_MS = 1000;
 
 type SkyViewProps = {
   initialView: SkyView;
@@ -141,36 +134,28 @@ export default function SkyView({
       .then(() => {
         if (cancelled) return;
         const { ra, dec, fov } = startView.current;
-        // The star guide reads the drawn sky back (getViewDataURL) after Aladin's frame; that only works when the WebGL
-        // buffer is kept between frames.
-        const restoreGetContext = keepWebglBuffer();
-        let aladin: Aladin;
-        try {
-          aladin = A.aladin(element, {
-            survey: SKY_SURVEY.hips,
-            target: `${ra} ${dec}`,
-            fov,
-            cooFrame: "ICRS",
-            projection: "TAN",
-            // Dragging rotates the sphere like a trackball and can roll the view; keep celestial north up.
-            lockNorthUp: true,
-            backgroundColor: "rgb(0, 0, 0)",
-            log: false,
-            showReticle: false,
-            showZoomControl: false,
-            showLayersControl: false,
-            showFullscreenControl: false,
-            showProjectionControl: false,
-            showFrame: false,
-            showFov: false,
-            showCooLocation: false,
-            showStatusBar: false,
-            showContextMenu: false,
-            gridOptions: { enabled: true, color: "rgb(111, 143, 184)", opacity: 0.35, thickness: 1, showLabels: false },
-          });
-        } finally {
-          restoreGetContext();
-        }
+        const aladin = A.aladin(element, {
+          survey: SKY_SURVEY.hips,
+          target: `${ra} ${dec}`,
+          fov,
+          cooFrame: "ICRS",
+          projection: "TAN",
+          // Dragging rotates the sphere like a trackball and can roll the view; keep celestial north up.
+          lockNorthUp: true,
+          backgroundColor: "rgb(0, 0, 0)",
+          log: false,
+          showReticle: false,
+          showZoomControl: false,
+          showLayersControl: false,
+          showFullscreenControl: false,
+          showProjectionControl: false,
+          showFrame: false,
+          showFov: false,
+          showCooLocation: false,
+          showStatusBar: false,
+          showContextMenu: false,
+          gridOptions: { enabled: true, color: "rgb(111, 143, 184)", opacity: 0.35, thickness: 1, showLabels: false },
+        });
         aladin.setFoVRange(MIN_FOV, MAX_FOV);
 
         // Every frame, from the view's actual state: Aladin's zoomChanged event is throttled, so anything sized from it
@@ -209,7 +194,7 @@ export default function SkyView({
             settledWith = null;
           } else if (onSettleNow && settledWith !== onSettleNow && performance.now() - changedAt >= SETTLE_MS) {
             settledWith = onSettleNow;
-            onSettleNow(settledSky(aladin, centerRa, centerDec, width, element.clientWidth, element.clientHeight));
+            onSettleNow({ ra: centerRa, dec: centerDec, fov: width, width: element.clientWidth, height: element.clientHeight });
           }
           const marks = markCanvas.current;
           const markKey = `${key} ${painterVersion.current}`;
@@ -328,55 +313,6 @@ export default function SkyView({
       />
     </div>
   );
-}
-
-/**
- * While Aladin Lite builds its view, asks for WebGL2 contexts that keep their drawing buffer (preserveDrawingBuffer),
- * so the picture can be read after the frame is shown. Aladin passes no context options itself. Returns the undo.
- */
-function keepWebglBuffer() {
-  const original = HTMLCanvasElement.prototype.getContext;
-  const patched = function (this: HTMLCanvasElement, type: string, options?: Record<string, unknown>) {
-    return type === "webgl2"
-      ? original.call(this, type, { ...options, preserveDrawingBuffer: true })
-      : original.call(this, type as "2d", options);
-  };
-  HTMLCanvasElement.prototype.getContext = patched as typeof original;
-  return () => {
-    HTMLCanvasElement.prototype.getContext = original;
-  };
-}
-
-function settledSky(aladin: Aladin, ra: number, dec: number, fov: number, width: number, height: number): SettledSky {
-  return {
-    ra,
-    dec,
-    fov,
-    width,
-    height,
-    capture: async () => {
-      try {
-        const url = await aladin.getViewDataURL({ format: "image/png", width, height, logo: false });
-        const image = new Image();
-        image.src = url;
-        await image.decode();
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d", { willReadFrequently: true });
-        if (!context) return null;
-        context.drawImage(image, 0, 0, width, height);
-        return context.getImageData(0, 0, width, height);
-      } catch {
-        // A tainted canvas or a failed encode: the picture cannot be read.
-        return null;
-      }
-    },
-    toSky: (x, y) => {
-      const world = aladin.pix2world(x, y);
-      return world && Number.isFinite(world[0]) && Number.isFinite(world[1]) ? { ra: normalizeRa(world[0]), dec: world[1] } : null;
-    },
-  };
 }
 
 function applyLayers(aladin: Aladin, layers: SkyLayers) {

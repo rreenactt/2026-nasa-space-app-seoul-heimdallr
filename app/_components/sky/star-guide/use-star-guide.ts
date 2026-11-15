@@ -1,86 +1,124 @@
 import "client-only";
 
-import { useCallback, useRef, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { api } from "@/lib/ky";
+import type { GaiaStar } from "@/app/_lib/sky/types";
+import { normalizeRa } from "../sky-coordinates";
 import type { SettledSky } from "../sky-view";
-import { type DetectedStar, detectStars } from "./detect";
 
-/** A star found on screen, placed on the sky so its mark follows the view. */
-export type GuideStar = DetectedStar & {
-  ra: number;
-  dec: number;
-  /** 1 = brightest on this screen. */
-  rank: number;
-  /** Brightness as a share of the brightest star on this screen (1 = the brightest). */
-  relative: number;
-  /** Size on screen converted to the sky at the zoom of the measurement, arcseconds. */
-  fwhmArcsec: number;
-  radiusArcsec: number;
-};
+/**
+ * Star guide (decision #48): points out stars in the view that Gaia DR3 measured moving, as places worth opening to
+ * watch a star move. Known stars, not candidates: it teaches where motion can be seen, it does not find anything new.
+ */
 
-export type StarGuideResult = {
-  stars: GuideStar[];
-  /** Stars found before the cut to the brightest ones. */
-  found: number;
-  /** `found` is an estimate (a crowded screen). */
-  approximate: boolean;
-  /** Field of view of the measured screen, degrees. */
-  fov: number;
-  /** Sky size of one CSS pixel at the center of the measured screen, arcseconds. */
-  arcsecPerPx: number;
-};
+/** The guide looks only at this field of view (degrees) or narrower; the Gaia cone query allows a 1.5° radius. */
+export const GUIDE_MAX_FOV = 2;
+/**
+ * Slowest motion listed, mas/yr. 0.2″/yr is about one 6.2″ SPHEREx pixel over the 27 years between 2MASS (about 1999)
+ * and SPHEREx (2025–26), so every star listed visibly moves in the Sky Time Machine comparison.
+ */
+export const GUIDE_MIN_PM = 200;
+/** The fastest this many stars are marked and listed. */
+export const GUIDE_STARS = 5;
+/** Gaia DR3 positions are for this epoch. */
+export const GAIA_EPOCH = 2016.0;
+/** About when SPHEREx DR1 observed (2025–26). */
+export const SPHEREX_EPOCH = 2026.0;
+/** SPHEREx pixel size, arcseconds. */
+export const SPHEREX_PIXEL_ARCSEC = 6.2;
+
+type FastStarsAnswer = { stars: GaiaStar[]; service: string; truncated: boolean };
+
+/** One Gaia cone over the settled view, rounded so a tiny nudge reuses the answer. */
+type Cone = { key: string; ra: number; dec: number; radius: number };
+
+function coneFor(view: SettledSky): Cone | null {
+  if (view.fov > GUIDE_MAX_FOV) return null;
+  const halfDiagonal = (view.fov / 2) * Math.hypot(1, view.height / Math.max(view.width, 1));
+  const radius = Math.min(Math.ceil(halfDiagonal * 1.05 * 100) / 100, 1.5);
+  const ra = Number(normalizeRa(view.ra).toFixed(3));
+  const dec = Number(view.dec.toFixed(3));
+  return { key: `${ra} ${dec} ${radius}`, ra, dec, radius };
+}
+
+/** Linear proper motion from the Gaia epoch, parallax ignored (decision #27). */
+export function positionAt(star: GaiaStar, year: number): [number, number] {
+  const years = year - GAIA_EPOCH;
+  const cosDec = Math.max(Math.cos((star.dec * Math.PI) / 180), 1e-6);
+  return [normalizeRa(star.ra + (star.pmra * years) / 3.6e6 / cosDec), star.dec + (star.pmdec * years) / 3.6e6];
+}
+
+export function totalPm(star: GaiaStar) {
+  return Math.hypot(star.pmra, star.pmdec);
+}
+
+/** Whether a star's position now falls inside the view (flat-sky approximation, fine below a few degrees). */
+function onScreen(star: GaiaStar, view: SettledSky) {
+  const [ra, dec] = positionAt(star, SPHEREX_EPOCH);
+  const dx = ((((ra - view.ra + 540) % 360) - 180) * Math.cos((view.dec * Math.PI) / 180));
+  const halfHeight = (view.fov / 2) * (view.height / Math.max(view.width, 1));
+  return Math.abs(dx) <= view.fov / 2 && Math.abs(dec - view.dec) <= halfHeight;
+}
 
 export type StarGuideState =
   | { status: "off" }
+  /** Zoomed out beyond GUIDE_MAX_FOV. */
+  | { status: "too-wide" }
   /** On, waiting for the view to hold still. */
   | { status: "waiting" }
-  | { status: "measuring" }
-  /** `stale`: the view moved since; the marks stay (dimmed) until the next measurement. */
-  | { status: "done"; result: StarGuideResult; stale: boolean }
-  | { status: "unreadable" };
+  | { status: "loading" }
+  | { status: "error" }
+  /** `stale`: the view moved since; the marks stay (dimmed) until the next answer. */
+  | { status: "done"; stars: GaiaStar[]; truncated: boolean; stale: boolean };
 
-/** The star guide: measures the screen each time the view settles while it is on. */
 export function useStarGuide(enabled: boolean) {
-  const [state, setState] = useState<StarGuideState>({ status: "waiting" });
-  const run = useRef(0);
+  const [cone, setCone] = useState<Cone | null>(null);
+  const [view, setView] = useState<SettledSky | null>(null);
+  const [tooWide, setTooWide] = useState(false);
+  const [moving, setMoving] = useState(true);
 
   const onSettle = useCallback((settled: SettledSky | null) => {
-    const id = ++run.current;
     if (!settled) {
-      setState((previous) => (previous.status === "done" ? { ...previous, stale: true } : { status: "waiting" }));
+      setMoving(true);
       return;
     }
-    setState((previous) => (previous.status === "done" ? { ...previous, stale: true } : { status: "measuring" }));
-    void settled.capture().then((picture) => {
-      if (id !== run.current) return; // the view moved while the picture was read
-      if (!picture || isBlank(picture.data)) {
-        setState({ status: "unreadable" });
-        return;
-      }
-      const detection = detectStars(picture.data, picture.width, picture.height);
-      const arcsecPerPx = (settled.fov * 3600) / settled.width;
-      const brightest = detection.stars[0]?.brightness ?? 1;
-      const stars: GuideStar[] = [];
-      for (const star of detection.stars) {
-        const sky = settled.toSky(star.x, star.y);
-        if (!sky) continue;
-        stars.push({
-          ...star,
-          ...sky,
-          rank: stars.length + 1,
-          relative: star.brightness / brightest,
-          fwhmArcsec: star.fwhmPx * arcsecPerPx,
-          radiusArcsec: star.radiusPx * arcsecPerPx,
-        });
-      }
-      setState({ status: "done", result: { stars, found: detection.found, approximate: detection.approximate, fov: settled.fov, arcsecPerPx }, stale: false });
-    });
+    setMoving(false);
+    setView(settled);
+    const next = coneFor(settled);
+    setTooWide(next === null);
+    if (next) setCone((previous) => (previous?.key === next.key ? previous : next));
   }, []);
 
-  return { state: enabled ? state : ({ status: "off" } as const), onSettle: enabled ? onSettle : undefined };
-}
+  const query = useQuery({
+    queryKey: ["sky", "fast-stars", cone?.key],
+    queryFn: ({ signal }) =>
+      api
+        .get("/api/sky/fast-stars", {
+          searchParams: { ra: cone!.ra, dec: cone!.dec, radius: cone!.radius, minPm: GUIDE_MIN_PM },
+          timeout: 65_000,
+          signal,
+        })
+        .json<FastStarsAnswer>(),
+    enabled: enabled && cone !== null,
+    staleTime: Infinity,
+    placeholderData: keepPreviousData,
+  });
 
-/** An all-black picture: WebGL gave back an empty buffer. */
-function isBlank(data: Uint8ClampedArray) {
-  for (let p = 0; p < data.length; p += 4 * 97) if (data[p] || data[p + 1] || data[p + 2]) return false;
-  return true;
+  let state: StarGuideState;
+  if (!enabled) state = { status: "off" };
+  else if (tooWide && !moving) state = { status: "too-wide" };
+  else if (query.data)
+    state = {
+      status: "done",
+      // The cone is a circle around the screen; keep the stars inside the screen itself.
+      stars: query.data.stars.filter((star) => !view || onScreen(star, view)).slice(0, GUIDE_STARS),
+      truncated: query.data.truncated,
+      stale: moving || query.isFetching,
+    };
+  else if (query.isError) state = { status: "error" };
+  else if (cone && !moving) state = { status: "loading" };
+  else state = { status: "waiting" };
+
+  return { state, onSettle: enabled ? onSettle : undefined };
 }

@@ -80,11 +80,6 @@ declare module "aladin-lite" {
     /** Screen position [x, y] in CSS pixels, or undefined/null when the point is outside the view. */
     world2pix(ra: number, dec: number): [number, number] | null | undefined;
     pix2world(x: number, y: number): [number, number] | null | undefined;
-    /**
-     * The sky as drawn (WebGL canvas plus Aladin's own catalog canvas, not our overlay canvases) as a data URL, resized
-     * to `width` × `height` device pixels. `logo: false` leaves out the Aladin logo.
-     */
-    getViewDataURL(options?: { format?: string; width?: number; height?: number; logo?: boolean }): Promise<string>;
   };
 
   const A: {

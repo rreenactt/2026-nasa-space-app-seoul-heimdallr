@@ -34,7 +34,7 @@ import { SkyHeaderActions } from "./sky-header-actions";
 import { ShowOnSky, SkyTools } from "./sky-tools";
 import { paintStarGuide } from "./star-guide/paint";
 import { StarGuideCard } from "./star-guide/star-guide-card";
-import { useStarGuide } from "./star-guide/use-star-guide";
+import { positionAt, SPHEREX_EPOCH, useStarGuide } from "./star-guide/use-star-guide";
 import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
 import type { Flight, SkyPainter } from "./sky-view";
 import { FovScale } from "./fov-scale";
@@ -438,7 +438,10 @@ export function SkyExplorer({
             <StarGuideCard
               state={starGuide.state}
               onHighlight={setGuideHighlight}
-              onOpen={(star) => goTo({ ra: star.ra, dec: star.dec })}
+              onOpen={(star) => {
+                const [ra, dec] = positionAt(star, SPHEREX_EPOCH);
+                goTo({ ra, dec });
+              }}
               onClose={() => setStarGuideOn(false)}
             />
           </div>

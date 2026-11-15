@@ -1,12 +1,11 @@
+import { SKY_SURVEY } from "../constants";
 import type { SkyPaintFrame } from "../sky-view";
-import type { StarGuideState } from "./use-star-guide";
-
-/** The brightest this many stars get a number and a label in the guide card. */
-export const NUMBERED_STARS = 5;
+import { positionAt, SPHEREX_EPOCH, type StarGuideState } from "./use-star-guide";
 
 /** Same light blue as the constellation lines, so guide marks read as "help", not as candidates (yellow). */
 const GUIDE = "168, 200, 255";
 const HIGHLIGHT = "#fbde7e";
+const BOX = 22;
 
 function dataFont(size: number) {
   const family = getComputedStyle(document.documentElement).getPropertyValue("--font-data-face").trim() || "monospace";
@@ -14,37 +13,44 @@ function dataFont(size: number) {
 }
 
 /**
- * Squares around the stars the guide measured, placed on the sky so they follow a drag. The five brightest are
- * numbered to match the guide card; `highlighted` is the star under the pointer in the card.
+ * For each guide star: a numbered square where it sits in the background picture (taken about SKY_SURVEY.year) and a
+ * line to where Gaia's motion puts it during SPHEREx (2026), ending in a dot. `highlighted` is the card row under the
+ * pointer (1-based).
  */
 export function paintStarGuide(context: CanvasRenderingContext2D, frame: SkyPaintFrame, state: StarGuideState, highlighted: number | null) {
   if (state.status !== "done") return;
-  const pxPerArcsec = frame.width / (frame.fov * 3600);
   context.save();
-  context.globalAlpha = state.stale ? 0.35 : 1;
+  context.globalAlpha = state.stale ? 0.4 : 1;
   context.font = dataFont(11);
   context.textBaseline = "bottom";
-  // Faintest first, so the numbered ones sit on top.
-  for (const star of [...state.result.stars].reverse()) {
-    const point = frame.project(star.ra, star.dec);
-    if (!point) continue;
-    const [x, y] = point;
-    const side = Math.max(2 * star.radiusArcsec * pxPerArcsec + 8, 12);
-    if (x < -side || y < -side || x > frame.width + side || y > frame.height + side) continue;
-    const numbered = star.rank <= NUMBERED_STARS;
-    const lit = highlighted === star.rank;
-    context.lineWidth = lit ? 2 : numbered ? 1.25 : 1;
-    context.strokeStyle = lit ? HIGHLIGHT : numbered ? `rgba(${GUIDE}, 0.95)` : `rgba(${GUIDE}, 0.45)`;
-    context.strokeRect(Math.round(x - side / 2) + 0.5, Math.round(y - side / 2) + 0.5, Math.round(side), Math.round(side));
-    if (!numbered) continue;
-    const label = String(star.rank);
-    const left = Math.round(x - side / 2);
-    const top = Math.round(y - side / 2) - 2;
-    const width = context.measureText(label).width + 6;
+  state.stars.forEach((star, index) => {
+    const rank = index + 1;
+    const then = frame.project(...positionAt(star, SKY_SURVEY.year));
+    const now = frame.project(...positionAt(star, SPHEREX_EPOCH));
+    if (!then || !now) return;
+    const lit = highlighted === rank;
+    const color = lit ? HIGHLIGHT : `rgb(${GUIDE})`;
+    context.strokeStyle = color;
+    context.fillStyle = color;
+    context.lineWidth = lit ? 2 : 1.25;
+    context.strokeRect(Math.round(then[0] - BOX / 2) + 0.5, Math.round(then[1] - BOX / 2) + 0.5, BOX, BOX);
+    // The motion since the picture was taken; only drawn when it is visible at this zoom.
+    if (Math.hypot(now[0] - then[0], now[1] - then[1]) > 3) {
+      context.beginPath();
+      context.moveTo(then[0], then[1]);
+      context.lineTo(now[0], now[1]);
+      context.stroke();
+      context.beginPath();
+      context.arc(now[0], now[1], 3, 0, Math.PI * 2);
+      context.fill();
+    }
+    const label = String(rank);
+    const left = Math.round(then[0] - BOX / 2);
+    const top = Math.round(then[1] - BOX / 2) - 2;
     context.fillStyle = "rgba(1, 1, 1, 0.6)";
-    context.fillRect(left, top - 14, width, 14);
-    context.fillStyle = lit ? HIGHLIGHT : `rgb(${GUIDE})`;
+    context.fillRect(left, top - 14, context.measureText(label).width + 6, 14);
+    context.fillStyle = color;
     context.fillText(label, left + 3, top - 1);
-  }
+  });
   context.restore();
 }

@@ -8,6 +8,8 @@ export type SkySurvey = {
   credit: string;
   /** Short name for the analysis panel's data line. */
   shortName: string;
+  /** About when the imagery was taken (year), for overlays that place moving stars at a date. */
+  year: number;
   /** Shown when the survey stands in for the SPHEREx imagery. */
   notice?: string;
 };
@@ -17,6 +19,7 @@ export const SPHEREX_COLOR_SURVEY: SkySurvey = {
   hips: "CDS/P/SPHEREx/QR2/color",
   credit: "SPHEREx QR2 color preview (CDS HiPS) · Courtesy NASA/JPL-Caltech",
   shortName: "SPHEREx QR2 color preview",
+  year: 2025,
 };
 
 /**
@@ -27,6 +30,8 @@ export const TWO_MASS_COLOR_SURVEY: SkySurvey = {
   hips: "https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color",
   credit: "2MASS J, H, K color. UMass and IPAC/Caltech, HiPS via IRSA",
   shortName: "2MASS color (temporary, not SPHEREx)",
+  // Observed 1997–2001 (PLAN.md chapter 9 uses about 1999 for the Barnard's Star offset).
+  year: 1999,
   // Figma "I · Explore": one line. Why (the CDS outage) is on the Method page under "Data sources and credits".
   notice: "Temporary background: 2MASS, not SPHEREx",
 };

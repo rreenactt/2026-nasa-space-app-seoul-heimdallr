@@ -47,7 +47,7 @@ type SkyToolsProps = {
   onLayersOpenChange: (open: boolean) => void;
   /** Candidates switched off: a small dot on the layers tool (Figma "I · Explore, candidates hidden"). */
   candidatesOff: boolean;
-  /** The star guide (measures the stars on screen when the view holds still) is on. */
+  /** The star guide (stars in the view that Gaia measured moving) is on. */
   starGuide: boolean;
   onStarGuide: () => void;
 };
@@ -104,7 +104,7 @@ export function SkyTools({
           {layersPanel}
         </PopoverContent>
       </Popover>
-      <ToolTip label={starGuide ? "Turn off the star guide" : "Star guide: measure the stars on screen"}>
+      <ToolTip label={starGuide ? "Turn off the star guide" : "Star guide: stars that move here"}>
         <button
           type="button"
           className={cn(toolClass, starGuide && "bg-paper/15 text-paper")}

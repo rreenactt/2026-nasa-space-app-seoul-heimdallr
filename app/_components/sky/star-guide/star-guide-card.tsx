@@ -2,37 +2,42 @@
 
 import { XIcon } from "lucide-react";
 import { cn } from "cn";
-import { NUMBERED_STARS } from "./paint";
-import type { GuideStar, StarGuideState } from "./use-star-guide";
+import type { GaiaStar } from "@/app/_lib/sky/types";
+import { SKY_SURVEY } from "../constants";
+import { formatDec, formatRa } from "../sky-coordinates";
+import { GUIDE_MAX_FOV, GUIDE_MIN_PM, SPHEREX_EPOCH, SPHEREX_PIXEL_ARCSEC, type StarGuideState, totalPm } from "./use-star-guide";
 
-function formatSize(arcsec: number) {
-  return arcsec < 60 ? `${arcsec.toFixed(0)}″` : `${(arcsec / 60).toFixed(1)}′`;
+/** Light years from a Gaia parallax (mas); null when the parallax is too small to say. */
+function lightYears(parallax: number | null) {
+  return parallax && parallax > 1 ? 3261.56 / parallax : null;
 }
 
-const COLOR_TEXT: Record<GuideStar["color"], string | null> = { reddish: "Reddish", bluish: "Bluish", white: null };
+function formatLy(ly: number) {
+  return ly < 100 ? `${ly.toFixed(ly < 10 ? 1 : 0)} light-years` : `${Math.round(ly / 10) * 10} light-years`;
+}
 
 type StarGuideCardProps = {
   state: StarGuideState;
   onHighlight: (rank: number | null) => void;
-  /** Flies to the star and opens its analysis panel. */
-  onOpen: (star: GuideStar) => void;
+  /** Flies to the star's 2026 position and opens its analysis panel. */
+  onOpen: (star: GaiaStar) => void;
   onClose: () => void;
 };
 
 /**
- * The star guide's card, bottom left while exploring: what was measured on screen, in plain words. Educational only:
- * it compares how stars look on this screen and never suggests that a star moves.
+ * The star guide's card, bottom left while exploring: stars in the view that Gaia measured moving, as good places to
+ * watch motion. Known stars only, in plain words; never presented as candidates.
  */
 export function StarGuideCard({ state, onHighlight, onOpen, onClose }: StarGuideCardProps) {
   if (state.status === "off") return null;
-  const numbered = state.status === "done" ? state.result.stars.filter((star) => star.rank <= NUMBERED_STARS) : [];
+  const sinceYears = SPHEREX_EPOCH - SKY_SURVEY.year;
   return (
     <section
       aria-label="Star guide"
-      className="pointer-events-auto w-[296px] rounded-[2px] bg-ink/85 font-ui text-bone shadow-[0_0_0_1px_rgb(240_240_250/0.08)]"
+      className="pointer-events-auto w-[320px] rounded-[2px] bg-ink/85 font-ui text-bone shadow-[0_0_0_1px_rgb(240_240_250/0.08)]"
     >
       <header className="flex h-9 items-center justify-between border-b border-rule pr-1.5 pl-3">
-        <h2 className="text-[13px] font-medium text-paper">Star guide</h2>
+        <h2 className="text-[13px] font-medium text-paper">Star guide · stars that move</h2>
         <button
           type="button"
           onClick={onClose}
@@ -43,65 +48,71 @@ export function StarGuideCard({ state, onHighlight, onOpen, onClose }: StarGuide
         </button>
       </header>
       <div aria-live="polite" className="px-3 py-2.5 text-[12.5px] leading-[18px]">
-        {state.status === "waiting" && <p className="text-ash">Hold the view still for a moment to measure the stars on screen.</p>}
-        {state.status === "measuring" && <p className="text-ash">Measuring the stars on screen…</p>}
-        {state.status === "unreadable" && <p className="text-ash">This browser did not let the guide read the sky picture.</p>}
-        {state.status === "done" && state.result.stars.length === 0 && (
+        {state.status === "too-wide" && <p className="text-ash">Zoom in to {GUIDE_MAX_FOV}° or less to find stars that move here.</p>}
+        {state.status === "waiting" && <p className="text-ash">Hold the view still to look for stars that move.</p>}
+        {state.status === "loading" && <p className="text-ash">Looking up stars that Gaia measured moving…</p>}
+        {state.status === "error" && <p className="text-ash">The Gaia archive did not answer. Move the view a little to try again.</p>}
+        {state.status === "done" && state.stars.length === 0 && (
           <p className={cn("text-ash", state.stale && "opacity-60")}>
-            No star-like dots on this screen. Zoom in, or move to a busier part of the sky.
+            No star on this screen moves {GUIDE_MIN_PM / 1000}″ a year or more, so motion would be hard to see. Try another
+            part of the sky, such as Barnard&apos;s Star in the Review queue.
           </p>
         )}
-        {state.status === "done" && state.result.stars.length > 0 && (
+        {state.status === "done" && state.stars.length > 0 && (
           <div className={cn("transition-opacity", state.stale && "opacity-60")}>
-            <p>
-              {state.result.approximate ? "About " : ""}
-              {state.result.found} star{state.result.found === 1 ? "" : "s"} found on screen. The {numbered.length} brightest:
-            </p>
-            <ol className="mt-2 flex flex-col">
-              {numbered.map((star) => (
-                <li key={star.rank}>
-                  <button
-                    type="button"
-                    onClick={() => onOpen(star)}
-                    onPointerEnter={() => onHighlight(star.rank)}
-                    onPointerLeave={() => onHighlight(null)}
-                    onFocus={() => onHighlight(star.rank)}
-                    onBlur={() => onHighlight(null)}
-                    className="grid w-full grid-cols-[18px_1fr_auto] items-center gap-2 rounded-sm px-1 py-1 text-left hover:bg-paper/8 focus-visible:bg-paper/8"
-                  >
-                    <span className="font-data text-[11px] text-[rgb(168,200,255)]">{star.rank}</span>
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span
-                        aria-hidden
-                        className="h-1.5 rounded-full bg-[rgb(168,200,255)]"
-                        style={{ width: `${Math.max(star.relative * 64, 3)}px` }}
-                      />
-                      <span className="truncate text-ash">
-                        {[star.saturated ? "Clipped white" : null, COLOR_TEXT[star.color]].filter(Boolean).join(" · ")}
+            <p>Good places to watch a star move, fastest first:</p>
+            <ol className="mt-1.5 flex flex-col">
+              {state.stars.map((star, index) => {
+                const pm = totalPm(star) / 1000;
+                const shift = pm * sinceYears;
+                const ly = lightYears(star.parallax);
+                return (
+                  <li key={star.sourceId}>
+                    <button
+                      type="button"
+                      onClick={() => onOpen(star)}
+                      onPointerEnter={() => onHighlight(index + 1)}
+                      onPointerLeave={() => onHighlight(null)}
+                      onFocus={() => onHighlight(index + 1)}
+                      onBlur={() => onHighlight(null)}
+                      className="grid w-full grid-cols-[16px_1fr] gap-x-2 rounded-sm px-1 py-1.5 text-left hover:bg-paper/8 focus-visible:bg-paper/8"
+                    >
+                      <span className="font-data text-[11px] leading-[18px] text-[rgb(168,200,255)]">{index + 1}</span>
+                      <span className="min-w-0">
+                        <span className="block text-paper">
+                          {pm.toFixed(pm >= 1 ? 1 : 2)}″ a year{ly ? ` · ${formatLy(ly)} away` : ""}
+                        </span>
+                        <span className="block text-[11.5px] leading-4 text-ash">
+                          {shift.toFixed(0)}″ since {SKY_SURVEY.year}, about {(shift / SPHEREX_PIXEL_ARCSEC).toFixed(1)} SPHEREx pixels
+                        </span>
+                        <span className="block font-data text-[10.5px] leading-4 text-bone/70">
+                          RA {formatRa(star.ra)} Dec {formatDec(star.dec)}
+                        </span>
                       </span>
-                    </span>
-                    <span className="font-data text-[11px] text-bone/80">
-                      {Math.round(star.relative * 100)}% · {formatSize(star.fwhmArcsec)}
-                    </span>
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                );
+              })}
             </ol>
             <p className="mt-2 text-[11.5px] leading-4 text-ash">
-              Bar and % compare brightness with the brightest star here; the size is how wide it looks. Click a star to
-              see its SPHEREx images.
+              Click a star to open its SPHEREx images. Between two SPHEREx visits (six months) most stars move far less than
+              a pixel, so the Sky Time Machine (25 years) shows the motion best.
             </p>
           </div>
         )}
       </div>
       <details className="border-t border-rule px-3 py-2 text-[11.5px] leading-4 text-ash">
-        <summary className="cursor-pointer text-bone/80 hover:text-paper">What do these mean?</summary>
+        <summary className="cursor-pointer text-bone/80 hover:text-paper">What am I looking at?</summary>
         <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-4">
-          <li>Measured on the picture you see, so the numbers change with the zoom and the background image. They compare stars on this screen only and are not real brightness.</li>
-          <li>A star that looks bigger is usually brighter: its light spreads over more pixels. It is not closer.</li>
-          <li>Clipped white: brighter than the screen can show, so its brightness here is a lower limit.</li>
-          <li>Reddish: brighter at the longest infrared wavelengths in this picture, as cool stars and stars behind dust are.</li>
-          <li>How a star looks does not tell whether it moves. Blinking its SPHEREx images does.</li>
+          <li>
+            These are known stars whose motion ESA&apos;s Gaia satellite measured (Gaia DR3), not new discoveries. Stars
+            that move fastest across the sky are usually the closest ones.
+          </li>
+          <li>
+            The square is where the star sits in this background picture ({SKY_SURVEY.shortName}, about {SKY_SURVEY.year}). The
+            line shows where Gaia&apos;s motion puts it in {SPHEREX_EPOCH.toFixed(0)}, when SPHEREx observed.
+          </li>
+          <li>Coordinates are Gaia&apos;s 2016 positions. Listed: stars moving {GUIDE_MIN_PM / 1000}″ a year or more, about one SPHEREx pixel since {SKY_SURVEY.year}.</li>
         </ul>
       </details>
     </section>
