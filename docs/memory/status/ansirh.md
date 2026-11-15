@@ -11,14 +11,16 @@
 
 ## 진행 중
 
-- 콘셉트 문장 변경 (결정 #64, `docs/candidate-concept` PR): "개발진이 후보를 분석해 주기적으로 업데이트하고, 사용자는 그 후보를 확인한다". AGENTS.md, direction.md, PLAN 1장, README, 제출 설명, About, 튜토리얼 검토 목록 단계
+- 콘셉트 문장 변경 (결정 #64, PR #30 `main` 병합): "개발진이 후보를 분석해 주기적으로 업데이트하고, 사용자는 그 후보를 확인한다". AGENTS.md, direction.md, PLAN 1장, README, 제출 설명, About, 튜토리얼 검토 목록 단계
 - 발표 슬라이드 제출 완료 (2026-11-15): Figma "Sky screen · Directions"의 MERGED DECK 7장(흐름 "HEIMDALLR merged deck"). 제목·문제·해결·데이터 흐름(김재현 아키텍처)·분석 6개·결과·영향과 다음, 실제 사이트 캡처와 GIF 2개
-- 이번에 `main`에 반영됨: 단계별 안내(튜토리얼, 결정 #61, PR #24), 끌기 뒤 메뉴 띠 복귀 단축(0.9초 → 0.3초, 결정 #38 갱신, PR #25). 원격의 내 병합 브랜치 4개 정리
-- PR #29 (`feat/method-ko`, 리뷰 대기): Method 페이지 한국어 번역(제목·쉬운 설명·자세한 설명, 참고 문헌만 영어), 화면 문구 해요체 → 합니다체(결정 #62, 권유는 ~하세요), 평가 상태·튜토리얼 수정 10줄, 용어 통일(크레딧, 측광 구경, 고스트·크로스토크·일시 신호)
+- 제출: 약관 동의 체크와 Submit for Judging은 직접 누름. 배너 이미지 교체 남음
 - 제안만 함(승인 대기): 깊이 확대(0.5° 이하)에서 후보의 2MASS 위치 → SPHEREx 위치 화살표와 양 끝 연도 표시
 
 ## 완료
 
+- 30초 시연 영상 (`docs/presentation/video-30s.md`): 구성·대사 확정, 앱 화면 녹화(실제 사이트·미리 계산된 좌표), 카드 A/B 시안 비교, 음악 선택, TTS 대사 타임코드, 유튜브 업로드와 설명란(데이터·음악·AI 사용 표기). 평가 장면용 Moving 1건을 프로덕션 후보 J174146.9-293330에 실제로 넣음
+- 제출 페이지 입력: Summary, Project Details, NASA Data 9줄, Partner 25줄(칸 한도 25줄이라 Shiki 제외, `links.md`에 기록), Use of SI 7개, 프로젝트 이름 "HEIMDALLR – Sky Explorer Community for SPHEREx", 프로젝트 링크
+- PR #29 (`feat/method-ko`) `main` 병합
 - 접힌 아래 막대·마우스 올림 이름표: 만들지 않기로 함(허한결 결정). Figma 시안(EN·KO "Review, queue folded")은 Archive로 옮기고, 결정 #39 상태와 PLAN "남은 것"에 기록
 - Star guide 이름: 바꾸지 않기로 함(허한결 결정)
 - Figma 임시 배경 안내 줄 제거(결정 #60 반영): 하늘 화면 오른쪽 아래·About의 줄 50개 삭제(EN·KO·튜토리얼 프레임), This view 패널 안 안내는 유지
