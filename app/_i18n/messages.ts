@@ -1682,7 +1682,7 @@ export const ko: Messages = {
   "fpl.visitDate": "방문 {n} · {date}",
   "fpl.visitFrom": "방문 {n} · {date}부터",
   "fpl.yourJudgment": "내 판단",
-  "intro.purpose": "SPHEREx 이미지에서 움직이는 것 찾기",
+  "intro.purpose": "SPHEREx가 찍은 하늘에서, 움직이는 천체를 찾습니다",
   "intro.skip": "인트로 건너뛰기",
   "language.en": "English",
   "language.ko": "한국어",
