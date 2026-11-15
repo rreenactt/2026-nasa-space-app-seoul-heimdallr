@@ -1,6 +1,6 @@
 import { SKY_SURVEY } from "../constants";
 import type { SkyPaintFrame } from "../sky-view";
-import { GUIDE_DRAW_FOV, GUIDE_STARS, lightYears, positionAt, SPHEREX_EPOCH, type StarGuideState, totalPm } from "./use-star-guide";
+import { GUIDE_MAX_FOV, GUIDE_STARS, lightYears, positionAt, SPHEREX_EPOCH, type StarGuideState, totalPm } from "./use-star-guide";
 
 /** Same light blue as the constellation lines, so guide marks read as "help", not as candidates (yellow). */
 const GUIDE = "168, 200, 255";
@@ -32,7 +32,7 @@ const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);
 
 /**
  * Animated presence of each star's marks, 0 (gone) to 1 (fully drawn). Every paint moves each value toward its
- * target: the square toward 1 while the star is on screen (and the view is not zoomed out past GUIDE_DRAW_FOV), the
+ * target: the square toward 1 while the star is on screen (and the view is not zoomed out past GUIDE_MAX_FOV), the
  * callout toward 1 while the star is one of the numbered five. So marks draw in when a star is first found, when it
  * pans into view or when the view zooms back in, and draw out (the entrance backwards) when it pans away, loses its
  * number or the view zooms out. A callout value below 0 is a stagger delay. One sky screen at a time.
@@ -64,15 +64,15 @@ export function paintStarGuide(
   const now = performance.now();
   const dt = Math.min(now - lastPaint, MAX_STEP_MS);
   lastPaint = now;
-  if (state.status !== "on" || state.known.length === 0) {
+  if (state.status !== "on" || state.nearby.length === 0) {
     presence.clear(); // switched off: gone at once, and the next showing draws everything in
     return false;
   }
 
-  const zoomedOut = frame.fov > GUIDE_DRAW_FOV;
+  const zoomedOut = frame.fov > GUIDE_MAX_FOV;
   const visible = zoomedOut
     ? []
-    : state.known.filter((star) => {
+    : state.nearby.filter((star) => {
         const point = frame.project(...positionAt(star, SPHEREX_EPOCH));
         return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= frame.width && point[1] <= frame.height;
       });
@@ -83,7 +83,7 @@ export function paintStarGuide(
   // Move every value toward its target.
   let delay = 0;
   let animating = false;
-  for (const star of state.known) {
+  for (const star of state.nearby) {
     const id = star.sourceId;
     const rank = rankOf.get(id);
     const markTarget = visibleIds.has(id) || rank !== undefined ? 1 : 0;
@@ -104,7 +104,7 @@ export function paintStarGuide(
     if (p.mark === 0 && p.callout <= 0 && markTarget === 0) presence.delete(id);
   }
 
-  const drawn = state.known.filter((star) => presence.has(star.sourceId));
+  const drawn = state.nearby.filter((star) => presence.has(star.sourceId));
   context.save();
 
   // Squares and motion lines. Numbered stars get the larger square, the dot at 2026 and their own color.

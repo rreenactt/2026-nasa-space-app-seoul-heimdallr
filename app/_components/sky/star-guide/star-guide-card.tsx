@@ -44,10 +44,9 @@ export function StarGuideCard({ state, onHighlight, onOpen, onClose }: StarGuide
         </button>
       </header>
       <div aria-live="polite" className="px-3 py-2.5 text-[12.5px] leading-[18px]">
-        {state.phase === "too-wide" && <p className="text-ash">Zoom in to {GUIDE_MAX_FOV}° or less to look up stars that move here.</p>}
-        {state.phase === "waiting" && listed.length === 0 && <p className="text-ash">Hold the view still to look for stars that move.</p>}
-        {state.phase === "loading" && <p className="text-ash">Looking up stars that Gaia measured moving…</p>}
-        {state.phase === "error" && <p className="text-ash">The Gaia archive did not answer. Move the view a little to try again.</p>}
+        {state.phase === "too-wide" && <p className="text-ash">Zoom in to {GUIDE_MAX_FOV}° or less to see the stars that move here.</p>}
+        {state.phase === "loading" && <p className="text-ash">Loading the list of stars that Gaia measured moving…</p>}
+        {state.phase === "error" && <p className="text-ash">The list of moving stars could not be loaded. Switch the guide off and on to try again.</p>}
         {state.phase === "ready" && listed.length === 0 && (
           <p className="text-ash">
             No star on this screen moves {GUIDE_MIN_PM / 1000}″ a year or more, so motion would be hard to see. Try another
@@ -55,7 +54,7 @@ export function StarGuideCard({ state, onHighlight, onOpen, onClose }: StarGuide
           </p>
         )}
         {listed.length > 0 && (
-          <div className={cn("transition-opacity", state.moving && "opacity-60", state.phase === "loading" && "mt-1.5")}>
+          <div className={cn("transition-opacity", state.moving && "opacity-60")}>
             <p>Good places to watch a star move, fastest first:</p>
             <ol className="mt-1.5 flex flex-col">
               {listed.map((star, index) => {
@@ -108,7 +107,10 @@ export function StarGuideCard({ state, onHighlight, onOpen, onClose }: StarGuide
             The square is where the star sits in this background picture ({SKY_SURVEY.shortName}, about {SKY_SURVEY.year}). The
             line shows where Gaia&apos;s motion puts it in {SPHEREX_EPOCH.toFixed(0)}, when SPHEREx observed.
           </li>
-          <li>Coordinates are Gaia&apos;s 2016 positions. Listed: stars moving {GUIDE_MIN_PM / 1000}″ a year or more, about one SPHEREx pixel since {SKY_SURVEY.year}.</li>
+          <li>
+            From a list of every Gaia DR3 star moving {GUIDE_MIN_PM / 1000}″ a year or more (about 70,000), about one
+            SPHEREx pixel since {SKY_SURVEY.year}. Coordinates are Gaia&apos;s 2016 positions.
+          </li>
         </ul>
       </details>
     </section>

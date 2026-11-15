@@ -36,7 +36,7 @@ export type SettledSky = SkyView & {
 };
 
 /** How long the view must hold still before onSettle runs. */
-export const SETTLE_MS = 1000;
+export const SETTLE_MS = 300;
 
 type SkyViewProps = {
   initialView: SkyView;
