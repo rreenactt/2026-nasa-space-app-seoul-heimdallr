@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { cachedJson, keyCoordinate } from "@/app/api/_server/response-cache";
 import { errorResponse, NO_STORE, parseQuery } from "../../comet/_server/respond";
 import { searchSpherex } from "../_server/search";
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
   const q = parseQuery(request.nextUrl, querySchema);
   if (!q.ok) return q.response;
   try {
-    return Response.json(await searchSpherex(q.data.ra, q.data.dec), { headers: NO_STORE });
+    return await cachedJson("fpl/search", { ...q.data, ra: keyCoordinate(q.data.ra), dec: keyCoordinate(q.data.dec) }, () => searchSpherex(q.data.ra, q.data.dec), NO_STORE);
   } catch (error) {
     return errorResponse(error);
   }

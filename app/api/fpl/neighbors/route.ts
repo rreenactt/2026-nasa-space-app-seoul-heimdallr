@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { cachedJson, keyCoordinate } from "@/app/api/_server/response-cache";
 import { errorResponse, NO_STORE, parseQuery } from "../../comet/_server/respond";
 import { brightNeighbors } from "../_server/search";
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   const q = parseQuery(request.nextUrl, querySchema);
   if (!q.ok) return q.response;
   try {
-    return Response.json(await brightNeighbors(q.data.ra, q.data.dec, q.data.radius, q.data.maxG, q.data.epoch), { headers: NO_STORE });
+    return await cachedJson("fpl/neighbors", { ...q.data, ra: keyCoordinate(q.data.ra), dec: keyCoordinate(q.data.dec) }, () => brightNeighbors(q.data.ra, q.data.dec, q.data.radius, q.data.maxG, q.data.epoch), NO_STORE);
   } catch (error) {
     return errorResponse(error);
   }

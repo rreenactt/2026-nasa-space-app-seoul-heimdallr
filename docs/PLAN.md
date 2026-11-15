@@ -497,7 +497,12 @@ flowchart LR
 
 - 이미지·결과 파일은 레포가 아니라 오브젝트 스토리지(예: S3, Cloudflare R2, Supabase Storage)에 두고, 레포에는 목록 JSON만 둔다. 이미지 파일을 git에 넣으면 레포가 빠르게 커진다.
 - 해커톤 범위에서 후보가 수십 개 수준이면 정적 호스팅에 함께 올려도 된다. **저장소 서비스는 팀 결정 필요.**
-
+- **현재 구현 (결정 #55 제안):** Cloudflare R2 버킷 하나(`lib/storage.ts`)에 분석 API의 응답 JSON을 gzip으로 저장한다. 키는 `responses/v1/<API 경로>/<입력의 SHA-256>.json.gz`이고, 입력의 RA·Dec는 페이지 URL과 같은 1e-5°로 반올림한다(`app/api/_server/response-cache.ts`). 대상 API: 블링크 계획, SPHEREx 컷아웃(`fpl/frame`, `comet/frame`), SPHEREx 검색, Gaia 이웃, Sky Time Machine 검색·프레임·Gaia, 근처 별 목록, 3I/ATLAS 관측 목록.
+  - 프로덕션은 **읽기만** 한다. 저장된 응답이 있으면 IRSA 대신 그것을 돌려주고, 없거나 R2가 8초 안에 답하지 않으면 지금처럼 실시간으로 처리한다. 실패한 응답은 저장하지 않는다.
+  - 쓰기는 `RESPONSE_CACHE_WRITE=1`로 띄운 로컬 서버에서만 한다. 공개 API에서 아무 좌표나 저장되게 두면 누구나 버킷을 채울 수 있기 때문이다. 그래서 위 표의 "실시간 + 캐시" 계층은 아직 없다.
+  - 사전 저장: `scripts/precompute-analyses.ts`가 브라우저와 똑같은 요청(블링크는 `blink-context.tsx`, 추가 분석은 `prefetchAnalysis`)을 보낸다. 대상은 테스트 대상 5개(핀 위치와 SPHEREx 시점 위치), 최신 조사의 검토 후보 303개(`motion-survey.ts targets`, 미확인 먼저), 3I/ATLAS 첫 프레임. 다시 돌리면 저장된 응답은 바로 돌아오고 IRSA 장애로 실패한 것만 다시 처리한다.
+  - 저장하는 것은 API가 화면에 보내는 결과(작은 컷아웃 배열, 정렬한 격자 이미지, 목록과 IRSA 링크)이고 원본 FITS 파일은 저장하지 않는다(절대 원칙 7).
+  - 프로덕션에서 쓰려면 Vercel 프로젝트 환경 변수에 `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`이 있어야 한다.
 #### 장애 대응
 
 - IRSA가 느리거나 응답하지 않아도 사전 저장 계층은 그대로 동작한다. 데모는 사전 저장 좌표로 진행한다.

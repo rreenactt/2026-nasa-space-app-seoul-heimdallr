@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { cachedJson, keyCoordinate } from "@/app/api/_server/response-cache";
 import { fetchFrame } from "../../comet/_server/irsa";
 import { errorResponse, NO_STORE, parseQuery } from "../../comet/_server/respond";
 
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
   const q = parseQuery(request.nextUrl, querySchema);
   if (!q.ok) return q.response;
   try {
-    return Response.json(await fetchFrame(q.data), { headers: NO_STORE });
+    return await cachedJson("fpl/frame", { ...q.data, ra: keyCoordinate(q.data.ra), dec: keyCoordinate(q.data.dec) }, () => fetchFrame(q.data), NO_STORE);
   } catch (error) {
     return errorResponse(error);
   }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cachedJson, keyCoordinate } from "@/app/api/_server/response-cache";
 import { errorResponse, NO_STORE } from "../../comet/_server/respond";
 import { buildEpochFrame, IBE_PREFIX, UpstreamNotFound } from "../_server/archive";
 
@@ -55,13 +56,19 @@ const bodySchema = z
 
 /**
  * POST /api/sky/frame — downloads the epoch's exposures (small cutouts / byte ranges), resamples them onto
- * the common grid and median-combines them. Returns the grid image; nothing is stored.
+ * the common grid and median-combines them. Returns the grid image. Precomputed answers are read from R2
+ * (response-cache.ts); nothing else is stored.
  */
 export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ message: z.prettifyError(parsed.error) }, { status: 400 });
   try {
-    return Response.json(await buildEpochFrame(parsed.data.epoch, parsed.data.grid), { headers: NO_STORE });
+    return await cachedJson(
+      "sky/frame",
+      { ...parsed.data, grid: { ...parsed.data.grid, ra: keyCoordinate(parsed.data.grid.ra), dec: keyCoordinate(parsed.data.grid.dec) } },
+      () => buildEpochFrame(parsed.data.epoch, parsed.data.grid),
+      NO_STORE,
+    );
   } catch (error) {
     if (error instanceof UpstreamNotFound) return Response.json({ message: error.message }, { status: 404 });
     return errorResponse(error);

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { cachedJson, keyCoordinate } from "@/app/api/_server/response-cache";
 import { errorResponse, NO_STORE, parseQuery } from "../../comet/_server/respond";
 import { buildPlan } from "../_server/plan";
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   const q = parseQuery(request.nextUrl, querySchema);
   if (!q.ok) return q.response;
   try {
-    return Response.json(await buildPlan(q.data.ra, q.data.dec, q.data.detector), { headers: NO_STORE });
+    return await cachedJson("blink/plan", { ...q.data, ra: keyCoordinate(q.data.ra), dec: keyCoordinate(q.data.dec) }, () => buildPlan(q.data.ra, q.data.dec, q.data.detector), NO_STORE);
   } catch (error) {
     return errorResponse(error);
   }

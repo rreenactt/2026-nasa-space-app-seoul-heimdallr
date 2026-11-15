@@ -22,6 +22,7 @@
  * Usage (from the repo root; `react-server` lets the server-only modules load outside Next):
  *   npx tsx --conditions=react-server --env-file=.env scripts/motion-survey.ts survey <random|control> <n> <out.jsonl>
  *   npx tsx --conditions=react-server --env-file=.env scripts/motion-survey.ts import <out.jsonl> <surveyId>
+ *   npx tsx --conditions=react-server --env-file=.env scripts/motion-survey.ts targets <out.json>
  */
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { decodeBits } from "@/app/_lib/fpl/flags";
@@ -496,7 +497,16 @@ async function main() {
     console.log(`imported ${rows.length} points, ${rows.reduce((s, r) => s + r.candidates.length, 0)} candidates into survey ${b}`);
     return;
   }
-  console.log("usage: survey <random|control> <n> <out.jsonl> | import <file.jsonl> <surveyId>");
+  if (cmd === "targets") {
+    // The places the review queue opens (latest run's known movers and unidentified pairs), for precompute-analyses.ts.
+    const { latestReviewBatch } = await import("@/data/motion-candidates");
+    const batch = await latestReviewBatch();
+    const rows = (batch?.candidates ?? []).map((c) => ({ id: c.id, match: c.match, ra: c.raDeg, dec: c.decDeg, name: c.tmassDesignation }));
+    writeFileSync(a ?? "precompute-targets.json", JSON.stringify({ surveyId: batch?.surveyId ?? null, targets: rows }, null, 1));
+    console.log(`${rows.length} review candidates of survey ${batch?.surveyId} → ${a ?? "precompute-targets.json"}`);
+    return;
+  }
+  console.log("usage: survey <random|control> <n> <out.jsonl> | import <file.jsonl> <surveyId> | targets <out.json>");
 }
 
 void main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });
