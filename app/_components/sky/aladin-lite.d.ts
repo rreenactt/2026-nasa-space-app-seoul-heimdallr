@@ -79,6 +79,7 @@ declare module "aladin-lite" {
     setCooGrid(options: { enabled?: boolean }): void;
     /** Screen position [x, y] in CSS pixels, or undefined/null when the point is outside the view. */
     world2pix(ra: number, dec: number): [number, number] | null | undefined;
+    pix2world(x: number, y: number): [number, number] | null | undefined;
   };
 
   const A: {

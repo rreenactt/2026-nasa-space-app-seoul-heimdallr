@@ -1,36 +1,43 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { Keycap } from "../site/keycap";
 
-/** What each key does (decision #40). Kept in one place so the help sheet and the handler never disagree. */
-export const SHORTCUT_GROUPS: { title: string; keys: { keys: string[]; label: string }[] }[] = [
+/**
+ * What each key does (decision #40), grouped as in Figma "I · Explore, keyboard shortcuts". Kept in one place so the
+ * help sheet and the handler never disagree. F and Enter keep labels that say what they really do here.
+ */
+export const SHORTCUT_GROUPS: { title: string; column: 0 | 1; keys: { keys: string[]; or?: boolean; label: string }[] }[] = [
   {
-    title: "Move",
+    title: "Sky",
+    column: 0,
     keys: [
-      { keys: ["+", "−"], label: "Zoom in, zoom out" },
-      { keys: ["←", "↑", "→", "↓"], label: "Pan the sky" },
+      { keys: ["+", "−"], or: true, label: "Zoom in or out" },
+      { keys: ["←", "↑", "→", "↓"], label: "Look around" },
       { keys: ["F"], label: "Full screen, frame off" },
     ],
   },
   {
-    title: "Review",
+    title: "Candidates",
+    column: 0,
     keys: [
-      { keys: ["Q"], label: "Open or fold the review queue" },
-      { keys: ["N"], label: "Next place in the queue" },
-      { keys: ["P"], label: "Previous place in the queue" },
+      { keys: ["C"], label: "Show or hide candidates" },
+      { keys: ["N"], label: "Next place" },
+      { keys: ["P"], label: "Previous place" },
       { keys: ["Enter"], label: "Analyze the center of the view" },
     ],
   },
   {
-    title: "Show",
+    title: "Panels",
+    column: 1,
     keys: [
-      { keys: ["C"], label: "Show or hide candidates" },
-      { keys: ["L"], label: "Show on sky" },
+      { keys: ["Q"], label: "Open or fold the review queue" },
+      { keys: ["L"], label: "Show on sky (layers)" },
       { keys: ["/"], label: "Search" },
       { keys: ["?"], label: "This list" },
-      { keys: ["Esc"], label: "Close what is open" },
+      { keys: ["Esc"], label: "Close the top panel" },
     ],
   },
 ];
@@ -100,33 +107,54 @@ export function useSkyShortcuts(actions: ShortcutActions, enabled: boolean) {
   }, [enabled]);
 }
 
-/** The keyboard shortcut sheet, opened with ? or Menu > Keyboard shortcuts. */
+/**
+ * The keyboard shortcut sheet, opened with ? or Menu > Keyboard shortcuts (Figma "I · Explore, keyboard shortcuts"):
+ * 680px, two columns with the keys beside their meaning, over a 55% black dim without blur.
+ */
 export function ShortcutSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dark max-w-[640px] rounded-sm border-0 bg-ink/95 p-7 font-ui text-bone ring-0 sm:max-w-[640px]">
-        <DialogTitle className="text-base font-medium text-paper">Keyboard shortcuts</DialogTitle>
-        <DialogDescription className="text-xs text-ash">Keys do nothing while you type in a field.</DialogDescription>
-        <div className="mt-2 grid gap-7 sm:grid-cols-3">
-          {SHORTCUT_GROUPS.map((group) => (
-            <section key={group.title}>
-              <h3 className="mb-3 font-data text-[11px] tracking-[0.08em] text-smoke uppercase">{group.title}</h3>
-              <dl className="grid gap-2.5">
-                {group.keys.map((item) => (
-                  <div key={item.label} className="grid gap-1">
-                    <dt className="flex gap-1">
-                      {item.keys.map((key) => (
-                        <Keycap key={key}>{key}</Keycap>
+      <DialogPortal>
+        <DialogOverlay className="bg-ink/55 supports-backdrop-filter:backdrop-blur-none" />
+        <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(680px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-[2px] border border-rule bg-ink/94 font-ui text-bone outline-none data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0">
+          <div className="flex items-center justify-between border-b border-rule px-6 py-[18px]">
+            <DialogTitle className="text-lg font-light text-paper">Keyboard shortcuts</DialogTitle>
+            <DialogPrimitive.Close className="flex items-center gap-1.5 text-[13px] text-ash hover:text-paper">
+              Close
+              <Keycap>Esc</Keycap>
+            </DialogPrimitive.Close>
+          </div>
+          <div className="grid gap-x-10 px-6 pt-5 pb-1 sm:grid-cols-2">
+            {[0, 1].map((column) => (
+              <div key={column}>
+                {SHORTCUT_GROUPS.filter((group) => group.column === column).map((group) => (
+                  <section key={group.title} className="mb-4">
+                    <h3 className="mb-2.5 text-xs text-ash">{group.title}</h3>
+                    <dl className="grid gap-2.5">
+                      {group.keys.map((item) => (
+                        <div key={item.label} className="grid grid-cols-[112px_minmax(0,1fr)] items-center">
+                          <dt className="flex items-center gap-1">
+                            {item.keys.map((key, index) => (
+                              <span key={key} className="flex items-center gap-1">
+                                {item.or && index > 0 && <span className="px-0.5 text-[11px] text-smoke">or</span>}
+                                <Keycap>{key}</Keycap>
+                              </span>
+                            ))}
+                          </dt>
+                          <dd className="text-[13px] text-bone">{item.label}</dd>
+                        </div>
                       ))}
-                    </dt>
-                    <dd className="text-xs text-bone">{item.label}</dd>
-                  </div>
+                    </dl>
+                  </section>
                 ))}
-              </dl>
-            </section>
-          ))}
-        </div>
-      </DialogContent>
+              </div>
+            ))}
+          </div>
+          <DialogDescription className="border-t border-rule px-6 py-3.5 text-[11.5px] text-smoke">
+            Shortcuts pause while you type in a field.
+          </DialogDescription>
+        </DialogPrimitive.Popup>
+      </DialogPortal>
     </Dialog>
   );
 }

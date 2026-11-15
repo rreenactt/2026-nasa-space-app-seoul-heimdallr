@@ -2,6 +2,7 @@ import type { SkyOverlays, StatusKey } from "./overlays";
 import type { PlaceVisit } from "./place-history";
 import type { MovementCandidate } from "./review-queue";
 import type { SkyPaintFrame } from "./sky-view";
+import { TEST_TARGETS } from "./test-targets";
 
 /** Field of view (degrees) above which candidates are drawn as density, and below which as single marks. */
 export const DENSITY_FOV = 30;
@@ -14,6 +15,13 @@ const GROUP_CELL = 72;
 const PAPER = "240, 240, 250";
 const SIGNAL = "#fbde7e";
 const ASH = "#b0b0a9";
+const BONE = "#f1f0ea";
+
+/** A font from one of the next/font families in app/layout.tsx; canvas cannot read CSS variables itself. */
+function siteFont(size: number, variable: "--font-ui-face" | "--font-data-face", weight = 400) {
+  const family = getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || "sans-serif";
+  return `${weight} ${size}px ${family}`;
+}
 
 export function statusKey(candidate: MovementCandidate): StatusKey {
   if (candidate.knownAsteroid) return "known";
@@ -70,6 +78,33 @@ export function paintCandidates(
     } else if (overlays.marks) {
       for (const point of projected) paintMark(context, point.x, point.y, statusKey(point.candidate));
     }
+  }
+
+  // Test targets: a ring with a dot and the name beside it (Figma "I · Explore", "⊙ Barnard's Star").
+  if (overlays.pins) {
+    context.save();
+    context.font = siteFont(13, "--font-ui-face");
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.shadowColor = "rgba(0, 0, 0, 0.9)";
+    context.shadowBlur = 3;
+    for (const target of TEST_TARGETS) {
+      const pixel = frame.project(target.ra, target.dec);
+      if (!pixel || !inside(pixel, frame)) continue;
+      const [x, y] = pixel;
+      context.setLineDash([]);
+      context.strokeStyle = BONE;
+      context.lineWidth = 1.25;
+      context.beginPath();
+      context.arc(x, y, 5.5, 0, Math.PI * 2);
+      context.stroke();
+      context.fillStyle = BONE;
+      context.beginPath();
+      context.arc(x, y, 1.5, 0, Math.PI * 2);
+      context.fill();
+      context.fillText(target.name, x + 12, y + 0.5);
+    }
+    context.restore();
   }
 
   if (overlays.opened) {
@@ -152,7 +187,7 @@ function paintGroups(context: CanvasRenderingContext2D, points: Projected[]) {
     group.noteworthy ||= statusKey(candidate) === "noteworthy";
     groups.set(key, group);
   }
-  context.font = "11px var(--font-data-face), ui-monospace, monospace";
+  context.font = siteFont(11, "--font-data-face");
   context.textAlign = "center";
   context.textBaseline = "middle";
   for (const group of groups.values()) {

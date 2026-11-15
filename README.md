@@ -10,14 +10,14 @@ Built by team HEIMDALLR for the [NASA International Space Apps Challenge](https:
 
 ## How to use
 
-1. **Explore the sky.** After a short intro (skip it with "Skip intro"), the sky fills the screen. Drag to pan and scroll to zoom; the RA/Dec under the cursor is shown. Click the wide view to fly there. The tools on the right edge zoom in and out, go back to the first view, switch to full screen and open "Show on sky" (test-target pins, constellation lines, coordinate grid, candidates).
+1. **Explore the sky.** After a short intro (skip it with "Skip intro"), the sky fills the screen. Drag to pan and scroll to zoom; the RA/Dec under the cursor is shown. Click the wide view to fly there. The tools on the right edge open "This view" (the center, field of view, what is in view and the background imagery, with buttons to copy a link or the coordinates) and "Show on sky" (test-target pins, constellation lines, coordinate grid, candidates), zoom in and out, go back to the first view and switch to full screen.
 2. **Find a place to analyze.** Open the **Review queue** (top left, or press `Q`) for the five challenge test targets and, once the pre-analysis has run, movement candidates. Use **Search** (top right, or `/`) for a test target name or coordinates (`269.4485 4.7394` or `17 57 48.5 +04 41 36`).
 3. **Pick a point.** Zoomed in, the cursor becomes a square the size of the analysis cutout. Click it (or press `Enter` for the center of the view) to open the analysis panel.
 4. **Watch it change.** The panel plays the SPHEREx DR1 images of that point, one per visit (about six months apart), with difference and stack views. Gaia DR3 stars moved to each visit's date are drawn on top, quality flags are listed, and every frame links to its IRSA original.
 5. **Rate it.** Say whether something is Moving, Not moving, or Noise or artifact. Other people's ratings stay hidden until you rate.
 6. **Go further.** Five additional analyses run from the same panel. Press **Run** on one; when its data is ready it opens as a tab beside the SPHEREx images, with the summary and rating still in view: Sky Time Machine (25 years with 2MASS, WISE and NEOWISE), Fake Planet Lab (is the moving dot a defect?), Neighborhood in Motion (nearby stars in 3D), Sky Sonata (the sky as sound) and Comet Breath (spectra of interstellar comet 3I/ATLAS).
 
-**About** and **Method** (tabs at the top) explain SPHEREx, Planet X and how the comparison works in plain language. Press `?` for all keyboard shortcuts.
+**About** and **Method** (tabs at the top) explain SPHEREx, Planet X and how the comparison works in plain language. The **Menu** (top right) has the keyboard shortcuts (or press `?`), how to rate, the test targets, data sources and credits, and a button to clear the places you opened.
 
 **Share** (top right) copies a link to what you are looking at: `/?view=ra,dec,fov` opens that view of the sky, and `/?ra=&dec=&fov=` opens the analysis panel for a point.
 

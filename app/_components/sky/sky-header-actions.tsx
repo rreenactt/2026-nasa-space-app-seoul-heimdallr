@@ -1,10 +1,10 @@
 "use client";
 
-import { SearchIcon, ShareIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { SearchIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { headerActionClass } from "../site/site-header";
-import { SiteMenu } from "../site/site-menu";
+import { ShareButton } from "../site/share-button";
+import { type MenuEntry, SiteMenu } from "../site/site-menu";
 import type { EquatorialCoordinates } from "./sky-coordinates";
 import { SkySearchBox } from "./sky-search-box";
 import { viewUrl } from "./sky-selection";
@@ -16,11 +16,11 @@ type SkyHeaderActionsProps = {
   onPoint: (point: EquatorialCoordinates) => void;
   searchOpen: boolean;
   onSearchOpenChange: (open: boolean) => void;
-  menuExtra?: Parameters<typeof SiteMenu>[0]["extra"];
+  menuGroups: MenuEntry[][];
 };
 
 /** Search, Share and Menu in the header of the sky screen. */
-export function SkyHeaderActions({ onTarget, onPoint, searchOpen, onSearchOpenChange, menuExtra }: SkyHeaderActionsProps) {
+export function SkyHeaderActions({ onTarget, onPoint, searchOpen, onSearchOpenChange, menuGroups }: SkyHeaderActionsProps) {
   return (
     <>
       <Popover open={searchOpen} onOpenChange={onSearchOpenChange}>
@@ -41,37 +41,12 @@ export function SkyHeaderActions({ onTarget, onPoint, searchOpen, onSearchOpenCh
           />
         </PopoverContent>
       </Popover>
-      <ShareButton />
-      <SiteMenu extra={menuExtra} />
-    </>
-  );
-}
-
-/** Copies a link to what is on screen (`?view=`, or the open panel's link from the address bar). */
-function ShareButton() {
-  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
-
-  useEffect(() => {
-    if (state === "idle") return;
-    const timer = setTimeout(() => setState("idle"), 2000);
-    return () => clearTimeout(timer);
-  }, [state]);
-
-  return (
-    <button
-      type="button"
-      className={headerActionClass}
-      onClick={() => {
+      <ShareButton linkFor={() => {
         const view = getView();
-        const url = window.location.search ? window.location.href : view ? new URL(viewUrl(view), window.location.origin).toString() : window.location.href;
-        navigator.clipboard.writeText(url).then(
-          () => setState("copied"),
-          () => setState("failed"),
-        );
-      }}
-    >
-      <ShareIcon aria-hidden />
-      <span aria-live="polite">{state === "copied" ? "Link copied" : state === "failed" ? "Copy failed" : "Share"}</span>
-    </button>
+        // An open panel already has its link in the address bar; otherwise link to what is on screen.
+        return window.location.search || !view ? window.location.href : new URL(viewUrl(view), window.location.origin).toString();
+      }} />
+      <SiteMenu groups={menuGroups} />
+    </>
   );
 }

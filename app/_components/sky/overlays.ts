@@ -19,11 +19,12 @@ export const DEFAULT_OVERLAYS: SkyOverlays = {
   candidates: true,
   density: true,
   marks: true,
-  statuses: { noteworthy: true, "needs-ratings": true, recommended: true, known: true },
+  // Known asteroids and the coordinate grid start off (Figma "I · Explore, layers panel open").
+  statuses: { noteworthy: true, "needs-ratings": true, recommended: true, known: false },
   opened: true,
   pins: true,
   constellations: true,
-  grid: true,
+  grid: false,
 };
 
 /** The part Aladin Lite draws today. */

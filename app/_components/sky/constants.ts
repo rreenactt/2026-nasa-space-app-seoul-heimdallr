@@ -25,9 +25,10 @@ export const SPHEREX_COLOR_SURVEY: SkySurvey = {
  */
 export const TWO_MASS_COLOR_SURVEY: SkySurvey = {
   hips: "https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color",
-  credit: "2MASS J, H, K color · University of Massachusetts & IPAC/Caltech (HiPS via IRSA)",
+  credit: "2MASS J, H, K color. UMass and IPAC/Caltech, HiPS via IRSA",
   shortName: "2MASS color (temporary, not SPHEREx)",
-  notice: "Temporary background: 2MASS, not SPHEREx. The SPHEREx sky tiles are unavailable during the CDS outage.",
+  // Figma "I · Explore": one line. Why (the CDS outage) is on the Method page under "Data sources and credits".
+  notice: "Temporary background: 2MASS, not SPHEREx",
 };
 
 /** Switch back to SPHEREX_COLOR_SURVEY once CDS serves the SPHEREx tiles again. */
