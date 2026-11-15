@@ -2,7 +2,11 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ApertureParams, ObservationEntry, PeriodId } from "@/app/_lib/comet/types";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { useObservationIndex } from "./use-comet-data";
+
+/** Translated names for `PERIODS[p].label` (same English text). */
+export const PERIOD_LABEL: Record<PeriodId, MessageKey> = { "2025-08": "comet.periodAug", "2025-12": "comet.periodDec" };
 
 export type DetectorFilter = "all" | "D1" | "D2" | "D3" | "D4" | "D5" | "D6";
 

@@ -13,8 +13,10 @@ import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PERIODS } from "@/app/_lib/comet/published";
 import { wavelengthAt } from "@/app/_lib/comet/wcs";
-import type { ObservationEntry, PeriodId } from "@/app/_lib/comet/types";
-import { formatUtc, useCometState } from "./comet-state";
+import type { ObservationEntry, PeriodId, QualityReason } from "@/app/_lib/comet/types";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
+import { formatUtc, PERIOD_LABEL, useCometState } from "./comet-state";
 import { FitsCanvas, displayValues, percentileRange, type DisplayRange, type Stretch } from "./fits-canvas";
 import { cometPixel, decodeFrame, measure, useFrame, type FrameCenter } from "./use-comet-data";
 
@@ -29,6 +31,7 @@ interface DisplayOptions {
 }
 
 export function ImageExplorer() {
+  const t = useT();
   const { selected, entries } = useCometState();
   const [mode, setMode] = useState<AlignMode>("comet");
   const [skyRef, setSkyRef] = useState<FrameCenter | null>(null);
@@ -45,7 +48,7 @@ export function ImageExplorer() {
   const [compareKey, setCompareKey] = useState<string | null>(null);
   const [sameScale, setSameScale] = useState(true);
 
-  if (!selected) return <p className="py-8 text-muted-foreground">No observations match these filters.</p>;
+  if (!selected) return <p className="py-8 text-muted-foreground">{t("comet.noMatch")}</p>;
 
   const centerFor = (e: ObservationEntry): FrameCenter =>
     mode === "sky" && skyRef ? skyRef : { ra: e.cometRa, dec: e.cometDec };
@@ -81,25 +84,25 @@ export function ImageExplorer() {
             setMode(m);
             if (m === "sky" && !skyRef) centerOnComet();
           }}
-          aria-label="Alignment mode"
+          aria-label={t("comet.alignAria")}
         >
-          <ToggleGroupItem value="comet">Comet-centered</ToggleGroupItem>
-          <ToggleGroupItem value="sky">Fixed sky</ToggleGroupItem>
+          <ToggleGroupItem value="comet">{t("comet.alignComet")}</ToggleGroupItem>
+          <ToggleGroupItem value="sky">{t("comet.alignSky")}</ToggleGroupItem>
         </ToggleGroup>
-        <NativeSelect size="sm" value={display.stretch} onChange={(e) => setDisplay({ ...display, stretch: e.target.value as Stretch })} aria-label="Brightness stretch">
+        <NativeSelect size="sm" value={display.stretch} onChange={(e) => setDisplay({ ...display, stretch: e.target.value as Stretch })} aria-label={t("comet.stretchAria")}>
           <NativeSelectOption value="asinh">asinh</NativeSelectOption>
-          <NativeSelectOption value="linear">Linear</NativeSelectOption>
-          <NativeSelectOption value="log">Log</NativeSelectOption>
+          <NativeSelectOption value="linear">{t("comet.stretchLinear")}</NativeSelectOption>
+          <NativeSelectOption value="log">{t("comet.stretchLog")}</NativeSelectOption>
         </NativeSelect>
-        <NativeSelect size="sm" value={String(display.clipHigh)} onChange={(e) => setDisplay({ ...display, clipHigh: Number(e.target.value) })} aria-label="Upper percentile">
+        <NativeSelect size="sm" value={String(display.clipHigh)} onChange={(e) => setDisplay({ ...display, clipHigh: Number(e.target.value) })} aria-label={t("comet.percentileAria")}>
           <NativeSelectOption value="99">99%</NativeSelectOption>
           <NativeSelectOption value="99.5">99.5%</NativeSelectOption>
           <NativeSelectOption value="99.9">99.9%</NativeSelectOption>
         </NativeSelect>
-        <ToggleSwitch label="Subtract zodiacal light (ZODI)" checked={display.subtractZodi} onChange={(v) => setDisplay({ ...display, subtractZodi: v })} />
-        <ToggleSwitch label="Show bad pixels" checked={display.showFlags} onChange={(v) => setDisplay({ ...display, showFlags: v })} />
-        <ToggleSwitch label="Photometry aperture" checked={display.showAperture} onChange={(v) => setDisplay({ ...display, showAperture: v })} />
-        <ToggleSwitch label="Compare over time" checked={compare} onChange={setCompare} />
+        <ToggleSwitch label={t("comet.subtractZodi")} checked={display.subtractZodi} onChange={(v) => setDisplay({ ...display, subtractZodi: v })} />
+        <ToggleSwitch label={t("comet.showBadPixels")} checked={display.showFlags} onChange={(v) => setDisplay({ ...display, showFlags: v })} />
+        <ToggleSwitch label={t("comet.showAperture")} checked={display.showAperture} onChange={(v) => setDisplay({ ...display, showAperture: v })} />
+        <ToggleSwitch label={t("comet.compareOverTime")} checked={compare} onChange={setCompare} />
       </div>
 
       {mode === "sky" && (
@@ -112,25 +115,25 @@ export function ImageExplorer() {
             <Label htmlFor="sky-dec" className="text-xs">Dec (deg)</Label>
             <Input id="sky-dec" className="h-8 w-32 font-mono" value={decText} onChange={(e) => setDecText(e.target.value)} inputMode="decimal" />
           </div>
-          <Button size="sm" onClick={applySky}>Apply coordinates</Button>
+          <Button size="sm" onClick={applySky}>{t("comet.applyCoordinates")}</Button>
           <Button size="sm" variant="outline" onClick={centerOnComet}>
-            <CrosshairIcon /> Current comet position
+            <CrosshairIcon /> {t("comet.currentCometPosition")}
           </Button>
           <p className="w-full text-xs text-muted-foreground">
-            Fixed sky: the same sky coordinates stay at the center, so the comet moves. If the coordinates fall outside an exposure’s detector, there is no image.
+            {t("comet.fixedSkyHelp")}
           </p>
         </div>
       )}
       {mode === "comet" && (
-        <p className="text-xs text-muted-foreground">Comet-centered: each observation is centered on the predicted comet position to compare the coma shape. Background stars move.</p>
+        <p className="text-xs text-muted-foreground">{t("comet.cometCenteredHelp")}</p>
       )}
 
       {compare && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground">Compare with (same detector {selected.detector})</span>
-          <NativeSelect size="sm" value={compareEntry?.key ?? ""} onChange={(e) => setCompareKey(e.target.value)} aria-label="Observation to compare">
+          <span className="text-xs text-muted-foreground">{t("comet.compareWith", { detector: selected.detector })}</span>
+          <NativeSelect size="sm" value={compareEntry?.key ?? ""} onChange={(e) => setCompareKey(e.target.value)} aria-label={t("comet.compareAria")}>
             {(Object.keys(PERIODS) as PeriodId[]).map((p) => (
-              <NativeSelectOptGroup key={p} label={PERIODS[p].label}>
+              <NativeSelectOptGroup key={p} label={t(PERIOD_LABEL[p])}>
                 {compareCandidates
                   .filter((e) => e.period === p)
                   .map((e) => (
@@ -141,7 +144,7 @@ export function ImageExplorer() {
               </NativeSelectOptGroup>
             ))}
           </NativeSelect>
-          <ToggleSwitch label="Same brightness range" checked={sameScale} onChange={setSameScale} />
+          <ToggleSwitch label={t("comet.sameScale")} checked={sameScale} onChange={setSameScale} />
         </div>
       )}
 
@@ -221,6 +224,7 @@ function FramePanel({
   rangeOverride?: DisplayRange;
   referenceWave?: { wavelength: number; bandwidth: number } | null;
 }) {
+  const t = useT();
   const { aperture } = useCometState();
   const frame = useFrame(entry, center);
   const decoded = useMemo(() => (frame.data ? decodeFrame(frame.data) : undefined), [frame.data]);
@@ -232,7 +236,7 @@ function FramePanel({
     return (
       <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed text-xs text-muted-foreground">
         <Spinner />
-        Reading only the rows around the comet from the {entry.obsId} {entry.detector} source FITS
+        {t("comet.readingRows", { obsId: entry.obsId, detector: entry.detector })}
       </div>
     );
   }
@@ -241,9 +245,9 @@ function FramePanel({
       <Alert variant="destructive">
         <AlertCircleIcon />
         <AlertDescription>
-          {tag}: {frame.error?.message ?? "Could not read the image"}
+          {tag}: {frame.error?.message ?? t("comet.readFailed")}
           <Button size="xs" variant="outline" className="mt-1" onClick={() => frame.refetch()}>
-            Try again
+            {t("analyses.tryAgain")}
           </Button>
         </AlertDescription>
       </Alert>
@@ -268,23 +272,23 @@ function FramePanel({
         label={`${tag} · ${formatUtc(entry.utcStart)} · ${entry.detector}`}
       />
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-        <dt className="text-muted-foreground">Wavelength at comet</dt>
+        <dt className="text-muted-foreground">{t("comet.waveAtComet")}</dt>
         <dd className="font-mono">
-          {wave ? `${wave.wavelength.toFixed(3)} µm (bandwidth ${wave.bandwidth.toFixed(3)})` : "—"}
-          {waveMismatch && <Badge variant="outline" className="ml-2">Wavelength differs from A</Badge>}
+          {wave ? t("comet.waveValue", { wavelength: wave.wavelength.toFixed(3), bandwidth: wave.bandwidth.toFixed(3) }) : "—"}
+          {waveMismatch && <Badge variant="outline" className="ml-2">{t("comet.waveDiffers")}</Badge>}
         </dd>
-        <dt className="text-muted-foreground">Photometry (aperture {aperture.rAp}px)</dt>
+        <dt className="text-muted-foreground">{t("comet.photometryAperture", { r: aperture.rAp })}</dt>
         <dd className="font-mono">
           {photometry ? `${photometry.fluxMjy.toFixed(2)} ± ${photometry.errorMjy.toFixed(2)} mJy (S/N ${photometry.snr.toFixed(1)})` : "—"}
         </dd>
-        <dt className="text-muted-foreground">Quality</dt>
+        <dt className="text-muted-foreground">{t("comet.quality")}</dt>
         <dd>
           {photometry?.quality === "ok" ? (
-            <Badge variant="secondary">Good</Badge>
+            <Badge variant="secondary">{t("comet.qualityGood")}</Badge>
           ) : (
             photometry?.reasons.map((r) => (
               <Badge key={r} variant="outline" className="mr-1">
-                {REASON_LABEL[r]}
+                {t(REASON_LABEL[r])}
               </Badge>
             ))
           )}
@@ -293,7 +297,7 @@ function FramePanel({
         <dd className="font-mono">
           {decoded.payload.header.psfFwhmArcsec?.toFixed(1) ?? "—"}″ · L2 {decoded.payload.header.l2Dqa ?? "—"}
         </dd>
-        <dt className="text-muted-foreground">Brightness range (display only)</dt>
+        <dt className="text-muted-foreground">{t("comet.rangeDisplayOnly")}</dt>
         <dd className="font-mono">
           {(rangeOverride ?? ownRange).lo.toFixed(3)} – {(rangeOverride ?? ownRange).hi.toFixed(3)} {decoded.payload.header.bunit}
         </dd>
@@ -302,10 +306,10 @@ function FramePanel({
   );
 }
 
-export const REASON_LABEL: Record<string, string> = {
-  edge: "Image edge",
-  masked: "Includes bad pixels",
-  "low-snr": "S/N < 3",
-  "dqa-fail": "Failed DQA",
-  "no-wave": "No wavelength info",
+export const REASON_LABEL: Record<QualityReason, MessageKey> = {
+  edge: "comet.reasonEdge",
+  masked: "comet.reasonMasked",
+  "low-snr": "comet.reasonLowSnr",
+  "dqa-fail": "comet.reasonDqaFail",
+  "no-wave": "comet.reasonNoWave",
 };

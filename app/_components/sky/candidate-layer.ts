@@ -1,3 +1,4 @@
+import type { Translate } from "@/app/_i18n/i18n-provider";
 import { MIN_FOV } from "./constants";
 import type { SkyOverlays, StatusKey } from "./overlays";
 import type { PlaceVisit } from "./place-history";
@@ -37,11 +38,12 @@ export function statusKey(candidate: MovementCandidate): StatusKey {
  * - narrower than 5°: one shape mark per candidate.
  * Test targets, places this browser opened and the selected place are drawn at every level, the selected one even with
  * the candidates switched off (decision #40). Circles and marks fade in and out (decision #53); returns true while a
- * fade is still running, so the sky asks for another frame.
+ * fade is still running, so the sky asks for another frame. `t` translates the kind label beside each mark.
  */
 export function paintCandidates(
   context: CanvasRenderingContext2D,
   frame: SkyPaintFrame,
+  t: Translate,
   {
     candidates,
     overlays,
@@ -74,7 +76,7 @@ export function paintCandidates(
           dec: candidate.dec,
           status: statusKey(candidate),
           name: candidate.id,
-          label: candidate.match === "known" ? "Known mover" : "Unidentified",
+          label: t(candidate.match === "known" ? "status.knownMover" : "status.unidentified"),
         });
       }
     }

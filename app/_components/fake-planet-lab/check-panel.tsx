@@ -7,28 +7,27 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { CHECK_PARAMS, runChecks, VERDICT_TEXT, type NativeFrame } from "@/app/_lib/fpl/checks";
 import { MEASUREMENT_EXCLUDE } from "@/app/_lib/fpl/flags";
 import type { CheckStatus, Judgment } from "@/app/_lib/fpl/types";
 import { useFpl } from "./fpl-state";
+import { checkLabel, JUDGMENT_LABEL, verdictText } from "./fpl-text";
 import { useNeighbours } from "./use-fpl-data";
 
-export const STATUS_META: Record<CheckStatus, { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
-  issue: { label: "Issue", icon: AlertOctagonIcon, cls: "text-red-600 dark:text-red-400" },
-  caution: { label: "Caution", icon: TriangleAlertIcon, cls: "text-amber-600 dark:text-amber-400" },
-  ok: { label: "OK", icon: CircleCheckIcon, cls: "text-emerald-600 dark:text-emerald-400" },
-  info: { label: "Info", icon: InfoIcon, cls: "text-slate-500 dark:text-slate-400" },
-  "not-checked": { label: "Not checked", icon: CircleDashedIcon, cls: "text-muted-foreground" },
+export const STATUS_META: Record<CheckStatus, { label: MessageKey; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
+  issue: { label: "fpl.statusIssue", icon: AlertOctagonIcon, cls: "text-red-600 dark:text-red-400" },
+  caution: { label: "fpl.statusCaution", icon: TriangleAlertIcon, cls: "text-amber-600 dark:text-amber-400" },
+  ok: { label: "fpl.statusOk", icon: CircleCheckIcon, cls: "text-emerald-600 dark:text-emerald-400" },
+  info: { label: "fpl.statusInfo", icon: InfoIcon, cls: "text-slate-500 dark:text-slate-400" },
+  "not-checked": { label: "fpl.statusNotChecked", icon: CircleDashedIcon, cls: "text-muted-foreground" },
 };
 
-const JUDGMENTS: { id: Judgment; label: string }[] = [
-  { id: "moving", label: "Moving" },
-  { id: "not-moving", label: "Not moving" },
-  { id: "noise-or-artifact", label: "Noise or artifact" },
-  { id: "undecided", label: "Undecided" },
-];
+const JUDGMENTS: Judgment[] = ["moving", "not-moving", "noise-or-artifact", "undecided"];
 
 export function CheckPanel({ frames }: { frames: NativeFrame[] }) {
+  const t = useT();
   const { candidate, target, selected, addRecord } = useFpl();
   const [runNeighbours, setRunNeighbours] = useState(false);
   const epochYear = frames[0] ? 2000 + (frames[0].payload.header.mjdAvg - 51544.5) / 365.25 : 2025.8;
@@ -43,7 +42,7 @@ export function CheckPanel({ frames }: { frames: NativeFrame[] }) {
   );
 
   if (!candidate) {
-    return <p className="text-sm text-muted-foreground">Click a dot on any image to inspect that position. Checks run on the original pixels of the primary observation (★).</p>;
+    return <p className="text-sm text-muted-foreground">{t("fpl.clickDot")}</p>;
   }
   if (!report) return <Spinner />;
 
@@ -83,15 +82,15 @@ export function CheckPanel({ frames }: { frames: NativeFrame[] }) {
   return (
     <div className="grid gap-3 text-sm">
       <div className={`rounded-md border p-3 ${verdictCls}`}>
-        <div className="text-base font-semibold">{VERDICT_TEXT[report.verdict]}</div>
+        <div className="text-base font-semibold">{verdictText(t, report.verdict)}</div>
         <p className="font-mono text-xs text-muted-foreground">
           RA {candidate.ra.toFixed(5)}° Dec {candidate.dec.toFixed(5)}° · {report.primary.key}
           {report.primary.wavelengthUm != null && ` · ${report.primary.wavelengthUm.toFixed(3)} µm`}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {report.verdict === "no-issue-found"
-            ? "No problem was found by these checks. This does not confirm a real object, let alone a planet."
-            : "Each item below is evidence, not a final ruling. Flags mean the pipeline marked an effect; they do not prove a dot is fake."}
+            ? t("fpl.noIssueNote")
+            : t("fpl.evidenceNote")}
         </p>
       </div>
 
@@ -105,13 +104,13 @@ export function CheckPanel({ frames }: { frames: NativeFrame[] }) {
                 <Icon className={`mt-0.5 size-4 shrink-0 ${m.cls}`} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-medium">{c.label}</span>
-                    <span className={`text-xs ${m.cls}`}>{m.label}</span>
+                    <span className="font-medium">{checkLabel(t, c)}</span>
+                    <span className={`text-xs ${m.cls}`}>{t(m.label)}</span>
                   </div>
                   <p className="text-xs">{c.summary}</p>
                   {c.details.length > 0 && (
                     <details className="mt-1 text-xs text-muted-foreground">
-                      <summary className="cursor-pointer select-none">Details</summary>
+                      <summary className="cursor-pointer select-none">{t("fpl.details")}</summary>
                       <ul className="mt-1 list-disc pl-4">
                         {c.details.map((d) => (
                           <li key={d}>{d}</li>
@@ -121,11 +120,11 @@ export function CheckPanel({ frames }: { frames: NativeFrame[] }) {
                   )}
                   {c.id === "neighbours" && !runNeighbours && (
                     <Button size="xs" variant="outline" className="mt-1" onClick={() => setRunNeighbours(true)}>
-                      Check bright stars (Gaia DR3)
+                      {t("fpl.checkBrightStars")}
                     </Button>
                   )}
                   {c.id === "neighbours" && runNeighbours && neighbours.isPending && (
-                    <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Spinner className="size-3" /> Querying Gaia DR3…</span>
+                    <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Spinner className="size-3" /> {t("fpl.queryingGaia")}</span>
                   )}
                   {c.id === "neighbours" && neighbours.isError && <p className="text-xs text-destructive">{neighbours.error.message}</p>}
                 </div>
@@ -136,19 +135,19 @@ export function CheckPanel({ frames }: { frames: NativeFrame[] }) {
       </ul>
 
       <div className="grid gap-2 rounded-md border p-3">
-        <Label className="text-xs">Your judgment</Label>
+        <Label className="text-xs">{t("fpl.yourJudgment")}</Label>
         <ToggleGroup variant="outline" size="sm" spacing={0} value={[judgment]} onValueChange={(v) => v[0] && setJudgment(v[0] as Judgment)} className="flex-wrap">
           {JUDGMENTS.map((j) => (
-            <ToggleGroupItem key={j.id} value={j.id}>
-              {j.label}
+            <ToggleGroupItem key={j} value={j}>
+              {t(JUDGMENT_LABEL[j])}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <Textarea placeholder="Notes (what you saw, what is still unclear)" value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16 text-xs" />
+        <Textarea placeholder={t("fpl.notesPlaceholder")} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16 text-xs" />
         <Button size="sm" onClick={save} className="w-fit">
-          <SaveIcon /> {saved ? "Saved to Records" : "Save record"}
+          <SaveIcon /> {saved ? t("fpl.savedToRecords") : t("fpl.saveRecord")}
         </Button>
-        <p className="text-[11px] text-muted-foreground">Records stay in this browser tab until you download them (Records tab).</p>
+        <p className="text-[11px] text-muted-foreground">{t("fpl.recordsStay")}</p>
       </div>
     </div>
   );

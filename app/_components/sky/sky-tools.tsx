@@ -4,13 +4,15 @@ import { InfoIcon, LayersIcon, LocateFixedIcon, MaximizeIcon, MinimizeIcon, Minu
 import { Fragment, type ReactElement, type ReactNode, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { cn } from "cn";
 import { Keycap } from "../site/keycap";
 import { MAX_FOV, MIN_FOV } from "./constants";
 import type { SkyOverlays, StatusKey } from "./overlays";
 import { GROUPS_FOV } from "./candidate-layer";
 import { useCandidates } from "./candidates-context";
-import { MARK_LABELS, StatusMark } from "./status-mark";
+import { MARK_LABEL_KEYS, StatusMark } from "./status-mark";
 import { angularDistance } from "./sky-coordinates";
 import { useView } from "./view-store";
 import { ViewInfo } from "./view-info";
@@ -66,14 +68,15 @@ export function SkyTools({
   starGuide,
   onStarGuide,
 }: SkyToolsProps) {
+  const t = useT();
   const view = useView();
   const [infoOpen, setInfoOpen] = useState(false);
   return (
-    <div role="toolbar" aria-orientation="vertical" aria-label="Sky tools" className="flex flex-col gap-[5px]">
+    <div role="toolbar" aria-orientation="vertical" aria-label={t("tools.label")} className="flex flex-col gap-[5px]">
       {/* Figma "I · This view": what is on screen now. The About page itself is the header tab. */}
       <Popover open={infoOpen} onOpenChange={setInfoOpen}>
-        <ToolTip label="This view">
-          <PopoverTrigger className={toolClass} aria-label="This view">
+        <ToolTip label={t("viewInfo.title")}>
+          <PopoverTrigger className={toolClass} aria-label={t("viewInfo.title")}>
             <InfoIcon />
           </PopoverTrigger>
         </ToolTip>
@@ -88,8 +91,11 @@ export function SkyTools({
         </PopoverContent>
       </Popover>
       <Popover open={layersOpen} onOpenChange={onLayersOpenChange}>
-        <ToolTip label="Show on sky" keyName="L">
-          <PopoverTrigger className={cn(toolClass, "relative")} aria-label={candidatesOff ? "Show on sky, candidates hidden" : "Show on sky"}>
+        <ToolTip label={t("layers.title")} keyName="L">
+          <PopoverTrigger
+            className={cn(toolClass, "relative")}
+            aria-label={candidatesOff ? t("tools.layersCandidatesHidden") : t("layers.title")}
+          >
             <LayersIcon />
             {candidatesOff && <span aria-hidden className="absolute top-[3px] right-[3px] size-[5px] rounded-full bg-ash" />}
           </PopoverTrigger>
@@ -105,49 +111,49 @@ export function SkyTools({
           {layersPanel}
         </PopoverContent>
       </Popover>
-      <ToolTip label={starGuide ? "Turn off the star guide" : "Star guide: stars that move here"}>
+      <ToolTip label={starGuide ? t("tools.starGuideOff") : t("tools.starGuideOn")}>
         <button
           type="button"
           className={cn(toolClass, starGuide && "bg-paper/15 text-paper")}
-          aria-label="Star guide"
+          aria-label={t("tools.starGuide")}
           aria-pressed={starGuide}
           onClick={onStarGuide}
         >
           <ScanSearchIcon />
         </button>
       </ToolTip>
-      <ToolTip label="Zoom in" keyName="+">
+      <ToolTip label={t("tools.zoomIn")} keyName="+">
         <button
           type="button"
           className={toolClass}
-          aria-label="Zoom in"
+          aria-label={t("tools.zoomIn")}
           disabled={!view || view.fov <= MIN_FOV * 1.01}
           onClick={() => onZoom(1 / 2)}
         >
           <PlusIcon />
         </button>
       </ToolTip>
-      <ToolTip label="Zoom out" keyName="−">
+      <ToolTip label={t("tools.zoomOut")} keyName="−">
         <button
           type="button"
           className={toolClass}
-          aria-label="Zoom out"
+          aria-label={t("tools.zoomOut")}
           disabled={!view || view.fov >= MAX_FOV * 0.99}
           onClick={() => onZoom(2)}
         >
           <MinusIcon />
         </button>
       </ToolTip>
-      <ToolTip label="Back to the first view">
-        <button type="button" className={toolClass} aria-label="Back to the first view" onClick={onHome}>
+      <ToolTip label={t("tools.home")}>
+        <button type="button" className={toolClass} aria-label={t("tools.home")} onClick={onHome}>
           <LocateFixedIcon />
         </button>
       </ToolTip>
-      <ToolTip label={fullscreen ? "Leave full screen" : "Full screen, frame off"} keyName="F">
+      <ToolTip label={fullscreen ? t("tools.leaveFullscreen") : t("tools.fullscreenFrameOff")} keyName="F">
         <button
           type="button"
           className={toolClass}
-          aria-label={fullscreen ? "Leave full screen" : "Full screen"}
+          aria-label={fullscreen ? t("tools.leaveFullscreen") : t("tools.fullscreen")}
           aria-pressed={fullscreen}
           onClick={onFullscreen}
         >
@@ -193,19 +199,25 @@ export function SkySwitch({
   );
 }
 
-const STATUS_KEYS: StatusKey[] = ["noteworthy", "needs-ratings", "recommended", "known"];
+/** The status filters with their names in the panel ("Known movers" in the plural here, unlike the mark itself). */
+const STATUS_KEYS: { key: StatusKey; label: MessageKey }[] = [
+  { key: "noteworthy", label: MARK_LABEL_KEYS.noteworthy },
+  { key: "needs-ratings", label: MARK_LABEL_KEYS["needs-ratings"] },
+  { key: "recommended", label: MARK_LABEL_KEYS.recommended },
+  { key: "known", label: "layers.knownMovers" },
+];
 
 /** `sub` rows sit indented under the row above and dim while it is off (Figma "Constellation names"). */
 const OTHER_LAYERS: {
   key: "opened" | "pins" | "constellations" | "constellationNames" | "grid";
-  label: string;
+  label: MessageKey;
   sub?: "constellations";
 }[] = [
-  { key: "opened", label: "Places you opened" },
-  { key: "pins", label: "Test targets" },
-  { key: "constellations", label: "Constellation lines" },
-  { key: "constellationNames", label: "Constellation names", sub: "constellations" },
-  { key: "grid", label: "Coordinate grid" },
+  { key: "opened", label: "layers.opened" },
+  { key: "pins", label: "common.testTargets" },
+  { key: "constellations", label: "layers.constellationLines" },
+  { key: "constellationNames", label: "layers.constellationNames", sub: "constellations" },
+  { key: "grid", label: "layers.grid" },
 ];
 
 function Row({ children, dim, className }: { children: ReactNode; dim?: boolean; className?: string }) {
@@ -228,6 +240,7 @@ export function ShowOnSky({
   onChange: (overlays: SkyOverlays) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const off = !overlays.candidates;
   const candidates = useCandidates();
   const view = useView();
@@ -237,37 +250,37 @@ export function ShowOnSky({
   return (
     <div>
       <div className="flex h-[46px] items-center justify-between border-b border-rule px-[18px]">
-        <p className="text-sm font-medium text-paper">Show on sky</p>
+        <p className="text-sm font-medium text-paper">{t("layers.heading")}</p>
         <button type="button" className="text-xs text-ash hover:text-paper" onClick={onClose}>
-          Close
+          {t("common.close")}
         </button>
       </div>
       <div className="border-b border-rule px-[18px] pt-3 pb-2.5">
         <label className="flex items-start justify-between gap-3">
           <span>
-            <span className="block text-sm font-medium text-paper">Candidates</span>
+            <span className="block text-sm font-medium text-paper">{t("common.candidates")}</span>
             <span className="block text-[11.5px] text-ash">
               {candidates.length === 0
-                ? "No candidates yet, so nothing is drawn"
+                ? t("layers.candidatesNone")
                 : view && view.fov > GROUPS_FOV
-                  ? `Shown at ${GROUPS_FOV}° and narrower`
-                  : `${inView.toLocaleString("en-US")} in view`}
+                  ? t("layers.candidatesShownBelow", { fov: GROUPS_FOV })
+                  : t("layers.candidatesInView", { n: inView.toLocaleString("en-US") })}
             </span>
           </span>
           <SkySwitch
             className="mt-0.5"
             checked={overlays.candidates}
-            label="Candidates"
+            label={t("common.candidates")}
             onChange={(candidates) => onChange({ ...overlays, candidates })}
           />
         </label>
         <div className="mt-2 pl-4">
           <Row dim={off} className="h-7">
-            Status marks
-            <SkySwitch checked={overlays.marks} label="Status marks" onChange={(marks) => onChange({ ...overlays, marks })} />
+            {t("layers.statusMarks")}
+            <SkySwitch checked={overlays.marks} label={t("layers.statusMarks")} onChange={(marks) => onChange({ ...overlays, marks })} />
           </Row>
           <div className={cn("mt-1 grid pl-4", (off || !overlays.marks) && "opacity-40")}>
-            {STATUS_KEYS.map((key) => (
+            {STATUS_KEYS.map(({ key, label }) => (
               <label
                 key={key}
                 className={cn(
@@ -284,7 +297,7 @@ export function ShowOnSky({
                   }
                 />
                 <StatusMark kind={key} className="size-2.5" />
-                {key === "known" ? "Known movers" : MARK_LABELS[key]}
+                {t(label)}
               </label>
             ))}
           </div>
@@ -294,15 +307,15 @@ export function ShowOnSky({
         {OTHER_LAYERS.map(({ key, label, sub }) => (
           <Fragment key={key}>
             <Row dim={sub && !overlays[sub]} className={sub && "pl-4"}>
-              {label}
-              <SkySwitch checked={overlays[key]} label={label} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
+              {t(label)}
+              <SkySwitch checked={overlays[key]} label={t(label)} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
             </Row>
             {/* Grid RA labels are in hours, as everywhere else on the screen (Figma "Coordinate grid hint"). */}
-            {key === "grid" && <p className="-mt-1 mb-0.5 text-[11.5px] text-ash">RA in hours: 1h = 15°</p>}
+            {key === "grid" && <p className="-mt-1 mb-0.5 text-[11.5px] text-ash">{t("layers.gridHint")}</p>}
           </Fragment>
         ))}
         <p className="mt-1 flex items-center gap-2 text-[11px] text-smoke">
-          Show or hide candidates
+          {t("shortcuts.candidates")}
           <Keycap>C</Keycap>
         </p>
       </div>

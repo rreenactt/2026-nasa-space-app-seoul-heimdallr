@@ -3,7 +3,9 @@
 import { ChevronDownIcon, CircleHelpIcon } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { cn } from "cn";
-import { MOST_RATED_LIMIT, RATING_LABELS, type MostRatedPlace, type RatingState } from "@/app/_lib/ratings/types";
+import { type Translate, useLocale, useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
+import { MOST_RATED_LIMIT, RATING_KEYS, type MostRatedPlace, type RatingState } from "@/app/_lib/ratings/types";
 import { ratingSummary } from "./rating-section";
 import { clearPlaces, type PlaceVisit, samePlace, usePlaceHistory } from "./place-history";
 import { useCandidateBatch, useCandidates } from "./candidates-context";
@@ -15,7 +17,7 @@ import {
   type ReviewEntry,
 } from "./review-queue";
 import { angularDistance, type EquatorialCoordinates, formatDec, formatRa } from "./sky-coordinates";
-import { MARK_LABELS, type MarkKind, StatusMark } from "./status-mark";
+import { MARK_LABEL_KEYS, type MarkKind, StatusMark } from "./status-mark";
 import { findTestTarget } from "./test-targets";
 import { useMostRated, useRatingSummary } from "./use-ratings";
 import { useView } from "./view-store";
@@ -23,17 +25,17 @@ import { useView } from "./view-store";
 type Tab = "view" | "sky" | "recent" | "rated";
 type Sort = "priority" | "snr" | "visits";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "view", label: "In view" },
-  { id: "sky", label: "Whole sky" },
-  { id: "recent", label: "Recent" },
-  { id: "rated", label: "Most rated" },
+const TABS: { id: Tab; label: MessageKey }[] = [
+  { id: "view", label: "review.tabInView" },
+  { id: "sky", label: "review.tabWholeSky" },
+  { id: "recent", label: "review.tabRecent" },
+  { id: "rated", label: "review.tabMostRated" },
 ];
 
-const SORTS: { id: Sort; label: string }[] = [
-  { id: "priority", label: "Priority" },
-  { id: "snr", label: "SNR" },
-  { id: "visits", label: "Visits" },
+const SORTS: { id: Sort; label: MessageKey }[] = [
+  { id: "priority", label: "review.sortPriority" },
+  { id: "snr", label: "review.snr" },
+  { id: "visits", label: "review.visits" },
 ];
 
 export function markOf(candidate: MovementCandidate): MarkKind {
@@ -42,11 +44,19 @@ export function markOf(candidate: MovementCandidate): MarkKind {
 }
 
 /** What a row calls a candidate: the Gaia DR3 verdict, then the tallied status once there is one. */
-export const MATCH_LABELS: Record<CandidateMatch, string> = { known: "Known mover", unidentified: "Unidentified" };
+export const MATCH_LABELS: Record<CandidateMatch, MessageKey> = {
+  known: "status.knownMover",
+  unidentified: "status.unidentified",
+};
 
-function candidateText(candidate: MovementCandidate) {
-  const tallied = candidate.status && candidate.status !== "needs-ratings" ? MARK_LABELS[markOf(candidate)] : undefined;
-  return [MATCH_LABELS[candidate.match], candidate.match === "unidentified" && tallied, candidate.synthetic && "synthetic"]
+function candidateText(candidate: MovementCandidate, t: Translate) {
+  const tallied =
+    candidate.status && candidate.status !== "needs-ratings" ? t(MARK_LABEL_KEYS[markOf(candidate)]) : undefined;
+  return [
+    t(MATCH_LABELS[candidate.match]),
+    candidate.match === "unidentified" && tallied,
+    candidate.synthetic && t("review.synthetic"),
+  ]
     .filter(Boolean)
     .join(", ");
 }
@@ -55,8 +65,9 @@ function candidateText(candidate: MovementCandidate) {
 const snrText = (snr: number) => (snr >= 1000 ? `${Math.round(snr / 1000)}k` : snr >= 100 ? snr.toFixed(0) : snr.toFixed(1));
 
 /** This browser's own rating, the only one shown before rating (decision #6). */
-const ratedText = (rating: RatingState | undefined) =>
-  rating?.mine ? `rated ${RATING_LABELS[rating.mine]}` : undefined;
+const ratedText = (rating: RatingState | undefined, t: Translate) =>
+  rating?.mine ? t("review.rated", { rating: t(RATING_KEYS[rating.mine]) }) : undefined;
+
 
 const count = (n: number) => n.toLocaleString("en-US");
 
@@ -99,6 +110,7 @@ export function ReviewQueuePanel({
   onStepListChange,
   onClose,
 }: ReviewQueuePanelProps) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>("view");
   const [sort, setSort] = useState<Sort>("priority");
   const view = useView();
@@ -122,32 +134,32 @@ export function ReviewQueuePanel({
   const total = all.filter((candidate) => candidate.status !== "excluded").length;
   const summary =
     tab === "rated"
-      ? `Places people rated most, top ${MOST_RATED_LIMIT}`
+      ? t("review.ratedSubtitle", { n: MOST_RATED_LIMIT })
       : tab === "recent"
-      ? `${count(history.length)} ${history.length === 1 ? "place" : "places"} opened in this browser`
+      ? t(history.length === 1 ? "review.placesOpenedOne" : "review.placesOpenedOther", { n: count(history.length) })
       : batch.state === "unavailable"
-        ? "Candidates could not be loaded"
+        ? t("review.loadFailed")
         : batch.state === "empty" || total === 0
-          ? "No candidates in the batch yet"
-          : `${count(total)} in the batch · ${count(batch.pointsSearched)} places searched`;
+          ? t("review.batchEmpty")
+          : t("review.batchSummary", { total: count(total), searched: count(batch.pointsSearched) });
 
   return (
     <section
-      aria-label="Review queue"
+      aria-label={t("review.title")}
       className="flex h-full w-[372px] flex-col rounded-[2px] bg-ink/86 text-bone backdrop-blur-sm"
     >
       <header className="px-5 pt-[18px]">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-light tracking-[-0.01em] text-paper">Review queue</h2>
+          <h2 className="text-xl font-light tracking-[-0.01em] text-paper">{t("review.heading")}</h2>
           <button type="button" className="text-[13px] text-ash hover:text-paper" onClick={onClose}>
-            Hide
+            {t("review.hide")}
           </button>
         </div>
         <p className="mt-0.5 text-xs text-ash">{summary}</p>
       </header>
 
       <div className="mt-3 flex items-center px-5">
-        <div role="tablist" aria-label="Which places" className="flex shrink-0 gap-3">
+        <div role="tablist" aria-label={t("review.tabsLabel")} className="flex shrink-0 gap-3">
           {TABS.map((item) => (
             <button
               key={item.id}
@@ -160,14 +172,14 @@ export function ReviewQueuePanel({
                 tab === item.id ? "border-paper font-medium text-paper" : "border-transparent text-ash hover:text-paper",
               )}
             >
-              {item.label}
+              {t(item.label)}
             </button>
           ))}
         </div>
         {/* Four tabs leave no room for a visible "Sort" word (Figma "I · Review, queue open · real candidates"). */}
         {(tab === "view" || tab === "sky") && (
           <label className="ml-auto flex items-center gap-2 text-[13px]">
-            <span className="sr-only">Sort</span>
+            <span className="sr-only">{t("review.sort")}</span>
             <span className="relative flex items-center">
               <select
                 value={sort}
@@ -176,7 +188,7 @@ export function ReviewQueuePanel({
               >
                 {SORTS.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.label}
+                    {t(item.label)}
                   </option>
                 ))}
               </select>
@@ -200,22 +212,22 @@ export function ReviewQueuePanel({
           <MatchCounts candidates={all} filter={filter} onChange={onFilterChange} />
           <div className="grid grid-cols-[10px_minmax(0,1fr)_40px_40px] gap-x-2.5 border-t border-rule px-5 pt-2.5 pb-1 text-[11px] text-smoke">
             <span />
-            <span>Candidate, RA Dec</span>
-            <span className="text-right">Visits</span>
-            <span className="text-right">SNR</span>
+            <span>{t("review.columnCandidate")}</span>
+            <span className="text-right">{t("review.visits")}</span>
+            <span className="text-right">{t("review.snr")}</span>
           </div>
           <ol className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
             {batch.state === "unavailable" ? (
               <li className="px-5 py-3 text-xs leading-5 text-ash">
-                The candidate list could not be loaded just now. Test targets still work; try again in a few minutes.
+                {t("review.listUnavailable")}
               </li>
             ) : total === 0 ? (
               <li className="px-5 py-3 text-xs leading-5 text-ash">
-                No movement candidates yet. They appear here once the detection pipeline has run on a region.
+                {t("review.listEmpty")}
               </li>
             ) : candidates.length === 0 ? (
               <li className="px-5 py-3 text-xs text-ash">
-                {tab === "view" ? "No candidates in view. Try Whole sky or zoom out." : "No candidates match these filters."}
+                {tab === "view" ? t("review.noneInView") : t("review.noneMatch")}
               </li>
             ) : null}
             {candidates.map((entry) => (
@@ -228,7 +240,7 @@ export function ReviewQueuePanel({
                 onSelect={onSelect}
               />
             ))}
-            {tests.length > 0 && <li className="px-5 pt-3 pb-1 text-[11px] text-smoke">Test targets</li>}
+            {tests.length > 0 && <li className="px-5 pt-3 pb-1 text-[11px] text-smoke">{t("common.testTargets")}</li>}
             {tests.map((entry) => (
               <EntryRow
                 key={entry.id}
@@ -240,7 +252,7 @@ export function ReviewQueuePanel({
               />
             ))}
           </ol>
-          <p className="px-5 py-2 text-[11px] text-smoke">Candidates, not detections.</p>
+          <p className="px-5 py-2 text-[11px] text-smoke">{t("review.notDetections")}</p>
           <QueueActions canOpen={!!pickedId} canStep={queue.length > 0} onOpen={onOpenPicked} onStep={onStep} />
         </>
       )}
@@ -260,6 +272,7 @@ function QueueActions({
   onOpen: () => void;
   onStep: (direction: 1 | -1) => void;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-2 border-t border-rule px-5 py-2.5">
       <button
@@ -268,7 +281,7 @@ function QueueActions({
         disabled={!canOpen}
         className="h-8 w-[150px] rounded-[2px] bg-paper text-sm font-medium text-ink transition-colors hover:bg-bone disabled:opacity-40"
       >
-        Open blink
+        {t("review.openBlink")}
       </button>
       <button
         type="button"
@@ -276,7 +289,7 @@ function QueueActions({
         disabled={!canStep}
         className="ml-auto px-3 text-sm text-ash hover:text-paper disabled:opacity-40"
       >
-        Previous
+        {t("review.previous")}
       </button>
       <button
         type="button"
@@ -284,14 +297,14 @@ function QueueActions({
         disabled={!canStep}
         className="pl-3 text-sm font-medium text-paper hover:text-bone disabled:opacity-40"
       >
-        Next
+        {t("review.next")}
       </button>
     </div>
   );
 }
 
 /** A rated cell as a stop in the queue: the listed candidate it holds, or the cell itself. */
-function ratedEntry(place: MostRatedPlace, candidates: MovementCandidate[]): ReviewEntry {
+function ratedEntry(place: MostRatedPlace, candidates: MovementCandidate[], t: Translate): ReviewEntry {
   const listed = place.candidate && candidates.find((candidate) => samePlace(candidate, place.candidate!));
   if (listed) return { kind: "candidate", id: listed.id, name: listed.id, point: listed, candidate: listed };
   if (place.candidate) {
@@ -299,7 +312,7 @@ function ratedEntry(place: MostRatedPlace, candidates: MovementCandidate[]): Rev
     const { id, ra, dec } = place.candidate;
     return { kind: "place", id, name: id, point: { ra, dec } };
   }
-  return { kind: "place", id: `cell ${place.ra} ${place.dec}`, name: "Sky cell", point: { ra: place.ra, dec: place.dec } };
+  return { kind: "place", id: `cell ${place.ra} ${place.dec}`, name: t("review.skyCell"), point: { ra: place.ra, dec: place.dec } };
 }
 
 /**
@@ -318,11 +331,12 @@ function MostRatedPlaces({
   onStepListChange: (list: ReviewEntry[] | null) => void;
   actions: ReactNode;
 }) {
+  const t = useT();
   const places = useMostRated(true);
   const candidates = useCandidates();
   const rows = useMemo(
-    () => (places.data ?? []).map((place) => ({ place, entry: ratedEntry(place, candidates) })),
-    [places.data, candidates],
+    () => (places.data ?? []).map((place) => ({ place, entry: ratedEntry(place, candidates, t) })),
+    [places.data, candidates, t],
   );
   useEffect(() => {
     onStepListChange(rows.map((row) => row.entry));
@@ -332,13 +346,13 @@ function MostRatedPlaces({
   return (
     <>
       <div className="px-5 pt-3.5 pb-3 text-xs leading-[18px]">
-        <p className="text-ash">A count is attention, not a result.</p>
-        <p className="text-smoke">How people rated shows only where you rated too.</p>
+        <p className="text-ash">{t("review.ratedCountNote")}</p>
+        <p className="text-smoke">{t("review.ratedHiddenNote")}</p>
       </div>
       <div className="grid grid-cols-[12px_minmax(0,1fr)_48px] gap-x-2.5 border-t border-rule px-5 pt-2.5 pb-1 text-[11px] text-smoke">
         <span />
-        <span>Place, RA Dec</span>
-        <span className="text-right">Ratings</span>
+        <span>{t("review.ratedColumnPlace")}</span>
+        <span className="text-right">{t("review.ratedColumnRatings")}</span>
       </div>
       <ol className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
         {places.isPending &&
@@ -351,12 +365,12 @@ function MostRatedPlaces({
           ))}
         {places.isError && (
           <li className="px-5 py-3 text-[13px] leading-5 text-red-400">
-            Could not load the ratings just now. Switch tabs or reopen the queue to try again.
+            {t("review.ratedLoadFailed")}
           </li>
         )}
         {places.data?.length === 0 && (
           <li className="px-5 py-3 text-[13px] leading-5 text-ash">
-            No ratings yet. Open a place, play the blink and rate it; it shows up here.
+            {t("review.ratedEmpty")}
           </li>
         )}
         {rows.map(({ place, entry }, index) => (
@@ -371,7 +385,7 @@ function MostRatedPlaces({
         ))}
       </ol>
       {rows.length > 0 && (
-        <p className="px-5 py-2 text-[11px] text-smoke">Top {MOST_RATED_LIMIT} sky cells, about 1.7′ each.</p>
+        <p className="px-5 py-2 text-[11px] text-smoke">{t("review.ratedFooter", { n: MOST_RATED_LIMIT })}</p>
       )}
       {actions}
     </>
@@ -394,7 +408,8 @@ function RatedRow({
   const candidate = entry.kind === "candidate" ? entry.candidate : null;
   const match = candidate?.match ?? place.candidate?.match;
   // "You rated 🌠 Moving · 3 ratings · …", only where this browser rated (decision #6).
-  const rated = ratingSummary(place.state);
+  const t = useT();
+  const rated = ratingSummary(place.state, t);
   return (
     <li className="relative after:absolute after:right-5 after:bottom-0 after:left-[50px] after:h-px after:bg-rule last:after:hidden">
       <button
@@ -413,7 +428,7 @@ function RatedRow({
               <StatusMark kind={candidate ? markOf(candidate) : match === "known" ? "known" : "needs-ratings"} className="size-2.5 shrink-0" />
             )}
             <span className={cn("shrink-0 text-sm font-medium", match ? "text-paper" : "text-ash")}>{entry.name}</span>
-            {match && <span className="truncate text-xs text-ash">{MATCH_LABELS[match]}</span>}
+            {match && <span className="truncate text-xs text-ash">{t(MATCH_LABELS[match])}</span>}
           </span>
           <span className="block font-data text-[10.5px] text-bone/80">
             {formatRa(entry.point.ra)}&nbsp;&nbsp;{formatDec(entry.point.dec)}
@@ -433,9 +448,9 @@ const STATUS_FILTERS: { kind: MarkKind; status: CandidateStatus }[] = [
 ];
 
 /** What each kind of candidate asks of the person reviewing it (Figma "I · Review, queue open · real candidates"). */
-const MATCH_LINES: { match: CandidateMatch; kind: MarkKind; note: string }[] = [
-  { match: "unidentified", kind: "needs-ratings", note: "Your call: no catalog explains it" },
-  { match: "known", kind: "known", note: "Answer key: Gaia DR3 explains it" },
+const MATCH_LINES: { match: CandidateMatch; kind: MarkKind; note: MessageKey }[] = [
+  { match: "unidentified", kind: "needs-ratings", note: "review.yourCall" },
+  { match: "known", kind: "known", note: "review.answerKey" },
 ];
 
 /**
@@ -451,6 +466,7 @@ function MatchCounts({
   filter: CandidateFilter;
   onChange: (filter: CandidateFilter) => void;
 }) {
+  const t = useT();
   const listed = candidates.filter((candidate) => candidate.status !== "excluded");
   const tallied = listed.some((candidate) => candidate.status !== undefined);
   return (
@@ -471,12 +487,12 @@ function MatchCounts({
             >
               <span className={cn("flex items-center gap-1.5", active && "underline underline-offset-4")}>
                 <StatusMark kind={kind} className="size-2.5" />
-                {MATCH_LABELS[match]}
+                {t(MATCH_LABELS[match])}
               </span>
               <span className="pr-1.5 font-medium text-paper">
                 {count(listed.filter((candidate) => candidate.match === match).length)}
               </span>
-              <span className="truncate text-smoke">{note}</span>
+              <span className="truncate text-smoke">{t(note)}</span>
             </button>
           );
         })}
@@ -498,7 +514,7 @@ function MatchCounts({
                 )}
               >
                 <StatusMark kind={kind} className="size-2.5" />
-                {MARK_LABELS[kind]}
+                {t(MARK_LABEL_KEYS[kind])}
                 <span className="font-medium text-paper">{count(n)}</span>
               </button>
             );
@@ -522,8 +538,13 @@ function EntryRow({
   seen: boolean;
   onSelect: (entry: ReviewEntry) => void;
 }) {
+  const t = useT();
   const candidate = entry.kind === "candidate" ? entry.candidate : null;
-  const status = [candidate ? candidateText(candidate) : "Test target", seen && "seen", ratedText(rating)]
+  const status = [
+    candidate ? candidateText(candidate, t) : t("status.testTarget"),
+    seen && t("review.seen"),
+    ratedText(rating, t),
+  ]
     .filter(Boolean)
     .join(", ");
   const faded = seen && !current;
@@ -560,34 +581,41 @@ function EntryRow({
 }
 
 /** What a recent place was: a candidate, a test target or a clicked point, with this browser's rating if any. */
-function describeVisit(visit: PlaceVisit, rating: RatingState | undefined, candidates: MovementCandidate[]) {
+function describeVisit(
+  visit: PlaceVisit,
+  rating: RatingState | undefined,
+  candidates: MovementCandidate[],
+  t: Translate,
+) {
   const candidate = candidates.find((item) => samePlace(item, visit));
   const target = findTestTarget(visit);
-  const rated = ratedText(rating);
+  const rated = ratedText(rating, t);
   if (candidate) {
     return {
       mark: markOf(candidate),
       name: candidate.id,
-      note: `${candidateText(candidate)}, ${rated ?? "not rated yet"}`,
+      note: `${candidateText(candidate, t)}, ${rated ?? t("review.notRatedYet")}`,
     };
   }
-  if (target) return { mark: "test" as const, name: target.name, note: ["Test target", rated].filter(Boolean).join(", ") };
+  if (target) return { mark: "test" as const, name: target.name, note: [t("status.testTarget"), rated].filter(Boolean).join(", ") };
   return {
     mark: "opened" as const,
-    name: visit.name ?? "Clicked point",
-    note: ["No candidate here", rated].filter(Boolean).join(", "),
+    name: visit.name ?? t("review.clickedPoint"),
+    note: [t("review.noCandidateHere"), rated].filter(Boolean).join(", "),
   };
 }
 
-function clock(at: number) {
+function clock(at: number, korean: boolean) {
   const date = new Date(at);
   const today = new Date().toDateString() === date.toDateString();
   return today
     ? date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    : date.toLocaleDateString(korean ? "ko-KR" : "en-US", { month: "short", day: "numeric" });
 }
 
 function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (place: EquatorialCoordinates) => void }) {
+  const t = useT();
+  const { locale } = useLocale();
   const [picked, setPicked] = useState(0);
   const ratings = useRatingSummary(history.slice(0, 50));
   const candidates = useCandidates();
@@ -607,10 +635,10 @@ function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (pla
     <>
       <ol className="mt-3.5 min-h-0 flex-1 overflow-y-auto border-t border-rule">
         {history.length === 0 && (
-          <li className="px-5 py-3 text-xs text-ash">Places you open appear here, newest first.</li>
+          <li className="px-5 py-3 text-xs text-ash">{t("review.recentEmpty")}</li>
         )}
         {history.map((visit, index) => {
-          const { mark, name, note } = describeVisit(visit, ratings.data?.[index], candidates);
+          const { mark, name, note } = describeVisit(visit, ratings.data?.[index], candidates, t);
           const current = visit === selected;
           return (
             <li
@@ -635,21 +663,21 @@ function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (pla
                     {formatRa(visit.ra)}&nbsp;&nbsp;{formatDec(visit.dec)}
                   </span>
                 </span>
-                <span className="self-start pt-3 text-xs text-ash">{clock(visit.at)}</span>
+                <span className="self-start pt-3 text-xs text-ash">{clock(visit.at, locale === "ko")}</span>
               </button>
             </li>
           );
         })}
       </ol>
       <div className="flex items-center justify-between px-5 py-2.5">
-        <span className="text-[11px] text-smoke">Kept in this browser only.</span>
+        <span className="text-[11px] text-smoke">{t("review.keptHere")}</span>
         <button
           type="button"
           disabled={history.length === 0}
           onClick={clearPlaces}
           className="text-xs text-ash hover:text-paper disabled:text-smoke"
         >
-          Clear
+          {t("review.clear")}
         </button>
       </div>
       <div className="flex items-center gap-2 border-t border-rule px-5 py-2.5">
@@ -659,7 +687,7 @@ function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (pla
           onClick={() => selected && onOpen(selected)}
           className="h-8 w-[150px] rounded-[2px] bg-paper text-sm font-medium text-ink transition-colors hover:bg-bone disabled:opacity-40"
         >
-          Go to place
+          {t("review.goToPlace")}
         </button>
         <button
           type="button"
@@ -667,7 +695,7 @@ function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (pla
           onClick={copy}
           className="ml-auto text-sm text-ash hover:text-paper disabled:opacity-40"
         >
-          {copied ? "Copied" : "Copy coordinates"}
+          {copied ? t("common.copied") : t("common.copyCoordinates")}
         </button>
       </div>
     </>
@@ -675,10 +703,10 @@ function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (pla
 }
 
 /** The three ratings with a schematic of each (Figma "I · Review, rating guide open"). Drawings, not data. */
-const RATING_GUIDE: { label: string; body: string; drawing: ReactNode }[] = [
+const RATING_GUIDE: { label: MessageKey; body: MessageKey; drawing: ReactNode }[] = [
   {
-    label: "Moving",
-    body: "A dot shifts between visits",
+    label: "review.moving",
+    body: "review.guideMoving",
     drawing: (
       <>
         <circle cx="26.5" cy="58.5" r="2.5" className="fill-paper/30" />
@@ -688,13 +716,13 @@ const RATING_GUIDE: { label: string; body: string; drawing: ReactNode }[] = [
     ),
   },
   {
-    label: "Not moving",
-    body: "Stays put; brightness may change",
+    label: "review.notMoving",
+    body: "review.guideNotMoving",
     drawing: <circle cx="44" cy="44" r="4" className="fill-paper" />,
   },
   {
-    label: "Noise or artifact",
-    body: "One visit only, streak or ghost",
+    label: "review.noiseOrArtifact",
+    body: "review.guideNoise",
     drawing: <line x1="16" y1="72" x2="72" y2="16" className="stroke-paper/70" strokeWidth="1.5" />,
   },
 ];
@@ -704,6 +732,7 @@ const RATING_GUIDE: { label: string; body: string; drawing: ReactNode }[] = [
  * 316px wide, above the tool column.
  */
 export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useT();
   if (!open) {
     return (
       <button
@@ -713,20 +742,20 @@ export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChang
         className="flex h-7 items-center gap-1.5 rounded-[2px] bg-ink/70 px-2.5 text-[13px] font-medium text-mist transition-colors hover:text-paper"
       >
         <CircleHelpIcon className="size-4 stroke-[1.5]" aria-hidden />
-        How to rate
+        {t("review.howToRate")}
       </button>
     );
   }
   return (
     <section
-      aria-label="How to rate"
+      aria-label={t("review.howToRate")}
       onKeyDown={(event) => event.key === "Escape" && onOpenChange(false)}
       className="w-[316px] rounded-[2px] bg-ink/86 px-[18px] pt-4 pb-3.5 text-bone backdrop-blur-sm"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-paper">What does a moving object look like?</h2>
+        <h2 className="text-sm font-medium text-paper">{t("review.guideTitle")}</h2>
         <button type="button" autoFocus className="text-xs text-ash hover:text-paper" onClick={() => onOpenChange(false)}>
-          Close
+          {t("common.close")}
         </button>
       </div>
       <dl className="mt-3 grid grid-cols-3 gap-2">
@@ -735,8 +764,8 @@ export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChang
             <svg viewBox="0 0 88 88" aria-hidden className="size-[88px] rounded-[2px] border border-rule bg-[#0a0a0a]">
               {rating.drawing}
             </svg>
-            <dt className="mt-2 text-[12.5px] font-medium whitespace-nowrap text-paper">{rating.label}</dt>
-            <dd className="text-[11px] leading-[15px] text-ash">{rating.body}</dd>
+            <dt className="mt-2 text-[12.5px] font-medium whitespace-nowrap text-paper">{t(rating.label)}</dt>
+            <dd className="text-[11px] leading-[15px] text-ash">{t(rating.body)}</dd>
           </div>
         ))}
       </dl>

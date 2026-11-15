@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import type { SkyView } from "./sky-coordinates";
 
 /** Imagery for the sky screen: one HiPS that Aladin Lite renders at every field of view. */
@@ -10,8 +11,10 @@ export type SkySurvey = {
   shortName: string;
   /** About when the imagery was taken (year), for overlays that place moving stars at a date. */
   year: number;
-  /** Shown when the survey stands in for the SPHEREx imagery. */
+  /** Shown when the survey stands in for the SPHEREx imagery. English; screens show `t(noticeKey)`. */
   notice?: string;
+  /** Translation key for `notice`. */
+  noticeKey?: MessageKey;
 };
 
 /** Intended imagery: the SPHEREx QR2 color HiPS published by CDS. Browsing only; analysis uses IRSA DR1/QR3 cutouts. */
@@ -34,6 +37,7 @@ export const TWO_MASS_COLOR_SURVEY: SkySurvey = {
   year: 1999,
   // Figma "I · Explore": one line. Why (the CDS outage) is on the Method page under "Data sources and credits".
   notice: "Temporary background: 2MASS, not SPHEREx",
+  noticeKey: "sky.backgroundNotice",
 };
 
 /** Switch back to SPHEREX_COLOR_SURVEY once CDS serves the SPHEREx tiles again. */
