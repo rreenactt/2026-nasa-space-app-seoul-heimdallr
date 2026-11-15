@@ -2,7 +2,7 @@
 
 **Live site: <https://2026-nasa-space-app-seoul-heimdallr.vercel.app/>**
 
-A public web tool for seeing how the sky changes in NASA's SPHEREx survey. Explore the whole sky, click any point (or type its RA/Dec), and watch the SPHEREx images of that patch play as a blink animation, the way Clyde Tombaugh found Pluto. Machines suggest where to look; people check.
+A public web tool for seeing how the sky changes in NASA's SPHEREx survey. Explore the whole sky, click any point (or type its RA/Dec), and watch the SPHEREx images of that patch play as a blink animation, the way Clyde Tombaugh found Pluto. Our team analyzes the survey and updates a list of candidates regularly; anyone can check them.
 
 Built by team HEIMDALLR for the [NASA International Space Apps Challenge](https://www.spaceappschallenge.org/) 2026 (Seoul), challenge **Planet X and SPHEREx**.
 

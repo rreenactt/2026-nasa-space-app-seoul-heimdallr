@@ -8,7 +8,7 @@
 
 ## What it does
 
-HEIMDALLR lets anyone look for things that move or change in NASA's SPHEREx all-sky survey, the way Clyde Tombaugh found Pluto: by flipping between images of the same sky taken at different times. Machines suggest where to look, and people check.
+HEIMDALLR lets anyone look for things that move or change in NASA's SPHEREx all-sky survey, the way Clyde Tombaugh found Pluto: by flipping between images of the same sky taken at different times. Our team analyzes the survey and regularly updates a list of moving-object candidates, and anyone can check them.
 
 1. Explore the sky. A full-screen sky view (Aladin Lite, from 120° down to a few arcminutes) with a coordinate grid, constellation lines, and the RA/Dec under the cursor. Search takes coordinates or a candidate's name, and every view has a shareable link.
 2. Open the review queue. Candidates found by our survey, plus the five challenge test targets, wait in a queue you can filter by the part of the sky in view. Each one says whether Gaia already explains it ("answer key") or nobody does ("your call").
@@ -59,7 +59,7 @@ What this shows: SPHEREx positions match Gaia to a fraction of a pixel when the 
 ## Design choices
 
 - Candidates, not detections. The tool never claims a discovery, including Planet X. Anything that moves is a candidate for a person to check.
-- Machines suggest, people check. The survey only orders where to look; people's ratings decide what stays.
+- The team analyzes, updates, and anyone checks. Our survey runs are refreshed regularly and only order where to look; people's ratings decide what stays.
 - No invented data. Missing observations are shown as missing; drawings are labelled as drawings; synthetic data is always labelled synthetic.
 - Positions with dates. A moving object's coordinates always carry the time they were observed.
 - Open to anyone. No sign-in, one rating per browser, shareable links, and plain-language explanations next to the formulas.
