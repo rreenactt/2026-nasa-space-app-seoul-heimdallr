@@ -46,6 +46,8 @@ lib/
 ├── highlighter.tsx      # Shiki code highlighter from shadcn (code-block), do not edit
 ├── ky.ts                # HTTP client
 ├── query-client.ts      # TanStack Query client
+├── storage.ts           # Cloudflare R2 via AWS SDK (server-only): put/get/head/delete, presigned upload URLs
+├── upload.ts            # Browser upload to a presigned URL with progress (client-only)
 └── utils.ts             # cn re-export (shadcn alias)
 .github/workflows/
 └── vercel-production.yml # Checks, then deploys main to Vercel production
