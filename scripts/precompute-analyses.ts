@@ -13,7 +13,7 @@
  *   RESPONSE_CACHE_WRITE=1 pnpm start --port 3100        # in another terminal, after pnpm build
  *   NODE_PATH=node_modules/next/dist/compiled npx tsx scripts/precompute-analyses.ts <targets.json> [http://localhost:3100]
  *
- * Environment: PAR places at once (default 3), ONLY=test|candidates, LIMIT=n places.
+ * Environment: PAR places at once (default 3), ONLY=test|candidates, LIMIT=n places, BLINK_ONLY=1.
  */
 import { appendFileSync, readFileSync } from "node:fs";
 import { QueryClient } from "@tanstack/react-query";
@@ -41,7 +41,9 @@ globalThis.Request = class extends NativeRequest {
 const BLINK_CUTOUT_PX = 48;
 /** Must match analyses-context.tsx (Sky Time Machine field when opened from the panel). */
 const STM_FOV_ARCMIN = 8;
-const ANALYSES: AnalysisId[] = ["sky-time-machine", "fake-planet-lab", "sky-sonata", "neighborhood-in-motion"];
+/** BLINK_ONLY=1 fills only the basic analysis, which every panel shows first. */
+const BLINK_ONLY = process.env.BLINK_ONLY === "1";
+const ANALYSES: AnalysisId[] = BLINK_ONLY ? [] : ["sky-time-machine", "fake-planet-lab", "sky-sonata", "neighborhood-in-motion"];
 const PAR = Number(process.env.PAR ?? 3);
 
 interface Place {
@@ -132,7 +134,7 @@ async function main() {
   if (process.env.LIMIT) places = places.slice(0, Number(process.env.LIMIT));
 
   // Comet Breath has one fixed object (3I/ATLAS): once for every place.
-  await prefetchAnalysis("comet-breath", {
+  if (!BLINK_ONLY) await prefetchAnalysis("comet-breath", {
     qc: new QueryClient(),
     ra: 0,
     dec: 0,

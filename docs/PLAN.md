@@ -237,7 +237,7 @@ flowchart LR
 | 기법 | 한 줄 설명 | 화면 배치 |
 | --- | --- | --- |
 | [Sky Time Machine](analyses/sky-time-machine.md) | 2MASS부터 SPHEREx까지 25년 적외선 하늘을 한 슬라이더로 비교 | 추가 분석 목록 |
-| [Fake Planet Lab](analyses/fake-planet-lab.md) | 우주선 흔적·유령상·포화·잔상을 레이어로 보여주는 오탐 판별 | 추가 분석 목록 |
+| [Fake Planet Lab](analyses/fake-planet-lab.md) | 우주선 흔적·유령상·포화·잔상을 레이어로 보여주는 오탐 판별, 같은 파장끼리 방문 간 밝기 비교 | 추가 분석 목록 |
 | [Neighborhood in Motion](analyses/neighborhood-in-motion.md) | 근접 천체를 3D 공간에서 수천 년 앞뒤로 이동 | 추가 분석 목록 (조건부) |
 | [Sky Sonata](analyses/sky-sonata.md) | 하늘의 변화를 소리로 듣는 접근성 도구 | 추가 분석 목록 |
 | [Comet Breath](analyses/comet-breath.md) | 성간 혜성 3I/ATLAS의 시기별 분자 방출 비교 | 특별 대상 페이지 권장 · **배치 논의 필요** |
@@ -503,6 +503,7 @@ flowchart LR
   - 사전 저장: `scripts/precompute-analyses.ts`가 브라우저와 똑같은 요청(블링크는 `blink-context.tsx`, 추가 분석은 `prefetchAnalysis`)을 보낸다. 대상은 테스트 대상 5개(핀 위치와 SPHEREx 시점 위치), 최신 조사의 검토 후보 303개(`motion-survey.ts targets`, 미확인 먼저), 3I/ATLAS 첫 프레임. 다시 돌리면 저장된 응답은 바로 돌아오고 IRSA 장애로 실패한 것만 다시 처리한다.
   - 저장하는 것은 API가 화면에 보내는 결과(작은 컷아웃 배열, 정렬한 격자 이미지, 목록과 IRSA 링크)이고 원본 FITS 파일은 저장하지 않는다(절대 원칙 7).
   - 프로덕션에서 쓰려면 Vercel 프로젝트 환경 변수에 `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`이 있어야 한다.
+
 #### 장애 대응
 
 - IRSA가 느리거나 응답하지 않아도 사전 저장 계층은 그대로 동작한다. 데모는 사전 저장 좌표로 진행한다.
