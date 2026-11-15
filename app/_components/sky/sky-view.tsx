@@ -26,6 +26,8 @@ export type SkyPaintFrame = {
   radius: number;
   width: number;
   height: number;
+  /** Whether a screen point (CSS px) is hidden under the page's interface (a panel, a card, the tool bar). */
+  covered: (x: number, y: number) => boolean;
 };
 /**
  * Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes, or on
@@ -40,6 +42,7 @@ export type SettledSky = SkyView & {
   height: number;
   /** Angular distance (degrees) from the center to the farthest screen corner. */
   radius: number;
+  covered: SkyPaintFrame["covered"];
   /** Screen position (CSS px) of a sky position in the current view, or null when it is outside the projection. */
   project: (ra: number, dec: number) => [number, number] | null;
 };
@@ -185,6 +188,16 @@ export default function SkyView({
           const pixel = aladin.world2pix(ra, dec);
           return pixel ? [pixel[0], pixel[1]] : null;
         };
+        // Hit-tests the page: a point is covered when what sits on top there is not part of the sky view. When even the
+        // center is covered (the intro, a dialog), nothing counts as covered, so a full-screen layer does not hide all.
+        const outside = (box: DOMRect, x: number, y: number) => {
+          const hit = document.elementFromPoint(box.left + x, box.top + y);
+          return hit !== null && !element.contains(hit);
+        };
+        const covered = (x: number, y: number) => {
+          const box = element.getBoundingClientRect();
+          return outside(box, x, y) && !outside(box, box.width / 2, box.height / 2);
+        };
         // The view's reach, from where its corners actually land on the sky (the field of view alone is only the
         // horizontal span, and the projection stretches toward the corners). Worked out again when the view changes.
         let radiusFor = "";
@@ -236,6 +249,7 @@ export default function SkyView({
               width: element.clientWidth,
               height: element.clientHeight,
               project,
+              covered,
             });
           }
           const marks = markCanvas.current;
@@ -252,6 +266,7 @@ export default function SkyView({
                 radius: reach(key, { ra: centerRa, dec: centerDec }, width, element.clientWidth, element.clientHeight),
                 width: element.clientWidth,
                 height: element.clientHeight,
+                covered,
               });
               if (again) paintedFor = "";
             }

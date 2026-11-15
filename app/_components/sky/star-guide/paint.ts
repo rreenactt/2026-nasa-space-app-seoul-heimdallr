@@ -3,8 +3,8 @@ import type { SkyPaintFrame } from "../sky-view";
 import type { GaiaStar } from "@/app/_lib/sky/types";
 import {
   GUIDE_MAX_FOV,
-  GUIDE_STARS,
   lightYears,
+  pickNumbered,
   positionAt,
   SPHEREX_EPOCH,
   type StarGuideState,
@@ -91,7 +91,7 @@ export function paintStarGuide(
   // Picked from the catalog around the current center on every frame (well under a millisecond), so a fast pan is
   // followed at once; the same on-screen test as the card's list.
   const visible = zoomedOut ? [] : starsOnScreen(state.catalog, frame);
-  const numbered = zoomedOut ? [] : !state.moving && state.listed.length > 0 ? state.listed : visible.slice(0, GUIDE_STARS);
+  const numbered = zoomedOut ? [] : !state.moving && state.listed.length > 0 ? state.listed : pickNumbered(visible, frame);
   const visibleIds = new Set(visible.map((star) => star.sourceId));
   const rankOf = new Map(numbered.map((star, index) => [star.sourceId, index + 1]));
 
@@ -194,17 +194,29 @@ export function paintStarGuide(
     const width = Math.max(w1, w2) + LABEL_PAD * 2;
     const height = LINE_1 + LINE_2 + 6;
 
-    // Up and to the right of the square, lifted until it clears the labels already placed.
+    // Up and to the right of the square, lifted until it clears the labels already placed and the interface (a label
+    // under the tool bar or a card cannot be read); when no lift clears the interface, the lowest free spot.
     const cornerX = Math.round(then[0] - BOX / 2) + 0.5 + BOX;
     const cornerY = Math.round(then[1] - BOX / 2) + 0.5;
-    let elbowY = cornerY - LEADER_RISE;
-    let rect: Rect = { x: 0, y: 0, w: width, h: height };
-    for (let attempt = 0; attempt < 8; attempt++) {
-      rect = { x: cornerX + (cornerY - elbowY) + LEADER_RUN, y: elbowY - height / 2, w: width, h: height };
-      if (!placed.some((other) => overlaps(rect, other))) break;
-      elbowY -= height + 4;
+    const spot = (lift: number): Rect => {
+      const elbow = cornerY - LEADER_RISE - lift * (height + 4);
+      return { x: cornerX + (cornerY - elbow) + LEADER_RUN, y: elbow - height / 2, w: width, h: height };
+    };
+    const hidden = (r: Rect) =>
+      [[r.x + 2, r.y + 2], [r.x + r.w - 2, r.y + 2], [r.x + 2, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]].some(
+        ([x, y]) => x >= 0 && y >= 0 && x <= frame.width && y <= frame.height && frame.covered(x, y),
+      );
+    let rect: Rect | null = null;
+    let fallback: Rect | null = null;
+    for (let lift = 0; lift < 8 && !rect; lift++) {
+      const candidate = spot(lift);
+      if (placed.some((other) => overlaps(candidate, other))) continue;
+      fallback ??= candidate;
+      if (!hidden(candidate)) rect = candidate;
     }
+    rect ??= fallback ?? spot(0);
     placed.push(rect);
+    const elbowY = rect.y + height / 2;
     const elbowX = cornerX + (cornerY - elbowY);
 
     // The leader grows out of the square, then the label fades in (and the reverse on the way out).

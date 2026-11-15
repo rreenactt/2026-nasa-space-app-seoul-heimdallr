@@ -67,6 +67,20 @@ export function buildCatalog(rows: CatalogRow[]): Catalog {
 const searchRadius = (view: { radius: number }) => view.radius + 0.1;
 
 /**
+ * The stars to number: the fastest on screen that are not hidden under the interface (the card, the tool bar), so
+ * every numbered star and its callout can be seen.
+ */
+export function pickNumbered(stars: GaiaStar[], view: { project: SettledSky["project"]; covered: SettledSky["covered"] }) {
+  const picked: GaiaStar[] = [];
+  for (const star of stars) {
+    if (picked.length === GUIDE_STARS) break;
+    const point = view.project(...positionAt(star, SPHEREX_EPOCH));
+    if (point && !view.covered(point[0], point[1])) picked.push(star);
+  }
+  return picked;
+}
+
+/**
  * Catalog stars whose 2026 position is on screen, fastest first. The same test for the sky marks and the card, through
  * the view's own projection, so the two always agree.
  */
@@ -160,7 +174,7 @@ export function useStarGuide(enabled: boolean) {
   const listed = useMemo(
     () =>
       catalog.data && view && view.fov <= GUIDE_MAX_FOV
-        ? starsOnScreen(catalog.data, view).slice(0, GUIDE_STARS)
+        ? pickNumbered(starsOnScreen(catalog.data, view), view)
         : [],
     [catalog.data, view],
   );
