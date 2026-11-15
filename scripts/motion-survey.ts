@@ -14,15 +14,17 @@
  *      counted as motion.
  *   4. Pairs: a SPHEREx source (S/N ≥ 20) with no 2MASS source in place × a 2MASS source (Ks ≤ 14.5, quality A/B)
  *      bright enough for SPHEREx but with no SPHEREx detection there in any visit, minSep–90″ apart, fluxes within ×3.
- *   5. Gaia DR3 moved to both epochs: KNOWN_MOVER (explains both ends), GAIA_STATIC (only the SPHEREx end: a
- *      chance pair), UNIDENTIFIED (a candidate to check, never a detection, absolute principle 1).
+ *   5. Gaia DR3 moved to both epochs: KNOWN_MOVER (one star explains both ends), GAIA_STATIC (a Gaia star sits at
+ *      only one end, e.g. a static star SPHEREx missed: a chance pair), UNIDENTIFIED (a candidate to check, never
+ *      a detection, absolute principle 1). `reclassify` reapplies this to saved results.
  * Nothing but metadata is kept: cutouts stay in memory (absolute principle 7).
  *
  * Usage (from the repo root; `react-server` lets the server-only modules load outside Next):
  *   npx tsx --conditions=react-server --env-file=.env scripts/motion-survey.ts survey <random|control> <n> <out.jsonl>
  *   npx tsx --conditions=react-server --env-file=.env scripts/motion-survey.ts import <out.jsonl> <surveyId>
+ *   npx tsx --conditions=react-server --env-file=.env scripts/motion-survey.ts targets <out.json>
  */
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { decodeBits } from "@/app/_lib/fpl/flags";
 import { readRemoteCutout, type RangeFetcher } from "@/app/_lib/comet/remote-fits";
 import { skyToPixel as tanSipSkyToPixel, wavelengthAt } from "@/app/_lib/comet/wcs";
@@ -32,7 +34,7 @@ import type { SkyGrid } from "@/app/_lib/sky/types";
 import { ang2pixNest, RATING_HPX_ORDER } from "@/app/api/ratings/_server/healpix";
 import type { CandidateInput, PointInput } from "@/data/motion-candidates";
 
-export const PIPELINE_VERSION = "sx2mass-3";
+export const PIPELINE_VERSION = "sx2mass-4";
 const RELEASE = "spherex_dr1";
 const P = {
   gridFovArcmin: 8,
@@ -220,6 +222,25 @@ async function gaiaCone(ra: number, dec: number, radiusDeg: number): Promise<Gai
   return parseCsv(csv).map((r) => ({ id: r.source_id, ra: Number(r.ra), dec: Number(r.dec), pmra: Number(r.pmra) || 0, pmdec: Number(r.pmdec) || 0, g: Number(r.phot_g_mean_mag) }));
 }
 
+/**
+ * Gaia check of one pair. KNOWN_MOVER: one star is at the SPHEREx end at the SPHEREx epoch and at the 2MASS end at
+ * the 2MASS epoch. GAIA_STATIC: a star sits at only one end (checked on 2026-11-15: the six strongest unidentified
+ * pairs of the first 75,756-point run all had a static Gaia star, G 15.6–18.8, on the 2MASS end that SPHEREx missed).
+ */
+export function classifyPair(stars: Gaia[], s: { ra: number; dec: number; mjd: number }, t: { ra: number; dec: number; mjd: number }, endR: number) {
+  let one: { id: string; pm: number; sep: number } | null = null;
+  for (const star of stars) {
+    const a = gaiaAt(star, s.mjd);
+    const sepS = separationArcsec(a.ra, a.dec, s.ra, s.dec);
+    const b = gaiaAt(star, t.mjd);
+    const sepT = separationArcsec(b.ra, b.dec, t.ra, t.dec);
+    const pm = Math.hypot(star.pmra, star.pmdec);
+    if (sepS <= endR && sepT <= P.gaiaEndArcsec + 1) return { match: "KNOWN_MOVER" as const, g: { id: star.id, pm, sep: sepS } };
+    if (!one && (sepS <= endR || sepT <= P.gaiaEndArcsec + 1)) one = { id: star.id, pm, sep: sepS };
+  }
+  return one ? { match: "GAIA_STATIC" as const, g: one } : { match: "UNIDENTIFIED" as const, g: null };
+}
+
 /** Gaia DR3 position (epoch 2016.0) moved linearly to an MJD; parallax ignored (< 1″ for all but a few stars). */
 function gaiaAt(s: Gaia, mjd: number) {
   const dt = mjdYear(mjd) - 2016.0;
@@ -350,18 +371,7 @@ export async function surveyPoint(pt: { kind: string; label: string; ra: number;
       const pmDec = ((s.dec - b.dec) * 3.6e6) / years;
       // Gaia: a star moved to the SPHEREx epoch at s, and to the 2MASS epoch at the 2MASS source.
       const endR = Math.max(3, p90 != null ? 1.5 * p90 : 3);
-      let match: CandidateInput["match"] = "UNIDENTIFIED";
-      let g: { id: string; pm: number; sep: number } | null = null;
-      for (const star of await gaiaFor()) {
-        const a = gaiaAt(star, spherexMjd);
-        const sepS = separationArcsec(a.ra, a.dec, s.ra, s.dec);
-        if (sepS > endR) continue;
-        const t2 = gaiaAt(star, b.mjd);
-        const sepT = separationArcsec(t2.ra, t2.dec, b.ra, b.dec);
-        const pm = Math.hypot(star.pmra, star.pmdec);
-        if (sepT <= P.gaiaEndArcsec + 1) { match = "KNOWN_MOVER"; g = { id: star.id, pm, sep: sepS }; break; }
-        if (match === "UNIDENTIFIED") { match = "GAIA_STATIC"; g = { id: star.id, pm, sep: sepS }; }
-      }
+      const { match, g } = classifyPair(await gaiaFor(), { ra: s.ra, dec: s.dec, mjd: spherexMjd }, { ra: b.ra, dec: b.dec, mjd: b.mjd }, endR);
       candidates.push({
         release: RELEASE,
         hpxIndex: ang2pixNest(RATING_HPX_ORDER, s.ra, s.dec),
@@ -448,17 +458,55 @@ async function main() {
     );
     return;
   }
+  if (cmd === "reclassify") {
+    // Rechecks UNIDENTIFIED pairs in saved results with small Gaia cones at both ends; writes one merged file.
+    const files = process.argv.slice(3, -1);
+    const out = process.argv[process.argv.length - 1];
+    const rows = files.flatMap((f) => readFileSync(f, "utf8").trim().split("\n").map((l) => JSON.parse(l)).filter((l) => l.point));
+    const todo = rows.flatMap((r) => r.candidates.filter((c: CandidateInput) => c.match === "UNIDENTIFIED").map((c: CandidateInput) => ({ r, c })));
+    let next = 0, n = 0, changed = 0;
+    await Promise.all(
+      Array.from({ length: Number(process.env.PAR ?? 6) }, async () => {
+        while (next < todo.length) {
+          const { r, c } = todo[next++];
+          const cone = (ra: number, dec: number) => `1=CONTAINS(POINT('ICRS',ra,dec),CIRCLE('ICRS',${ra},${dec},${10 / 3600}))`;
+          const stars = parseCsv(await adql(`SELECT source_id, ra, dec, pmra, pmdec, phot_g_mean_mag FROM gaiadr3.gaia_source WHERE ${cone(c.raDeg, c.decDeg)} OR ${cone(c.tmassRaDeg, c.tmassDecDeg)}`)).map((x) => ({ id: x.source_id, ra: Number(x.ra), dec: Number(x.dec), pmra: Number(x.pmra) || 0, pmdec: Number(x.pmdec) || 0, g: Number(x.phot_g_mean_mag) }));
+          const endR = Math.max(3, r.point.scatterArcsec != null ? 1.5 * r.point.scatterArcsec : 3);
+          const res = classifyPair(stars, { ra: c.raDeg, dec: c.decDeg, mjd: c.epochMjd }, { ra: c.tmassRaDeg, dec: c.tmassDecDeg, mjd: c.tmassMjd }, endR);
+          if (res.match !== c.match) changed++;
+          Object.assign(c, { match: res.match, gaiaSourceId: res.g?.id, gaiaPmMasYr: res.g ? +res.g.pm.toFixed(1) : undefined, gaiaSepArcsec: res.g ? +res.g.sep.toFixed(2) : undefined });
+          if (++n % 200 === 0) console.log(`${n}/${todo.length} checked, ${changed} changed`);
+        }
+      }),
+    );
+    const header = { pipelineVersion: PIPELINE_VERSION, release: RELEASE, params: P, pointsPlanned: rows.length, reclassifiedFrom: files.map((f) => f.split(/[\\/]/).pop()) };
+    writeFileSync(out, [JSON.stringify({ header }), ...rows.map((r) => JSON.stringify(r))].join("\n") + "\n");
+    console.log(`checked ${todo.length} unidentified pairs: ${changed} reclassified → ${out}`);
+    return;
+  }
   if (cmd === "import") {
-    const { createSurvey, savePoint } = await import("@/data/motion-candidates");
+    const { createSurvey, savePoints } = await import("@/data/motion-candidates");
     const lines = readFileSync(a, "utf8").trim().split("\n").map((l) => JSON.parse(l));
     const header = lines.find((l) => l.header)?.header;
     const rows = lines.filter((l) => l.point);
     await createSurvey({ id: b, method: "spherex-vs-2mass", release: RELEASE, pipelineVersion: header?.pipelineVersion ?? PIPELINE_VERSION, params: header?.params ?? P, pointsPlanned: rows.length });
-    for (const r of rows) await savePoint(b, r.point, r.candidates);
+    for (let i = 0; i < rows.length; i += 5000) {
+      await savePoints(b, rows.slice(i, i + 5000));
+      console.log(`${Math.min(i + 5000, rows.length)}/${rows.length} points written`);
+    }
     console.log(`imported ${rows.length} points, ${rows.reduce((s, r) => s + r.candidates.length, 0)} candidates into survey ${b}`);
     return;
   }
-  console.log("usage: survey <random|control> <n> <out.jsonl> | import <file.jsonl> <surveyId>");
+  if (cmd === "targets") {
+    // The places the review queue opens (latest run's known movers and unidentified pairs), for precompute-analyses.ts.
+    const { latestReviewBatch } = await import("@/data/motion-candidates");
+    const batch = await latestReviewBatch();
+    const rows = (batch?.candidates ?? []).map((c) => ({ id: c.id, match: c.match, ra: c.raDeg, dec: c.decDeg, name: c.tmassDesignation }));
+    writeFileSync(a ?? "precompute-targets.json", JSON.stringify({ surveyId: batch?.surveyId ?? null, targets: rows }, null, 1));
+    console.log(`${rows.length} review candidates of survey ${batch?.surveyId} → ${a ?? "precompute-targets.json"}`);
+    return;
+  }
+  console.log("usage: survey <random|control> <n> <out.jsonl> | import <file.jsonl> <surveyId> | targets <out.json>");
 }
 
 void main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

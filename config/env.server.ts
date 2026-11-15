@@ -30,6 +30,11 @@ const serverEnvSchema = z.object({
   R2_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/, "an R2 bucket name").optional(),
   /** Public base URL of the bucket (r2.dev or a custom domain). Optional. */
   R2_PUBLIC_URL: z.url({ protocol: /^https$/ }).optional(),
+  /**
+   * "1" lets this server store the analysis responses it computes in R2 (app/api/_server/response-cache.ts). Only for
+   * precompute runs (scripts/precompute-analyses.ts) on a local server; production only reads them.
+   */
+  RESPONSE_CACHE_WRITE: z.enum(["0", "1"]).optional(),
 });
 
 const parsed = serverEnvSchema.safeParse({
@@ -41,6 +46,7 @@ const parsed = serverEnvSchema.safeParse({
   R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || undefined,
   R2_BUCKET: process.env.R2_BUCKET || undefined,
   R2_PUBLIC_URL: process.env.R2_PUBLIC_URL || undefined,
+  RESPONSE_CACHE_WRITE: process.env.RESPONSE_CACHE_WRITE || undefined,
 });
 
 if (!parsed.success) {
@@ -72,4 +78,6 @@ export const serverEnv = {
           publicUrl: R2_PUBLIC_URL?.replace(/\/+$/, ""),
         }
       : undefined,
+  /** Whether precomputed responses may be written (only with R2 configured). */
+  responseCacheWrite: parsed.data.RESPONSE_CACHE_WRITE === "1",
 } as const;

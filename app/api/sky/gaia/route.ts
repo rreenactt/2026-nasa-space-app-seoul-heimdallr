@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { cachedJson, keyCoordinate } from "@/app/api/_server/response-cache";
 import { errorResponse, NO_STORE, parseQuery } from "../../comet/_server/respond";
 import { fetchGaia } from "../_server/archive";
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   const q = parseQuery(request.nextUrl, querySchema);
   if (!q.ok) return q.response;
   try {
-    return Response.json(await fetchGaia(q.data.ra, q.data.dec, q.data.radius, q.data.minPm), { headers: NO_STORE });
+    return await cachedJson("sky/gaia", { ...q.data, ra: keyCoordinate(q.data.ra), dec: keyCoordinate(q.data.dec) }, () => fetchGaia(q.data.ra, q.data.dec, q.data.radius, q.data.minPm), NO_STORE);
   } catch (error) {
     return errorResponse(error);
   }

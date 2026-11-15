@@ -307,10 +307,11 @@ SPHEREx 방문끼리(약 6개월 간격)는 위치 잡음 한계가 약 9″라�
 1. **SPHEREx:** 지점을 덮는 DR1 노출을 IRSA SIA2로 찾고(재시도), 픽셀은 AWS 공개 사본에서 바이트 범위로 읽는다. 2MASS Ks에 가까운 검출기(D3 우선), 기준 파장 ±0.5×대역폭 안의 노출만(절대 원칙 3), IMAGE − ZODI, 고정 하늘 격자(8′, 256×256), 방문별 중앙값. 5σ 광원 중 모든 방문에서 잡힌 것만 쓴다.
 2. **2MASS:** ESA Gaia Archive의 2MASS PSC 사본(`gaiadr1.tmass_original_valid`, 광원마다 관측일 `j_date`)을 지점별로 조회한다. 양쪽에 있는 밝은 별로 SPHEREx 위치를 맞추고, 남은 흔들림(상위 10%)의 2.5배와 8″ 중 큰 값을 이 지점의 최소 이동으로 둔다.
 3. **짝:** SPHEREx에만 있는 광원(S/N ≥ 20) × SPHEREx가 볼 만큼 밝은데(Ks ≤ 14.5, 품질 A/B) 지금 그 자리에 아무것도 없는 2MASS 광원, 최소 이동–90″, 밝기 ×3 이내.
-4. **Gaia DR3 대조:** 두 관측 시점으로 옮긴 Gaia 별이 양 끝을 모두 설명하면 `KNOWN_MOVER`(알려진 움직이는 별), SPHEREx 끝만이면 `GAIA_STATIC`(우연 짝), 아니면 `UNIDENTIFIED`(미확인 후보, "감지"라고 쓰지 않음).
+4. **Gaia DR3 대조:** 두 관측 시점으로 옮긴 Gaia 별 하나가 양 끝을 모두 설명하면 `KNOWN_MOVER`(알려진 움직이는 별), 어느 한쪽 끝에만 Gaia 별이 있으면 `GAIA_STATIC`(우연 짝, 예: SPHEREx가 놓친 정지별이 2MASS 끝에 있음), 아니면 `UNIDENTIFIED`(미확인 후보, "감지"라고 쓰지 않음).
 5. 지점마다 광원 밀도로 계산한 우연 짝 기대 개수를 함께 남긴다.
 
 - **대조군:** 고유운동 0.5–3″/년, G 11–15 별 12개 중 8개를 `KNOWN_MOVER`로 찾았다. 잰 이동 속도는 Gaia와 1–8% 차이, 미확인 0개. 1.4″/년 이상인 2개와 밝은 별 일부는 놓쳤다(원인 조사 필요).
+- **첫 조사 (2026-11-15, GitHub Actions 실행 43625776099, `sx2mass-4`로 재분류 후 DB 저장):** 무작위 75,756곳(계획 10만 곳, 작업 5개가 시간 상한 200분에 걸림), 실패 41곳. 짝 5,384개: `KNOWN_MOVER` 262개(잰 이동 속도와 Gaia 값 차이 중앙값 4.3%, 194–1,536 mas/년), `GAIA_STATIC` 5,081개, `UNIDENTIFIED` 41개. 처음에는 미확인이 1,766개였지만 그중 1,725개(97.7%)가 2MASS 끝에 정지한 Gaia 별이 있는 우연 짝이어서 Gaia 확인을 양 끝으로 넓혔다. 남은 41개 중 23개는 은하면(|b| < 20°)에 있다. 미확인은 사람이 확인할 후보이며 발견이 아니다. 몇몇은 대조군과 비슷한 0.5–0.9″/년 짝이라 Gaia에 고유운동이 없는(2-매개변수) 별일 수 있다(확인 필요).
 - **저장:** 평가와 같은 Neon DB의 `MotionSurvey`(실행 1회)·`MotionSurveyPoint`(조사한 모든 지점, 결과 0개 포함)·`MotionCandidate`(짝, HEALPix order 11 `hpxIndex`로 평가와 같은 칸). 위의 `candidates/*.json` 배치 파일 대신 쓴다. 원본 픽셀은 저장하지 않는다(절대 원칙 7).
 - **실행:** `scripts/motion-survey.ts`(조사 `survey` → JSON Lines, DB 넣기 `import`), GitHub Actions `Motion Survey`(손으로 실행, 작업 수·지점 수·시간 상한 입력). 저장소가 비공개라 Actions 실행 시간(배포와 공유)을 쓰므로 작게 재 보고 늘린다.
 
@@ -497,7 +498,12 @@ flowchart LR
 
 - 이미지·결과 파일은 레포가 아니라 오브젝트 스토리지(예: S3, Cloudflare R2, Supabase Storage)에 두고, 레포에는 목록 JSON만 둔다. 이미지 파일을 git에 넣으면 레포가 빠르게 커진다.
 - 해커톤 범위에서 후보가 수십 개 수준이면 정적 호스팅에 함께 올려도 된다. **저장소 서비스는 팀 결정 필요.**
-
+- **현재 구현 (결정 #56 제안):** Cloudflare R2 버킷 하나(`lib/storage.ts`)에 분석 API의 응답 JSON을 gzip으로 저장한다. 키는 `responses/v1/<API 경로>/<입력의 SHA-256>.json.gz`이고, 입력의 RA·Dec는 페이지 URL과 같은 1e-5°로 반올림한다(`app/api/_server/response-cache.ts`). 대상 API: 블링크 계획, SPHEREx 컷아웃(`fpl/frame`, `comet/frame`), SPHEREx 검색, Gaia 이웃, Sky Time Machine 검색·프레임·Gaia, 근처 별 목록, 3I/ATLAS 관측 목록.
+  - 프로덕션은 **읽기만** 한다. 저장된 응답이 있으면 IRSA 대신 그것을 돌려주고, 없거나 R2가 8초 안에 답하지 않으면 지금처럼 실시간으로 처리한다. 실패한 응답은 저장하지 않는다.
+  - 쓰기는 `RESPONSE_CACHE_WRITE=1`로 띄운 로컬 서버에서만 한다. 공개 API에서 아무 좌표나 저장되게 두면 누구나 버킷을 채울 수 있기 때문이다. 그래서 위 표의 "실시간 + 캐시" 계층은 아직 없다.
+  - 사전 저장: `scripts/precompute-analyses.ts`가 브라우저와 똑같은 요청(블링크는 `blink-context.tsx`, 추가 분석은 `prefetchAnalysis`)을 보낸다. 대상은 테스트 대상 5개(핀 위치와 SPHEREx 시점 위치), 최신 조사의 검토 후보 303개(`motion-survey.ts targets`, 미확인 먼저), 3I/ATLAS 첫 프레임. 다시 돌리면 저장된 응답은 바로 돌아오고 IRSA 장애로 실패한 것만 다시 처리한다.
+  - 저장하는 것은 API가 화면에 보내는 결과(작은 컷아웃 배열, 정렬한 격자 이미지, 목록과 IRSA 링크)이고 원본 FITS 파일은 저장하지 않는다(절대 원칙 7).
+  - 프로덕션에서 쓰려면 Vercel 프로젝트 환경 변수에 `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`이 있어야 한다.
 #### 장애 대응
 
 - IRSA가 느리거나 응답하지 않아도 사전 저장 계층은 그대로 동작한다. 데모는 사전 저장 좌표로 진행한다.
