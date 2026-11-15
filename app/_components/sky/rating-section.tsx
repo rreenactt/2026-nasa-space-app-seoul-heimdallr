@@ -149,7 +149,7 @@ function Tally({ tally }: { tally: NonNullable<RatingState["tally"]> }) {
   const t = useT();
   const share = (n: number) => `${Math.round((n / tally.total) * 100)}%`;
   return (
-    <div className="grid gap-1 text-sm">
+    <div data-tour="rating-tally" className="grid gap-1 text-sm">
       <p>
         {ratingCount(tally.total, t)}
         {tally.total < MIN_RATINGS && <span className="text-muted-foreground"> · {t("rating.tooFew")}</span>}
@@ -192,7 +192,7 @@ export function RatingBadge({ point }: { point: EquatorialCoordinates }) {
   const state = useRating(point);
   if (!state.data) return null;
   return (
-    <Badge variant={state.data.mine ? "secondary" : "outline"} className="font-normal">
+    <Badge data-tour="rating-badge" variant={state.data.mine ? "secondary" : "outline"} className="font-normal">
       {state.data.mine ? <RatedSummary state={state.data} /> : t("rating.notRatedYet")}
     </Badge>
   );

@@ -27,6 +27,7 @@ import { cn } from "cn";
 import { Keycap } from "../site/keycap";
 import { DEFAULT_OVERLAYS, type SkyOverlays, skyLayers } from "./overlays";
 import { SkyIntro } from "./sky-intro";
+import { SkyTour, TOUR_STEPS } from "./sky-tour";
 import { ShortcutSheet, useSkyShortcuts } from "./sky-shortcuts";
 import { SiteHeader } from "../site/site-header";
 import { SkyFrame } from "./sky-frame";
@@ -330,6 +331,63 @@ export function SkyExplorer({
     else void document.documentElement.requestFullscreen().catch(() => undefined);
   }, []);
 
+  // The tour (decision #61): once by itself after the intro on a browser's first visit, and from Menu at any time.
+  const [tourStep, setTourStep] = useState<number | null>(null);
+  useEffect(() => {
+    if (initialSelection || initialView) return;
+    let done = false;
+    try {
+      done = window.localStorage.getItem(TOUR_DONE_KEY) === "1";
+    } catch {
+      // Storage blocked: the tour would come back every visit, so it does not start by itself.
+      done = true;
+    }
+    if (done) return;
+    const root = document.documentElement;
+    let observer: MutationObserver | undefined;
+    // The intro sets data-intro just after the first paint; wait for it to start and finish, then begin.
+    const timer = setTimeout(() => {
+      if (!root.dataset.intro) return setTourStep(0);
+      observer = new MutationObserver(() => {
+        if (root.dataset.intro) return;
+        observer?.disconnect();
+        setTourStep(0);
+      });
+      observer.observe(root, { attributes: true, attributeFilter: ["data-intro"] });
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      observer?.disconnect();
+    };
+  }, [initialSelection, initialView]);
+  const endTour = useCallback(() => {
+    setTourStep(null);
+    try {
+      window.localStorage.setItem(TOUR_DONE_KEY, "1");
+    } catch {
+      // Storage blocked: nothing to remember.
+    }
+  }, []);
+  // Moving to a step sets up its scene: the plain sky, the queue open, or Barnard's Star open in the panel.
+  const goToTourStep = useCallback(
+    (next: number) => {
+      setTourStep(next);
+      const scene = TOUR_STEPS[next].scene;
+      if (scene === "panel") {
+        const barnard = TEST_TARGETS.find((target) => target.id === TOUR_TARGET_ID);
+        const open = selectionRef.current?.target?.id === TOUR_TARGET_ID || flyingRef.current?.target?.id === TOUR_TARGET_ID;
+        if (!open && barnard) goToTarget(barnard);
+        return;
+      }
+      if (selectionRef.current) closePanel();
+      if (scene === "queue") {
+        setQueueOpen(true);
+        showCandidates();
+      } else foldQueue();
+    },
+    [goToTarget, closePanel, showCandidates, foldQueue],
+  );
+
   useSkyShortcuts(
     {
       zoom: zoomBy,
@@ -361,7 +419,7 @@ export function SkyExplorer({
 
   return (
     <div data-sky-framed={framed} className="relative h-dvh w-full overflow-hidden bg-ink text-paper">
-      <div data-sky-surface className="absolute inset-0">
+      <div data-sky-surface data-tour="sky" className="absolute inset-0">
         <SkyView
           initialView={startView}
           flight={flight}
@@ -395,6 +453,7 @@ export function SkyExplorer({
             onSearchOpenChange={setSearchOpen}
             menuGroups={[
               [
+                { label: t("tour.menu"), onSelect: () => goToTourStep(0) },
                 { label: t("shortcuts.title"), key: "?", onSelect: () => setShortcutsOpen(true) },
                 {
                   label: t("review.howToRate"),
@@ -434,7 +493,7 @@ export function SkyExplorer({
             nearly full height, and "How to rate" sits at the top right. */}
         {queueOpen ? (
           <>
-            <div className="pointer-events-auto absolute top-4 bottom-[76px] left-4">
+            <div data-tour="queue" className="pointer-events-auto absolute top-4 bottom-[76px] left-4">
               <ReviewQueuePanel
                 queue={queue}
                 currentId={currentEntry?.id}
@@ -471,6 +530,7 @@ export function SkyExplorer({
         )}
         {/* Centred on the screen rather than on this box (Figma: icons 20px from the edge, 34px apart). */}
         <div
+          data-tour="tools"
           className={cn(
             "pointer-events-auto absolute top-1/2 right-3.5 -translate-y-1/2 transition-[margin] duration-500 ease-out-expo",
             framed ? "-mt-2" : "-mt-7",
@@ -532,9 +592,27 @@ export function SkyExplorer({
       <SkyIntro enabled={!initialSelection && !initialView} />
       <ShortcutSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} onGoTo={goTo} />
+      {tourStep !== null && (
+        <SkyTour
+          step={tourStep}
+          point={selection}
+          onStep={goToTourStep}
+          onFinish={endTour}
+          onDone={() => {
+            endTour();
+            setQueueOpen(true);
+            showCandidates();
+          }}
+        />
+      )}
     </div>
   );
 }
+
+/** Set once the tour is finished or skipped, so it does not start by itself again. */
+const TOUR_DONE_KEY = "heimdallr:tour-done";
+/** The tour practises on Barnard's Star: a test target whose motion is known (decision #61). */
+const TOUR_TARGET_ID = "barnard";
 
 /** The coordinates under the pointer, bottom left while exploring (Figma "I · Explore"). */
 function CursorReadout({ hidden }: { hidden: boolean }) {

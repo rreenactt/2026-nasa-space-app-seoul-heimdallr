@@ -26,7 +26,7 @@ export function SkyHeaderActions({ onTarget, onPoint, searchOpen, onSearchOpenCh
   return (
     <>
       <Popover open={searchOpen} onOpenChange={onSearchOpenChange}>
-        <PopoverTrigger className={headerActionClass}>
+        <PopoverTrigger data-tour="search" className={headerActionClass}>
           <SearchIcon aria-hidden />
           {t("search.label")}
         </PopoverTrigger>

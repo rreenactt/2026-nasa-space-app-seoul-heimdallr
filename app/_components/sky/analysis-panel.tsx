@@ -145,11 +145,11 @@ function PanelBody({
                     <BlinkSummary />
                   </PanelSection>
 
-                  <PanelSection title={t("panel.yourAssessment")}>
+                  <PanelSection title={t("panel.yourAssessment")} tour="assessment">
                     <RatingSection />
                   </PanelSection>
 
-                  <PanelSection title={t("panel.additionalAnalyses")}>
+                  <PanelSection title={t("panel.additionalAnalyses")} tour="analyses">
                     <AdditionalAnalyses />
                   </PanelSection>
 
@@ -176,7 +176,7 @@ function PanelColumns({ children }: { children: React.ReactNode }) {
   const wide = wideChoice && opened.length > 0;
   return (
     <div className={cn("min-h-0 overflow-y-auto lg:grid lg:overflow-hidden", wide ? "lg:grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]")}>
-      <div className={cn("h-[min(calc(100vw+400px),calc(100dvh-140px))] min-h-[560px] border-b lg:h-auto lg:min-h-0 lg:border-b-0", !wide && "lg:border-r")}>
+      <div data-tour="blink" className={cn("h-[min(calc(100vw+400px),calc(100dvh-140px))] min-h-[560px] border-b lg:h-auto lg:min-h-0 lg:border-b-0", !wide && "lg:border-r")}>
         <PanelViews blink={<BlinkViewer />} wide={wide} onToggleWide={() => setWide((w) => !w)} />
       </div>
       <div className={cn("min-h-0 lg:overflow-y-auto", wide && "lg:hidden")}>{children}</div>
@@ -239,9 +239,10 @@ function CandidateNote({ candidate }: { candidate: MovementCandidate }) {
   );
 }
 
-function PanelSection({ title, children }: { title: string; children: React.ReactNode }) {
+/** `tour` names the section for the tour's spotlight (sky-tour.tsx). */
+function PanelSection({ title, tour, children }: { title: string; tour?: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-2">
+    <section data-tour={tour} className="grid gap-2">
       <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h3>
       {children}
     </section>
@@ -261,6 +262,7 @@ function CopyLinkButton() {
 
   return (
     <Button
+      data-tour="copy-link"
       variant="ghost"
       size="sm"
       onClick={() => {

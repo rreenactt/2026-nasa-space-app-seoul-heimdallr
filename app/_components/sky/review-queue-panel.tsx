@@ -278,6 +278,7 @@ function QueueActions({
     <div className="flex items-center gap-2 border-t border-rule px-5 py-2.5">
       <button
         type="button"
+        data-tour="open-blink"
         onClick={onOpen}
         disabled={!canOpen}
         className="h-8 w-[150px] rounded-[2px] bg-paper text-sm font-medium text-ink transition-colors hover:bg-bone disabled:opacity-40"
@@ -286,6 +287,7 @@ function QueueActions({
       </button>
       <button
         type="button"
+        data-tour="queue-step"
         onClick={() => onStep(-1)}
         disabled={!canStep}
         className="ml-auto px-3 text-sm text-ash hover:text-paper disabled:opacity-40"
@@ -294,6 +296,7 @@ function QueueActions({
       </button>
       <button
         type="button"
+        data-tour="queue-step"
         onClick={() => onStep(1)}
         disabled={!canStep}
         className="pl-3 text-sm font-medium text-paper hover:text-bone disabled:opacity-40"
