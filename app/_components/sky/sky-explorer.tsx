@@ -40,6 +40,7 @@ import { paintCandidates } from "./candidate-layer";
 import { clearPlaces, recordPlace, samePlace, usePlaceHistory } from "./place-history";
 import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
 import { MostRated } from "./most-rated";
+import { ViewCenter } from "./view-center";
 import { findTestTarget, TEST_TARGETS, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
 
@@ -358,6 +359,8 @@ export function SkyExplorer({
           onError={setError}
         />
       </div>
+      {/* Where Enter analyzes: the view center while aiming, only with the frame off (decision #49). */}
+      <ViewCenter hidden={!aiming || framed} />
       <SkyFrame on={framed} dim={selection !== null} />
       <SiteHeader
         className={cn(
