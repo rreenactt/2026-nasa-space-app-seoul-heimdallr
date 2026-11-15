@@ -1,4 +1,3 @@
-import type { GaiaStar } from "@/app/_lib/sky/types";
 import { SKY_SURVEY } from "../constants";
 import type { SkyPaintFrame } from "../sky-view";
 import { GUIDE_DRAW_FOV, GUIDE_STARS, lightYears, positionAt, SPHEREX_EPOCH, type StarGuideState, totalPm } from "./use-star-guide";
@@ -14,11 +13,14 @@ const LEADER_RUN = 14;
 const LABEL_PAD = 6;
 const LINE_1 = 15;
 const LINE_2 = 13;
-/** Entrance: square, motion line, leader, then label. Numbered stars that appear together follow one another. */
-const APPEAR_MS = 520;
-const STAGGER_MS = 80;
-/** Exit when zooming out past GUIDE_DRAW_FOV: the entrance played backwards. */
-const DISAPPEAR_MS = 360;
+/** Time for a square (with its motion line) to draw in or out. */
+const MARK_MS = 420;
+/** Time for a callout (leader, then label) to draw in or out. */
+const CALLOUT_MS = 460;
+/** Callouts that start together follow one another by this share of CALLOUT_MS, fastest star first. */
+const CALLOUT_STAGGER = 0.18;
+/** Longest frame step the animation takes, so a pause between repaints does not skip an animation. */
+const MAX_STEP_MS = 50;
 
 function font(variable: "--font-ui-face" | "--font-data-face", size: number, weight = 400) {
   const family = getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || "sans-serif";
@@ -29,25 +31,29 @@ const easeOut = (t: number) => 1 - (1 - t) ** 3;
 const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);
 
 /**
- * Animation memory (one sky screen at a time):
- * - `appearAt`: when each star started its entrance. A star gets one the first time it is drawn, so only stars the
- *   viewer has not seen yet animate; panning back to a star already shown draws it at once.
- * - Zooming out past GUIDE_DRAW_FOV plays the exit once; zooming back in (or switching the guide on again) clears
- *   `appearAt`, so every star on screen plays its entrance again.
+ * Animated presence of each star's marks, 0 (gone) to 1 (fully drawn). Every paint moves each value toward its
+ * target: the square toward 1 while the star is on screen (and the view is not zoomed out past GUIDE_DRAW_FOV), the
+ * callout toward 1 while the star is one of the numbered five. So marks draw in when a star is first found, when it
+ * pans into view or when the view zooms back in, and draw out (the entrance backwards) when it pans away, loses its
+ * number or the view zooms out. A callout value below 0 is a stagger delay. One sky screen at a time.
  */
-const appearAt = new Map<string, number>();
-let hidden = true;
-let hiddenAt = 0;
+type Presence = { mark: number; callout: number; rank: number; numbered: boolean };
+const presence = new Map<string, Presence>();
+let lastPaint = 0;
 
 type Rect = { x: number; y: number; w: number; h: number };
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+function step(value: number, target: number, amount: number) {
+  return target > value ? Math.min(value + amount, target) : Math.max(value - amount, target);
+}
 
 /**
  * Every collected star on screen gets a square where it sits in the background picture (taken about SKY_SURVEY.year)
  * and a line to where Gaia's motion puts it during SPHEREx (2026). The fastest five also get a number and a callout
  * (leader line and label): the card's five once the view is still, the fastest on screen while it moves. Callouts
- * always point up and to the right; the screen edge simply cuts them off. Returns true while an entrance or exit is
- * running, so the view repaints next frame. `highlighted` is the card row under the pointer (1-based).
+ * always point up and to the right; the screen edge simply cuts them off. Returns true while anything is still
+ * animating, so the view repaints next frame. `highlighted` is the card row under the pointer (1-based).
  */
 export function paintStarGuide(
   context: CanvasRenderingContext2D,
@@ -56,101 +62,97 @@ export function paintStarGuide(
   highlighted: number | null,
 ): boolean {
   const now = performance.now();
+  const dt = Math.min(now - lastPaint, MAX_STEP_MS);
+  lastPaint = now;
   if (state.status !== "on" || state.known.length === 0) {
-    hidden = true;
-    hiddenAt = 0; // switched off: no exit animation, and the next showing plays the entrance for all
-    appearAt.clear();
+    presence.clear(); // switched off: gone at once, and the next showing draws everything in
     return false;
   }
-  const tooWide = frame.fov > GUIDE_DRAW_FOV;
-  if (tooWide && !hidden) {
-    hidden = true;
-    hiddenAt = now;
-  } else if (!tooWide && hidden) {
-    hidden = false;
-    appearAt.clear();
-  }
-  const exit = hidden ? 1 - clamp01((now - hiddenAt) / DISAPPEAR_MS) : 1;
-  if (exit <= 0) return false;
 
-  const visible = state.known.filter((star) => {
-    const point = frame.project(...positionAt(star, SPHEREX_EPOCH));
-    return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= frame.width && point[1] <= frame.height;
-  });
-  const numbered = !state.moving && state.listed.length > 0 ? state.listed : visible.slice(0, GUIDE_STARS);
-  const numberedIds = new Set(numbered.map((star) => star.sourceId));
+  const zoomedOut = frame.fov > GUIDE_DRAW_FOV;
+  const visible = zoomedOut
+    ? []
+    : state.known.filter((star) => {
+        const point = frame.project(...positionAt(star, SPHEREX_EPOCH));
+        return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= frame.width && point[1] <= frame.height;
+      });
+  const numbered = zoomedOut ? [] : !state.moving && state.listed.length > 0 ? state.listed : visible.slice(0, GUIDE_STARS);
+  const visibleIds = new Set(visible.map((star) => star.sourceId));
+  const rankOf = new Map(numbered.map((star, index) => [star.sourceId, index + 1]));
 
-  // Stars drawn for the first time start their entrance now; numbered ones one after another, fastest first.
-  if (!hidden) {
-    let next = 0;
-    for (const star of numbered) {
-      if (!appearAt.has(star.sourceId)) appearAt.set(star.sourceId, now + STAGGER_MS * next++);
+  // Move every value toward its target.
+  let delay = 0;
+  let animating = false;
+  for (const star of state.known) {
+    const id = star.sourceId;
+    const rank = rankOf.get(id);
+    const markTarget = visibleIds.has(id) || rank !== undefined ? 1 : 0;
+    let p = presence.get(id);
+    if (!p) {
+      if (markTarget === 0) continue;
+      p = { mark: 0, callout: 0, rank: rank ?? 0, numbered: false };
+      presence.set(id, p);
     }
-    for (const star of visible) if (!appearAt.has(star.sourceId)) appearAt.set(star.sourceId, now);
+    const calloutTarget = rank !== undefined ? 1 : 0;
+    // A callout starting from nothing waits its turn behind others starting in the same frame.
+    if (calloutTarget === 1 && !p.numbered && p.callout <= 0) p.callout = -CALLOUT_STAGGER * delay++;
+    p.numbered = calloutTarget === 1;
+    if (rank !== undefined) p.rank = rank;
+    p.mark = step(p.mark, markTarget, dt / MARK_MS);
+    p.callout = step(p.callout, calloutTarget, dt / CALLOUT_MS);
+    if (p.mark !== markTarget || p.callout !== calloutTarget) animating = true;
+    if (p.mark === 0 && p.callout <= 0 && markTarget === 0) presence.delete(id);
   }
-  let animating = hidden; // an exit in progress
-  const progressOf = (star: GaiaStar) => {
-    const entrance = clamp01((now - (appearAt.get(star.sourceId) ?? now)) / APPEAR_MS);
-    if (entrance < 1) animating = true;
-    return Math.min(easeOut(entrance), exit);
-  };
 
+  const drawn = state.known.filter((star) => presence.has(star.sourceId));
   context.save();
-  // The rest of the collection on screen: small faint squares and motion lines, no labels.
-  context.strokeStyle = `rgba(${GUIDE}, 0.45)`;
-  context.lineWidth = 1;
-  for (const star of visible) {
-    if (numberedIds.has(star.sourceId)) continue;
-    const own = progressOf(star);
+
+  // Squares and motion lines. Numbered stars get the larger square, the dot at 2026 and their own color.
+  for (const star of drawn) {
+    const p = presence.get(star.sourceId)!;
+    const own = easeOut(p.mark);
     if (own <= 0) continue;
     const then = frame.project(...positionAt(star, SKY_SURVEY.year));
     const later = frame.project(...positionAt(star, SPHEREX_EPOCH));
     if (!then || !later) continue;
-    context.globalAlpha = clamp01(own * 2);
-    context.strokeRect(Math.round(then[0] - SMALL_BOX / 2) + 0.5, Math.round(then[1] - SMALL_BOX / 2) + 0.5, SMALL_BOX, SMALL_BOX);
-    if (Math.hypot(later[0] - then[0], later[1] - then[1]) > 3) {
-      context.beginPath();
-      context.moveTo(then[0], then[1]);
-      context.lineTo(then[0] + (later[0] - then[0]) * own, then[1] + (later[1] - then[1]) * own);
-      context.stroke();
-    }
-  }
-
-  const placed: Rect[] = [];
-  numbered.forEach((star, index) => {
-    const rank = index + 1;
-    const then = frame.project(...positionAt(star, SKY_SURVEY.year));
-    const later = frame.project(...positionAt(star, SPHEREX_EPOCH));
-    if (!then || !later) return;
-    const own = progressOf(star);
-    if (own <= 0) return;
-    const lit = highlighted === rank;
-    const color = lit ? HIGHLIGHT : `rgb(${GUIDE})`;
-
-    // Square and the motion since the picture was taken (the line only when it is visible at this zoom).
+    const big = p.callout > 0;
+    const lit = big && highlighted === p.rank;
+    const color = lit ? HIGHLIGHT : big ? `rgb(${GUIDE})` : `rgba(${GUIDE}, 0.45)`;
+    const size = big ? BOX : SMALL_BOX;
     context.globalAlpha = clamp01(own * 2);
     context.strokeStyle = color;
     context.fillStyle = color;
-    context.lineWidth = lit ? 2 : 1.25;
-    const left = Math.round(then[0] - BOX / 2) + 0.5;
-    const top = Math.round(then[1] - BOX / 2) + 0.5;
-    context.strokeRect(left, top, BOX, BOX);
+    context.lineWidth = lit ? 2 : big ? 1.25 : 1;
+    context.strokeRect(Math.round(then[0] - size / 2) + 0.5, Math.round(then[1] - size / 2) + 0.5, size, size);
     if (Math.hypot(later[0] - then[0], later[1] - then[1]) > 3) {
       context.beginPath();
       context.moveTo(then[0], then[1]);
       context.lineTo(then[0] + (later[0] - then[0]) * own, then[1] + (later[1] - then[1]) * own);
       context.stroke();
-      if (own === 1) {
+      if (big && own === 1) {
         context.beginPath();
         context.arc(later[0], later[1], 3, 0, Math.PI * 2);
         context.fill();
       }
     }
+  }
 
-    // Callout text and size.
+  // Callouts, fastest first so they claim the nearest spot.
+  const placed: Rect[] = [];
+  const callouts = drawn
+    .filter((star) => presence.get(star.sourceId)!.callout > 0)
+    .sort((a, b) => presence.get(a.sourceId)!.rank - presence.get(b.sourceId)!.rank);
+  for (const star of callouts) {
+    const p = presence.get(star.sourceId)!;
+    const own = easeOut(clamp01(p.callout)) * clamp01(p.mark * 2);
+    const then = frame.project(...positionAt(star, SKY_SURVEY.year));
+    if (!then || own <= 0) continue;
+    const lit = highlighted === p.rank;
+    const color = lit ? HIGHLIGHT : `rgb(${GUIDE})`;
+
     const pm = totalPm(star) / 1000;
     const ly = lightYears(star.parallax);
-    const title = `${rank}  ${pm.toFixed(pm >= 1 ? 1 : 2)}″ a year${ly ? ` · ${ly < 100 ? ly.toFixed(ly < 10 ? 1 : 0) : Math.round(ly / 10) * 10} ly` : ""}`;
+    const title = `${p.rank}  ${pm.toFixed(pm >= 1 ? 1 : 2)}″ a year${ly ? ` · ${ly < 100 ? ly.toFixed(ly < 10 ? 1 : 0) : Math.round(ly / 10) * 10} ly` : ""}`;
     const detail = `moved ${(pm * (SPHEREX_EPOCH - SKY_SURVEY.year)).toFixed(0)}″ since ${SKY_SURVEY.year}`;
     context.font = font("--font-ui-face", 12, 500);
     const w1 = context.measureText(title).width;
@@ -160,36 +162,36 @@ export function paintStarGuide(
     const height = LINE_1 + LINE_2 + 6;
 
     // Up and to the right of the square, lifted until it clears the labels already placed.
-    const cornerX = left + BOX;
-    const cornerY = top;
+    const cornerX = Math.round(then[0] - BOX / 2) + 0.5 + BOX;
+    const cornerY = Math.round(then[1] - BOX / 2) + 0.5;
     let elbowY = cornerY - LEADER_RISE;
     let rect: Rect = { x: 0, y: 0, w: width, h: height };
     for (let attempt = 0; attempt < 8; attempt++) {
-      const elbowX = cornerX + (cornerY - elbowY);
-      rect = { x: elbowX + LEADER_RUN, y: elbowY - height / 2, w: width, h: height };
+      rect = { x: cornerX + (cornerY - elbowY) + LEADER_RUN, y: elbowY - height / 2, w: width, h: height };
       if (!placed.some((other) => overlaps(rect, other))) break;
       elbowY -= height + 4;
     }
     placed.push(rect);
     const elbowX = cornerX + (cornerY - elbowY);
 
-    // The leader grows out of the square, then the label fades in (and the reverse on exit).
+    // The leader grows out of the square, then the label fades in (and the reverse on the way out).
     const diagonal = Math.hypot(elbowX - cornerX, elbowY - cornerY);
-    const drawn = (diagonal + LEADER_RUN) * clamp01(own / 0.6);
+    const length = (diagonal + LEADER_RUN) * clamp01(own / 0.6);
     context.globalAlpha = 1;
+    context.strokeStyle = color;
     context.lineWidth = 1;
     context.beginPath();
     context.moveTo(cornerX, cornerY);
-    if (drawn <= diagonal) {
-      context.lineTo(cornerX + ((elbowX - cornerX) * drawn) / diagonal, cornerY + ((elbowY - cornerY) * drawn) / diagonal);
+    if (length <= diagonal) {
+      context.lineTo(cornerX + ((elbowX - cornerX) * length) / diagonal, cornerY + ((elbowY - cornerY) * length) / diagonal);
     } else {
       context.lineTo(elbowX, elbowY);
-      context.lineTo(elbowX + (drawn - diagonal), elbowY);
+      context.lineTo(elbowX + (length - diagonal), elbowY);
     }
     context.stroke();
 
     const labelAlpha = clamp01((own - 0.6) / 0.4);
-    if (labelAlpha <= 0) return;
+    if (labelAlpha <= 0) continue;
     context.globalAlpha = labelAlpha;
     context.fillStyle = "rgba(1, 1, 1, 0.72)";
     context.fillRect(rect.x, rect.y, rect.w, rect.h);
@@ -202,7 +204,7 @@ export function paintStarGuide(
     context.fillStyle = "#b0b0a9";
     context.font = font("--font-data-face", 10.5);
     context.fillText(detail, rect.x + LABEL_PAD, rect.y + 3 + LINE_1);
-  });
+  }
   context.restore();
   return animating;
 }
