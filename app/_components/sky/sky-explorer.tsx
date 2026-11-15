@@ -31,6 +31,9 @@ import { SiteHeader } from "../site/site-header";
 import { SkyFrame } from "./sky-frame";
 import { SkyHeaderActions } from "./sky-header-actions";
 import { ShowOnSky, SkyTools } from "./sky-tools";
+import { paintStarGuide } from "./star-guide/paint";
+import { StarGuideCard } from "./star-guide/star-guide-card";
+import { positionAt, SPHEREX_EPOCH, useStarGuide } from "./star-guide/use-star-guide";
 import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
 import type { Flight, SkyPainter } from "./sky-view";
 import { FovScale } from "./fov-scale";
@@ -82,15 +85,22 @@ export function SkyExplorer({
   useEffect(() => {
     flyingRef.current = flyingTo;
   }, [flyingTo]);
+  const [starGuideOn, setStarGuideOn] = useState(false);
+  const starGuide = useStarGuide(starGuideOn);
+  const [guideHighlight, setGuideHighlight] = useState<number | null>(null);
   const painter = useMemo<SkyPainter>(
-    () => (context, frame) =>
-      paintCandidates(context, frame, {
+    () => (context, frame) => {
+      const fading = paintCandidates(context, frame, {
         candidates,
         overlays,
         opened,
         selected: flyingTo ?? selection,
-      }),
-    [candidates, overlays, opened, selection, flyingTo],
+      });
+      // Both painters run every frame; either one still animating asks for the next.
+      const guiding = paintStarGuide(context, frame, starGuide.state, guideHighlight);
+      return fading || guiding;
+    },
+    [candidates, overlays, opened, selection, flyingTo, starGuide.state, guideHighlight],
   );
   const [queueOpen, setQueueOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -311,6 +321,7 @@ export function SkyExplorer({
           onFlightEnd={onFlightEnd}
           onSelect={selectPoint}
           onError={setError}
+          onSettle={starGuide.onSettle}
         />
       </div>
       <SkyFrame on={framed} dim={selection !== null} />
@@ -414,6 +425,8 @@ export function SkyExplorer({
         >
           <SkyTools
             candidatesOff={!overlays.candidates}
+            starGuide={starGuideOn}
+            onStarGuide={() => setStarGuideOn((on) => !on)}
             onZoom={zoomBy}
             onHome={goHome}
             fullscreen={fullscreen}
@@ -423,6 +436,19 @@ export function SkyExplorer({
             layersPanel={<ShowOnSky overlays={overlays} onChange={setOverlays} onClose={() => setLayersOpen(false)} />}
           />
         </div>
+        {!framed && (
+          <div className={cn("absolute left-6", overlays.candidates ? "bottom-[52px]" : "bottom-[92px]")}>
+            <StarGuideCard
+              state={starGuide.state}
+              onHighlight={setGuideHighlight}
+              onOpen={(star) => {
+                const [ra, dec] = positionAt(star, SPHEREX_EPOCH);
+                goTo({ ra, dec });
+              }}
+              onClose={() => setStarGuideOn(false)}
+            />
+          </div>
+        )}
         <CursorReadout hidden={framed} />
         <FovScale hidden={framed} aiming={aiming} />
         {!overlays.candidates && !framed && (

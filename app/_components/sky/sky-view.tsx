@@ -18,21 +18,34 @@ export type SkyLayers = { pins: boolean; constellations: boolean; grid: boolean 
 /** What a painter gets on each redraw: a sky-to-screen projection (null beyond the view) and the view size. */
 export type SkyPaintFrame = {
   project: (ra: number, dec: number) => [number, number] | null;
+  /** View center (ICRS degrees). */
+  ra: number;
+  dec: number;
   fov: number;
   width: number;
   height: number;
 };
 /**
  * Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes, or on
- * the next frame too when it returns true (a fade still in progress).
+ * the next frame when it returns true (an animation in progress).
  */
 export type SkyPainter = (context: CanvasRenderingContext2D, frame: SkyPaintFrame) => boolean | void;
+
+/** The view after it has held still for SETTLE_MS. */
+export type SettledSky = SkyView & {
+  /** Size of the view in CSS pixels. */
+  width: number;
+  height: number;
+};
+
+/** How long the view must hold still before onSettle runs. */
+export const SETTLE_MS = 300;
 
 type SkyViewProps = {
   initialView: SkyView;
   flight: Flight | null;
   layers: SkyLayers;
-  /** Candidate marks, count circles and opened places (candidate-layer.ts). */
+  /** Candidate marks, density cells and opened places (candidate-layer.ts). */
   painter?: SkyPainter;
   onCursorMove: (cursor: EquatorialCoordinates | null) => void;
   onFovChange: (fov: number) => void;
@@ -41,6 +54,11 @@ type SkyViewProps = {
   /** A click (not a drag) at any field of view, with the test target when it landed on that target's pin. */
   onSelect: (point: EquatorialCoordinates, fov: number, target?: TestTarget) => void;
   onError: (message: string) => void;
+  /**
+   * Called once the view has held still for SETTLE_MS, and with null as soon as it moves again. Leave it out when
+   * nothing needs it; a new function after a settle is called right away for the current view.
+   */
+  onSettle?: (settled: SettledSky | null) => void;
 };
 
 /** A click this close (CSS pixels) to a test target's pin selects the target itself. */
@@ -75,6 +93,7 @@ export default function SkyView({
   onFlightEnd,
   onSelect,
   onError,
+  onSettle,
 }: SkyViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const reticle = useRef<HTMLDivElement>(null);
@@ -87,11 +106,11 @@ export default function SkyView({
   const pendingFlight = useRef<Flight | null>(null);
   /** Cancels the flight in progress, if any. */
   const stopFlight = useRef<() => void>(() => {});
-  const callbacks = useRef({ onCursorMove, onFovChange, onFlightEnd, onSelect, onError });
+  const callbacks = useRef({ onCursorMove, onFovChange, onFlightEnd, onSelect, onError, onSettle });
   const startView = useRef(initialView);
 
   useEffect(() => {
-    callbacks.current = { onCursorMove, onFovChange, onFlightEnd, onSelect, onError };
+    callbacks.current = { onCursorMove, onFovChange, onFlightEnd, onSelect, onError, onSettle };
   });
   useEffect(() => {
     painterRef.current = painter;
@@ -153,6 +172,9 @@ export default function SkyView({
         let placedFor = "";
         let reportedFor = "";
         let pointedFor = "";
+        let settleKey = "";
+        let changedAt = 0;
+        let settledWith: ((settled: SettledSky | null) => void) | null = null;
         const onFrame = () => {
           frame = requestAnimationFrame(onFrame);
           const [centerRa, centerDec] = aladin.getRaDec();
@@ -168,22 +190,36 @@ export default function SkyView({
             drawnFor = key;
             drawConstellations(canvas, aladin, element.clientWidth, element.clientHeight);
           }
+          // Settling: the view (or its size) unchanged for SETTLE_MS.
+          const onSettleNow = callbacks.current.onSettle;
+          if (!onSettleNow) settledWith = null;
+          if (key !== settleKey) {
+            settleKey = key;
+            changedAt = performance.now();
+            if (settledWith) settledWith(null);
+            settledWith = null;
+          } else if (onSettleNow && settledWith !== onSettleNow && performance.now() - changedAt >= SETTLE_MS) {
+            settledWith = onSettleNow;
+            onSettleNow({ ra: centerRa, dec: centerDec, fov: width, width: element.clientWidth, height: element.clientHeight });
+          }
           const marks = markCanvas.current;
           const markKey = `${key} ${painterVersion.current}`;
           if (marks && markKey !== paintedFor) {
             paintedFor = markKey;
             const context = prepareCanvas(marks, element.clientWidth, element.clientHeight);
             if (context && painterRef.current) {
-              const animating = painterRef.current(context, {
+              const again = painterRef.current(context, {
                 project: (ra, dec) => {
                   const pixel = aladin.world2pix(ra, dec);
                   return pixel ? [pixel[0], pixel[1]] : null;
                 },
+                ra: centerRa,
+                dec: centerDec,
                 fov: width,
                 width: element.clientWidth,
                 height: element.clientHeight,
               });
-              if (animating) paintedFor = "";
+              if (again) paintedFor = "";
             }
           }
           // The sky under a still pointer changes while the view drags, zooms or flies, and Aladin sends mouseMove only
