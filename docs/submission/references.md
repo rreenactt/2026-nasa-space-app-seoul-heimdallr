@@ -14,7 +14,7 @@
 - [ ] WISE 감사 문구와 논문 (IRSA WISE 페이지)
 - [ ] NEOWISE 감사 문구 (NEOWISE 페이지)
 - [ ] Gaia DR3 감사 문구 전문 (Gaia DR3 credit 페이지)
-- [ ] 3I/ATLAS 논문 제목 (Lisse et al. 2025b, 2026)
+- [x] 3I/ATLAS 논문 제목 (Lisse et al. 2025b, 2026)
 - [ ] 레포 GitHub URL
 - [ ] 소프트웨어 라이선스를 `package.json` 버전 기준으로 재확인
 - [ ] 슬라이드·README에 쓴 이미지·아이콘 중 외부 출처가 있으면 추가
@@ -35,7 +35,18 @@
 
 ## Papers
 
-- Lisse et al. 2025b, arXiv:2512.07318 (v3), and Lisse et al. 2026, arXiv:2601.06759 (v2): 3I/ATLAS gas production rates quoted in Comet Breath. arXiv:2508.15469 (v2) is shown as superseded. [TODO: titles]
+- Lisse et al. 2025, SPHEREx pre-perihelion mapping of H2O, CO2 and CO in 3I/ATLAS, [arXiv:2512.07318v3](https://arxiv.org/abs/2512.07318v3), and Lisse et al. 2026, SPHEREx re-observation of 3I/ATLAS in December 2025, [arXiv:2601.06759v2](https://arxiv.org/abs/2601.06759v2): 3I/ATLAS gas production rates quoted in Comet Breath (not measured by the tool; CO in August is a tentative detection).
+- Lisse et al. 2025, SPHEREx discovery of water ice and a CO2 coma in 3I/ATLAS, [arXiv:2508.15469v2](https://arxiv.org/abs/2508.15469v2): early analysis, its values are superseded by the two papers above.
+- SPHEREx Team 2025, SPHEREx Data Release 1 (DR1) Spectral Images, DOI [10.26131/IRSA678](https://doi.org/10.26131/IRSA678).
+- Bock et al. 2025, The SPHEREx Satellite Mission, ApJ, [arXiv:2511.02985v2](https://arxiv.org/abs/2511.02985v2), [doi:10.3847/1538-4357/ae2be2](https://doi.org/10.3847/1538-4357/ae2be2).
+- Akeson et al. 2025, The SPHEREx Image and Spectrophotometry Processing Pipeline, ApJS (accepted), [arXiv:2511.15823v2](https://arxiv.org/abs/2511.15823v2).
+- Doré et al. 2014, Cosmology with the SPHEREx All-Sky Spectral Survey, [arXiv:1412.4872](https://arxiv.org/abs/1412.4872).
+- Gaia Collaboration, Vallenari et al. 2023, Gaia Data Release 3: Summary of the content and survey properties, A&A 674, A1, [doi:10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-6361/202243940); Gaia Collaboration, Prusti et al. 2016, The Gaia mission, A&A 595, A1, [doi:10.1051/0004-6361/201629272](https://doi.org/10.1051/0004-6361/201629272).
+- Skrutskie et al. 2006, The Two Micron All Sky Survey (2MASS), AJ 131, 1163, [doi:10.1086/498708](https://doi.org/10.1086/498708).
+- Wright et al. 2010, The Wide-field Infrared Survey Explorer (WISE), AJ 140, 1868, [doi:10.1088/0004-6256/140/6/1868](https://doi.org/10.1088/0004-6256/140/6/1868).
+- Mainzer et al. 2011, Preliminary Results from NEOWISE, ApJ 731, 53, [doi:10.1088/0004-637X/731/1/53](https://doi.org/10.1088/0004-637X/731/1/53); Mainzer et al. 2014, Initial Performance of the NEOWISE Reactivation Mission, ApJ 792, 30, [doi:10.1088/0004-637X/792/1/30](https://doi.org/10.1088/0004-637X/792/1/30).
+- Zanella et al. 2022, Sonification and sound design for astronomy research, education and public engagement, Nature Astronomy 6, 1241, [doi:10.1038/s41550-022-01721-z](https://doi.org/10.1038/s41550-022-01721-z): background for Sky Sonata.
+- Caselden et al. 2018, WiseView: Visualizing motion and variability of faint WISE sources, [ascl:1806.004](https://ascl.net/1806.004): the model for the blink viewer; Kuchner et al. 2017, The First Brown Dwarf Discovered by the Backyard Worlds: Planet 9 Citizen Science Project, ApJL 841, L19, [doi:10.3847/2041-8213/aa7200](https://doi.org/10.3847/2041-8213/aa7200).
 - Luhman & Esplin 2014, arXiv:1409.5899 (v1): parallax, proper motion and position of WISE 0855−0714 (not in Gaia), used in Neighborhood in Motion.
 - van Wijk & Nuij 2003, "Smooth and efficient zooming and panning", IEEE Symposium on Information Visualization: the zoom-and-pan path of the sky view's flights.
 
