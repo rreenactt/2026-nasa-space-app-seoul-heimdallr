@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/app/_i18n/i18n-provider";
 import { cn } from "cn";
 import { AIM_FOV, MAX_FOV, MIN_FOV } from "./constants";
 import { formatFov } from "./sky-tools";
@@ -13,8 +14,6 @@ function position(fov: number) {
   return Math.min(Math.max(Math.log(MAX_FOV / fov) / Math.log(MAX_FOV / MIN_FOV), 0), 1);
 }
 
-/** Tick labels as in Figma: whole degrees without decimals, and "5° aim" at the threshold. */
-const label = (fov: number) => (fov === AIM_FOV ? `${fov}° aim` : `${fov}°`);
 
 /**
  * What a click does and the field-of-view scale, at the bottom centre while exploring (Figma "I · Explore"): a 440px
@@ -23,6 +22,7 @@ const label = (fov: number) => (fov === AIM_FOV ? `${fov}° aim` : `${fov}°`);
  * so the dot follows the camera with no CSS transition (a transition restarts each frame and lags, then snaps).
  */
 export function FovScale({ hidden, aiming }: { hidden: boolean; aiming: boolean }) {
+  const t = useT();
   const view = useView();
   const at = view ? position(view.fov) : 0;
   return (
@@ -34,12 +34,12 @@ export function FovScale({ hidden, aiming }: { hidden: boolean; aiming: boolean 
       )}
     >
       <p className="text-[17px] leading-[23px] text-paper">
-        {aiming ? "Click a point to analyze it" : "Click anywhere to zoom in"}
+        {aiming ? t("fovScale.aimingTitle") : t("fovScale.zoomTitle")}
       </p>
       <p className="mt-px text-[12.5px] leading-[17px] text-ash">
         {aiming
-          ? "Wider than 5° a click zooms in instead. Click a pin to analyze it."
-          : "Below 5° you can aim at a point. Click a pin to analyze it."}
+          ? t("fovScale.aimingHint", { fov: AIM_FOV })
+          : t("fovScale.zoomHint", { fov: AIM_FOV })}
       </p>
       <div className="relative mt-[3px] h-[13px]">
         <span
@@ -56,7 +56,7 @@ export function FovScale({ hidden, aiming }: { hidden: boolean; aiming: boolean 
         <span
           className="absolute top-[3px] right-0 h-[3px] bg-paper/35"
           style={{ left: `${position(AIM_FOV) * 100}%` }}
-          title="Aiming zone"
+          title={t("fovScale.aimingZone")}
         />
         {MAJOR.map((fov) => (
           <span key={fov} className="absolute top-0 h-[9px] w-px bg-ash" style={{ left: `${position(fov) * 100}%` }} />
@@ -76,7 +76,8 @@ export function FovScale({ hidden, aiming }: { hidden: boolean; aiming: boolean 
             )}
             style={{ left: `${position(fov) * 100}%` }}
           >
-            {label(fov)}
+            {/* Whole degrees without decimals, and "5° aim" at the threshold, as in Figma. */}
+            {fov === AIM_FOV ? t("fovScale.aimTick", { fov }) : `${fov}°`}
           </span>
         ))}
       </div>

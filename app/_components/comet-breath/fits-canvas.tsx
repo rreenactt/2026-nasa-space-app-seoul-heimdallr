@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { APERTURE_BAD_FLAGS, maskFor } from "@/app/_lib/comet/photometry";
 import type { ApertureParams } from "@/app/_lib/comet/types";
+import { useT } from "@/app/_i18n/i18n-provider";
 import type { DecodedFrame } from "./use-comet-data";
 
 export type Stretch = "asinh" | "linear" | "log";
@@ -50,6 +51,7 @@ interface Props {
 
 /** Renders a cutout at native resolution (FITS row 0 at the bottom) with SVG overlays. */
 export function FitsCanvas({ frame, values, range, stretch, showFlags, comet, aperture, label }: Props) {
+  const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { width, height } = frame.payload;
   const badMask = useMemo(() => maskFor(frame.payload.flagBits, APERTURE_BAD_FLAGS), [frame.payload.flagBits]);
@@ -105,7 +107,7 @@ export function FitsCanvas({ frame, values, range, stretch, showFlags, comet, ap
         <figcaption className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[11px] text-white">{label}</figcaption>
       )}
       {!comet && (
-        <div className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[11px] text-white">Comet is outside this area</div>
+        <div className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[11px] text-white">{t("comet.cometOutside")}</div>
       )}
     </figure>
   );

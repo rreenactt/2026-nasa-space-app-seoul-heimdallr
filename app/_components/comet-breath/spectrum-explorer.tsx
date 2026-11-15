@@ -12,9 +12,10 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PERIODS, SPECTRAL_FEATURES } from "@/app/_lib/comet/published";
+import { SPECTRAL_FEATURES } from "@/app/_lib/comet/published";
 import type { ObservationEntry, PhotometryResult } from "@/app/_lib/comet/types";
-import { formatUtc, useCometState } from "./comet-state";
+import { useT } from "@/app/_i18n/i18n-provider";
+import { formatUtc, PERIOD_LABEL, useCometState } from "./comet-state";
 import { REASON_LABEL } from "./image-explorer";
 import { decodeFrame, measure, useFrameBatch, type BatchItem } from "./use-comet-data";
 
@@ -43,6 +44,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
+  const t = useT();
   const { entries, period, aperture, selectKey } = useCometState();
   const [sampleSize, setSampleSize] = useState(12);
   const [includeFlagged, setIncludeFlagged] = useState(false);
@@ -79,21 +81,21 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
     <div className="flex flex-col gap-4 pt-2">
       <div className="flex flex-wrap items-end gap-4">
         <div className="grid gap-1">
-          <Label className="text-xs">Observations to measure ({PERIODS[period].label})</Label>
+          <Label className="text-xs">{t("comet.toMeasure", { period: t(PERIOD_LABEL[period]) })}</Label>
           <NativeSelect size="sm" value={String(sampleSize)} onChange={(e) => setSampleSize(Number(e.target.value))}>
-            <NativeSelectOption value="12">12 representative</NativeSelectOption>
-            <NativeSelectOption value="24">24 representative</NativeSelectOption>
-            <NativeSelectOption value="48">48 representative</NativeSelectOption>
-            <NativeSelectOption value="9999">All {periodEntries.length} (slow)</NativeSelectOption>
+            <NativeSelectOption value="12">{t("comet.representative", { n: 12 })}</NativeSelectOption>
+            <NativeSelectOption value="24">{t("comet.representative", { n: 24 })}</NativeSelectOption>
+            <NativeSelectOption value="48">{t("comet.representative", { n: 48 })}</NativeSelectOption>
+            <NativeSelectOption value="9999">{t("comet.allSlow", { n: periodEntries.length })}</NativeSelectOption>
           </NativeSelect>
         </div>
         {batch.running ? (
           <Button size="sm" variant="outline" onClick={batch.cancel}>
-            <SquareIcon /> Stop
+            <SquareIcon /> {t("comet.stop")}
           </Button>
         ) : (
           <Button size="sm" onClick={() => batch.run(representativeSample(periodEntries, sampleSize))} disabled={periodEntries.length === 0}>
-            <PlayIcon /> Start measuring
+            <PlayIcon /> {t("comet.startMeasuring")}
           </Button>
         )}
         <ApertureControls />
@@ -103,28 +105,34 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
         <div className="grid gap-1">
           <Progress value={(done / batch.items.length) * 100} />
           <span className="text-xs text-muted-foreground">
-            Images read {done}/{batch.items.length} · failed {failures.length}
-            {failures.length > 0 && ` (e.g. ${failures[0].entry.obsId} ${failures[0].entry.detector} — ${failures[0].message})`}
-            {measuredPeriod && measuredPeriod !== period && " · These results are from a different period. Measure again."}
+            {t("comet.imagesRead", { done, total: batch.items.length, failed: failures.length })}
+            {failures.length > 0 &&
+              ` ${t("comet.failExample", { obsId: failures[0].entry.obsId, detector: failures[0].entry.detector, message: failures[0].message })}`}
+            {measuredPeriod && measuredPeriod !== period && ` · ${t("comet.otherPeriod")}`}
           </span>
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-medium">Composite spectrum for the period</h3>
+          <h3 className="text-sm font-medium">{t("comet.spectrumHeading")}</h3>
           <p className="text-xs text-muted-foreground">
             {dates.length > 0
-              ? `${shown.length} points measured from ${new Set(shown.map((p) => p.entry.obsId)).size} exposures between ${dates[0]} and ${dates.at(-1)}. This is not a spectrum of a single moment.`
-              : "Press Start measuring to read the image around the comet in each observation and plot the flux at the comet position against its wavelength."}
+              ? t("comet.spectrumSummary", {
+                  points: shown.length,
+                  exposures: new Set(shown.map((p) => p.entry.obsId)).size,
+                  from: dates[0],
+                  to: dates.at(-1) ?? "",
+                })
+              : t("comet.spectrumHelp")}
           </p>
         </div>
         <div className="flex gap-4">
           <Label className="flex items-center gap-2 text-xs font-normal">
-            <Switch size="sm" checked={includeFlagged} onCheckedChange={setIncludeFlagged} /> Include quality-flagged points
+            <Switch size="sm" checked={includeFlagged} onCheckedChange={setIncludeFlagged} /> {t("comet.includeFlagged")}
           </Label>
           <Label className="flex items-center gap-2 text-xs font-normal">
-            <Switch size="sm" checked={showTable} onCheckedChange={setShowTable} /> Show as table
+            <Switch size="sm" checked={showTable} onCheckedChange={setShowTable} /> {t("comet.showTable")}
           </Label>
         </div>
       </div>
@@ -149,7 +157,7 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
             domain={[0.7, 5.1]}
             ticks={[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]}
             tickLine={false}
-            label={{ value: "Wavelength (µm)", position: "insideBottom", offset: -12, fontSize: 11 }}
+            label={{ value: t("comet.axisWavelength"), position: "insideBottom", offset: -12, fontSize: 11 }}
           />
           <YAxis type="number" dataKey="fluxMjy" tickLine={false} axisLine={false} width={48} label={{ value: "mJy", angle: -90, position: "insideLeft", fontSize: 11 }} />
           <ChartTooltip cursor={false} content={<PointTooltip />} />
@@ -169,9 +177,9 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
         </ScatterChart>
       </ChartContainer>
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[var(--series-1)]" /> Measurement (±1σ)</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-muted-foreground" /> Quality flag</span>
-        <span>Shaded: molecular feature ranges named in the papers · wavelengths without measurements are left empty (no interpolation) · click a point to open its image</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[var(--series-1)]" /> {t("comet.legendMeasurement")}</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-muted-foreground" /> {t("comet.legendFlagged")}</span>
+        <span>{t("comet.legendNote")}</span>
       </div>
 
       {showTable && (
@@ -180,12 +188,12 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
             <TableHeader>
               <TableRow>
                 <TableHead>UTC</TableHead>
-                <TableHead>Observation / detector</TableHead>
+                <TableHead>{t("comet.colObservation")}</TableHead>
                 <TableHead className="text-right">λ (µm)</TableHead>
                 <TableHead className="text-right">Δλ</TableHead>
-                <TableHead className="text-right">Flux (mJy)</TableHead>
+                <TableHead className="text-right">{t("comet.colFlux")}</TableHead>
                 <TableHead className="text-right">S/N</TableHead>
-                <TableHead>Quality</TableHead>
+                <TableHead>{t("comet.quality")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -197,7 +205,7 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
                   <TableCell className="text-right">{p.bandwidthUm?.toFixed(3)}</TableCell>
                   <TableCell className="text-right">{p.fluxMjy.toFixed(2)} ± {p.errorMjy.toFixed(2)}</TableCell>
                   <TableCell className="text-right">{p.snr.toFixed(1)}</TableCell>
-                  <TableCell>{p.reasons.map((r) => REASON_LABEL[r]).join(", ") || "Good"}</TableCell>
+                  <TableCell>{p.reasons.map((r) => t(REASON_LABEL[r])).join(", ") || t("comet.qualityGood")}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -209,12 +217,13 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
 }
 
 function ApertureControls() {
+  const t = useT();
   const { aperture, setAperture } = useCometState();
   return (
       <div className="flex flex-wrap items-end gap-4">
-        <RangeField label={`Aperture radius ${aperture.rAp}px`} min={1} max={8} step={0.5} value={aperture.rAp} onChange={(v) => setAperture({ ...aperture, rAp: v })} />
+        <RangeField label={t("comet.apertureRadius", { r: aperture.rAp })} min={1} max={8} step={0.5} value={aperture.rAp} onChange={(v) => setAperture({ ...aperture, rAp: v })} />
         <RangeField
-          label={`Background annulus ${aperture.rIn}–${aperture.rOut}px`}
+          label={t("comet.backgroundAnnulus", { rIn: aperture.rIn, rOut: aperture.rOut })}
           min={aperture.rAp + 2}
           max={34}
           step={1}
@@ -227,9 +236,9 @@ function ApertureControls() {
             checked={aperture.maskSourcesInAnnulus}
             onCheckedChange={(v) => setAperture({ ...aperture, maskSourcesInAnnulus: v })}
           />
-          Exclude SOURCE pixels from the background (off by default because most L2b pixels are flagged SOURCE)
+          {t("comet.excludeSource")}
         </Label>
-        <Badge variant="outline">Paper setting: 2px · 1′–3′</Badge>
+        <Badge variant="outline">{t("comet.paperSetting")}</Badge>
       </div>
   );
 }
@@ -253,6 +262,7 @@ function RangeField<T extends number | number[]>(props: { label: string; min: nu
 }
 
 function PointTooltip({ active, payload }: { active?: boolean; payload?: { payload: Point }[] }) {
+  const t = useT();
   const p = active ? payload?.[0]?.payload : undefined;
   if (!p) return null;
   return (
@@ -261,7 +271,7 @@ function PointTooltip({ active, payload }: { active?: boolean; payload?: { paylo
       <span className="text-muted-foreground">{p.entry.obsId} · {p.entry.detector}</span>
       <span className="font-mono">λ {p.wavelengthUm!.toFixed(3)} µm (Δλ {p.bandwidthUm?.toFixed(3)})</span>
       <span className="font-mono">{p.fluxMjy.toFixed(2)} ± {p.errorMjy.toFixed(2)} mJy · S/N {p.snr.toFixed(1)}</span>
-      {p.reasons.length > 0 && <span className="text-muted-foreground">{p.reasons.map((r) => REASON_LABEL[r]).join(", ")}</span>}
+      {p.reasons.length > 0 && <span className="text-muted-foreground">{p.reasons.map((r) => t(REASON_LABEL[r])).join(", ")}</span>}
     </div>
   );
 }

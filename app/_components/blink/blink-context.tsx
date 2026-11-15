@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/ky";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { skyToPixel, wavelengthAt } from "@/app/_lib/comet/wcs";
 import type { BlinkPlan, PlannedExposure, PlannedVisit } from "@/app/_lib/blink/types";
 import type { BrightNeighbor } from "@/app/_lib/fpl/types";
@@ -21,6 +22,12 @@ const CUTOUT_PX = 48;
 /** Pixels never used: unusable, or single-exposure hits (cosmic rays). OUTLIER is kept — moving objects get it. */
 const MASKED = ["NONFUNC", "MISSING_DATA", "HOT", "COLD", "SUR_ERROR", "TRANSIENT", "SNOWBALL"];
 
+/** Text to translate at render: a key and its placeholder values. */
+export interface KeyText {
+  key: MessageKey;
+  values?: Record<string, string | number>;
+}
+
 export interface FrameResult {
   exposure: PlannedExposure;
   visit: number;
@@ -31,7 +38,7 @@ export interface FrameResult {
   wavelengthUm: number | null;
   bandwidthUm: number | null;
   /** Reason the loaded frame is dropped after verification. */
-  dropped: string | null;
+  dropped: KeyText | null;
   flagsAtTarget: string[];
   grid: Float32Array | null;
 }
@@ -57,7 +64,7 @@ interface BlinkState {
   /** Gaia DR3 stars (G < 16) moved to each visit's date, by visit index. */
   gaia: Map<number, BrightNeighbor[]>;
   /** Everything the viewer needs: plan, every image, Gaia per visit. */
-  progress: { done: number; total: number; step: string };
+  progress: { done: number; total: number; step: KeyText };
   ready: boolean;
 }
 
@@ -101,8 +108,12 @@ export function BlinkProvider({ selection, children }: { selection: SkySelection
       if (!frame) return { exposure: u.e, visit: u.visit, frame: null, error: q?.error?.message ?? null, loading: Boolean(q?.isPending), wavelengthUm: null, bandwidthUm: null, dropped: null, flagsAtTarget: [], grid: null };
       const p = skyToPixel(frame.payload.wcs, ra, dec);
       const w = p && frame.payload.wave ? wavelengthAt(frame.payload.wave, p.x, p.y) : null;
-      const dropped =
-        !w ? "target outside this cutout" : ref != null && tol != null && Math.abs(w.wavelength - ref) > tol ? `measured ${w.wavelength.toFixed(3)} µm is outside ${ref.toFixed(3)} ± ${tol.toFixed(3)} µm` : null;
+      const dropped: KeyText | null =
+        !w
+          ? { key: "blink.droppedOutside" }
+          : ref != null && tol != null && Math.abs(w.wavelength - ref) > tol
+            ? { key: "blink.droppedWavelength", values: { measured: w.wavelength.toFixed(3), ref: ref.toFixed(3), tol: tol.toFixed(3) } }
+            : null;
       const bits = decodeBits(frame.payload.flagBits);
       const mask = bits.filter((b) => MASKED.includes(b.name)).reduce((m, b) => m | b.mask, 0) >>> 0;
       const at = p ? frame.flags[Math.round(p.y) * frame.payload.width + Math.round(p.x)] >>> 0 : 0;
@@ -171,13 +182,13 @@ export function BlinkProvider({ selection, children }: { selection: SkySelection
   const gaiaDone = gaiaQs.filter((q) => !q.isPending).length;
   const total = 1 + frames.length + gaiaQs.length;
   const done = (planSettled ? 1 : 0) + framesDone + gaiaDone;
-  const step = !planSettled
-    ? "Finding SPHEREx observations and matching wavelength"
+  const step: KeyText = !planSettled
+    ? { key: "blink.stepPlan" }
     : framesDone < frames.length
-      ? `Reading SPHEREx images (${framesDone}/${frames.length})`
+      ? { key: "blink.stepImages", values: { done: framesDone, total: frames.length } }
       : gaiaDone < gaiaQs.length
-        ? `Moving Gaia stars to each visit's date (${gaiaDone}/${gaiaQs.length})`
-        : "Done";
+        ? { key: "blink.stepGaia", values: { done: gaiaDone, total: gaiaQs.length } }
+        : { key: "blink.stepDone" };
   const ready = planSettled && (plan.isError || plan.data?.status === "no-observations" || (framesDone === frames.length && gaiaDone === gaiaQs.length));
 
   const value: BlinkState = {

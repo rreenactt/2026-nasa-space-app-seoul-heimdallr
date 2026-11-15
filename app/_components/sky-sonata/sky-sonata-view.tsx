@@ -17,8 +17,10 @@ import type { FplExposure } from "@/app/_lib/fpl/types";
 import { DEFAULT_SETTINGS, sharedFluxRange, type SoundSettings } from "@/app/_lib/sonata/mapping";
 import { detectSources } from "@/app/_lib/sonata/sources";
 import type { SkyGrid } from "@/app/_lib/sky/types";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { useFixedTarget } from "../analyses/fixed-target";
 import { FPL_EXAMPLES, mjdIso, visitsOf, type FplTarget } from "../fake-planet-lab/fpl-state";
+import { targetName } from "../fake-planet-lab/fpl-text";
 import { toNative, useFrames, useSpherexSearch } from "../fake-planet-lab/use-fpl-data";
 import { SonataAudio } from "./audio";
 import { ListenPanel } from "./listen-panel";
@@ -41,6 +43,7 @@ export const GRID_FOV = 3;
 export const GRID_N = 120;
 
 function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
+  const t = useT();
   const [target, setTarget] = useState<FplTarget>(shared?.target ?? FPL_EXAMPLES[1]);
   const [ra, setRa] = useState(target.ra.toFixed(5));
   const [dec, setDec] = useState(target.dec.toFixed(5));
@@ -142,25 +145,25 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
       {/* Always-available controls */}
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 p-2">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b bg-background/95 pb-2">
         {!audioOn ? (
           <Button size="sm" onClick={startAudio}>
-            <Volume2Icon /> Start sound
+            <Volume2Icon /> {t("sonata.startSound")}
           </Button>
         ) : (
-          <span className="text-xs text-emerald-600 dark:text-emerald-400">Sound on</span>
+          <span className="text-xs text-emerald-600 dark:text-emerald-400">{t("sonata.soundOn")}</span>
         )}
-        <Button size="sm" variant="destructive" onClick={stopAll} aria-label="Stop all sound">
-          <SquareIcon /> Stop all sound
+        <Button size="sm" variant="destructive" onClick={stopAll} aria-label={t("sonata.stopAll")}>
+          <SquareIcon /> {t("sonata.stopAll")}
         </Button>
         <label className="flex items-center gap-2 text-xs">
-          Volume
+          {t("sonata.volume")}
           <input
             type="range"
             min={0}
             max={100}
             value={volume}
-            aria-valuetext={`${volume} percent`}
+            aria-valuetext={t("sonata.volumePercent", { n: volume })}
             onChange={(e) => {
               const v = Number(e.target.value);
               setVolume(v);
@@ -169,33 +172,33 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
             className="w-28"
           />
         </label>
-        <span className="text-xs text-muted-foreground">Headphones recommended. Nothing plays until you press a play button.</span>
+        <span className="text-xs text-muted-foreground">{t("sonata.headphones")}</span>
       </div>
 
-      <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-2 border-b pb-3 text-xs [&>[role=alert]]:basis-full [&>p]:basis-full [&>span]:basis-full">
         <div className="flex flex-wrap items-end gap-2">
           {/* In the analysis panel the point is already chosen; only its sound rules can change here. */}
           {!fixed && (
           <>
           <div className="grid gap-1">
-            <Label className="text-xs" htmlFor="ss-ex">Example</Label>
+            <Label className="text-xs" htmlFor="ss-ex">{t("sonata.example")}</Label>
             <NativeSelect
               id="ss-ex"
               size="sm"
               value={FPL_EXAMPLES.find((e) => e.name === target.name)?.name ?? ""}
               onChange={(e) => {
-                const t = FPL_EXAMPLES.find((x) => x.name === e.target.value);
-                if (!t) return;
-                setTarget(t);
-                setRa(t.ra.toFixed(5));
-                setDec(t.dec.toFixed(5));
+                const next = FPL_EXAMPLES.find((x) => x.name === e.target.value);
+                if (!next) return;
+                setTarget(next);
+                setRa(next.ra.toFixed(5));
+                setDec(next.dec.toFixed(5));
                 setAKey(null);
                 setBKey(null);
               }}
             >
-              <NativeSelectOption value="">Custom position</NativeSelectOption>
+              <NativeSelectOption value="">{t("sonata.customPosition")}</NativeSelectOption>
               {FPL_EXAMPLES.map((e) => (
-                <NativeSelectOption key={e.name} value={e.name}>{e.name}</NativeSelectOption>
+                <NativeSelectOption key={e.name} value={e.name}>{targetName(t, e.name)}</NativeSelectOption>
               ))}
             </NativeSelect>
           </div>
@@ -219,25 +222,25 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
               }
             }}
           >
-            Go
+            {t("sonata.go")}
           </Button>
           </>
           )}
           <Button size="sm" variant="outline" onClick={share}>
-            {copied ? <CheckIcon /> : <LinkIcon />} {copied ? "Link copied" : "Copy link (field + sound rules)"}
+            {copied ? <CheckIcon /> : <LinkIcon />} {copied ? t("sonata.linkCopied") : t("sonata.copyLink")}
           </Button>
         </div>
 
         {search.isPending ? (
-          <span className="flex items-center gap-2 text-muted-foreground"><Spinner className="size-3" /> Searching SPHEREx DR1…</span>
+          <span className="flex items-center gap-2 text-muted-foreground"><Spinner className="size-3" /> {t("sonata.searching")}</span>
         ) : search.isError ? (
           <span className="text-destructive">{search.error.message}</span>
         ) : !exposures.length ? (
-          <span>No SPHEREx DR1 observation covers this position.</span>
+          <span>{t("sonata.noCoverage")}</span>
         ) : (
           <div className="flex flex-wrap items-end gap-2">
             <div className="grid gap-1">
-              <Label htmlFor="ss-det" className="text-xs">Detector</Label>
+              <Label htmlFor="ss-det" className="text-xs">{t("sonata.detector")}</Label>
               <NativeSelect id="ss-det" size="sm" value={detector} onChange={(e) => { setDetChoice(e.target.value); setAKey(null); setBKey(null); }}>
                 {dets.map((d) => (
                   <NativeSelectOption key={d} value={d}>{d}</NativeSelectOption>
@@ -248,12 +251,12 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
               const cur = tag === "A" ? a : b;
               return (
                 <div key={tag} className="grid gap-1">
-                  <Label htmlFor={`ss-${tag}`} className="text-xs">Observation {tag}</Label>
+                  <Label htmlFor={`ss-${tag}`} className="text-xs">{t("sonata.observationTag", { tag })}</Label>
                   <NativeSelect id={`ss-${tag}`} size="sm" value={cur?.key ?? ""} onChange={(e) => (tag === "A" ? setAKey : setBKey)(e.target.value || null)}>
-                    {tag === "B" && <NativeSelectOption value="">None</NativeSelectOption>}
+                    {tag === "B" && <NativeSelectOption value="">{t("sonata.noneOption")}</NativeSelectOption>}
                     {visits.map((v, vi) => v.map((e, ei) => (
                       <NativeSelectOption key={e.key} value={e.key}>
-                        Visit {vi + 1}/{visits.length}, exposure {ei + 1}/{v.length} — {mjdIso(e.tStart)}
+                        {t("sonata.visitOption", { v: vi + 1, visits: visits.length, e: ei + 1, n: v.length, date: mjdIso(e.tStart) })}
                       </NativeSelectOption>
                     )))}
                   </NativeSelect>
@@ -263,20 +266,20 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
           </div>
         )}
         {waiting && exposures.length > 0 && (
-          <span className="flex items-center gap-2 text-muted-foreground"><Spinner className="size-3" /> Choosing two observations at the same wavelength…</span>
+          <span className="flex items-center gap-2 text-muted-foreground"><Spinner className="size-3" /> {t("sonata.choosing")}</span>
         )}
         {matchedDefaults && matched && (
           <p className="text-muted-foreground">
-            A and B are the first and last visit at the same wavelength here (about {matched.reference.toFixed(3)} µm), so a louder or quieter note is not just a different colour.
+            {t("sonata.matchedNote", { um: matched.reference.toFixed(3) })}
           </p>
         )}
         {visits.length === 1 && (
-          <p>Additional analysis needed: only one SPHEREx visit here. A and B are minutes apart in the same visit, at different wavelengths.</p>
+          <p>{t("sonata.oneVisit")}</p>
         )}
         {waveMismatch && wa && wb && (
           <Alert>
             <AlertDescription>
-              A is at {wa.wavelength.toFixed(3)} µm and B at {wb.wavelength.toFixed(3)} µm here — outside the bandwidth. Loudness differences may come from the wavelength, not from a change in the sky.
+              {t("sonata.waveAlert", { a: wa.wavelength.toFixed(3), b: wb.wavelength.toFixed(3) })}
             </AlertDescription>
           </Alert>
         )}
@@ -284,9 +287,9 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
 
       <Tabs defaultValue="listen">
         <TabsList className="w-full">
-          <TabsTrigger value="listen">Listen</TabsTrigger>
-          <TabsTrigger value="practice">Practice</TabsTrigger>
-          <TabsTrigger value="rules">Rules & sources</TabsTrigger>
+          <TabsTrigger value="listen">{t("sonata.tabListen")}</TabsTrigger>
+          <TabsTrigger value="practice">{t("sonata.tabPractice")}</TabsTrigger>
+          <TabsTrigger value="rules">{t("sonata.tabRules")}</TabsTrigger>
         </TabsList>
         <TabsContent value="listen">
           <ListenPanel

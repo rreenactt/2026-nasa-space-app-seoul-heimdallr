@@ -27,6 +27,7 @@ import { cn } from "cn";
 import { Keycap } from "../site/keycap";
 import { DEFAULT_OVERLAYS, type SkyOverlays, skyLayers } from "./overlays";
 import { SkyIntro } from "./sky-intro";
+import { SkyTour, TOUR_STEPS } from "./sky-tour";
 import { ShortcutSheet, useSkyShortcuts } from "./sky-shortcuts";
 import { SiteHeader } from "../site/site-header";
 import { SkyFrame } from "./sky-frame";
@@ -42,10 +43,10 @@ import { paintCandidates } from "./candidate-layer";
 import { clearPlaces, recordPlace, samePlace, usePlaceHistory } from "./place-history";
 import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
 import { useCandidates } from "./candidates-context";
-import { MostRated } from "./most-rated";
 import { ViewCenter } from "./view-center";
 import { findTestTarget, TEST_TARGETS, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
+import { useT } from "@/app/_i18n/i18n-provider";
 
 // Aladin Lite touches browser APIs as soon as it loads, so the sky renders only on the client.
 const SkyView = dynamic(() => import("./sky-view"), { ssr: false });
@@ -67,6 +68,7 @@ export function SkyExplorer({
   /** Opens one additional analysis in the panel at start (older `?stm=` / `?sonata=` links). */
   autoOpen?: AutoOpenAnalysis;
 }) {
+  const t = useT();
   const [startView] = useState<SkyViewState>(initialView ?? INITIAL_VIEW);
   const [aiming, setAiming] = useState(startView.fov <= AIM_FOV);
   const [flight, setFlight] = useState<Flight | null>(null);
@@ -97,7 +99,7 @@ export function SkyExplorer({
   const [guideHighlight, setGuideHighlight] = useState<number | null>(null);
   const painter = useMemo<SkyPainter>(
     () => (context, frame) => {
-      const fading = paintCandidates(context, frame, {
+      const fading = paintCandidates(context, frame, t, {
         candidates,
         overlays,
         opened,
@@ -108,7 +110,7 @@ export function SkyExplorer({
       const guiding = paintStarGuide(context, frame, starGuide.state, guideHighlight);
       return fading || guiding;
     },
-    [candidates, overlays, opened, selection, flyingTo, picked, starGuide.state, guideHighlight],
+    [t, candidates, overlays, opened, selection, flyingTo, picked, starGuide.state, guideHighlight],
   );
   const [queueOpen, setQueueOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -283,14 +285,17 @@ export function SkyExplorer({
     (entry: ReviewEntry) => (picked?.id === entry.id ? goToEntry(entry) : pick(entry)),
     [picked, goToEntry, pick],
   );
+  // The queue's "Most rated" tab hands over its own list, so Previous, Next, N and P walk what is on screen (#58).
+  const [stepList, setStepList] = useState<ReviewEntry[] | null>(null);
   const step = useCallback(
     (direction: 1 | -1) => {
-      if (queue.length === 0) return;
+      const list = stepList ?? queue;
+      if (list.length === 0) return;
       const from = picked ?? currentEntry;
-      const index = from ? queue.findIndex((entry) => entry.id === from.id) : -1;
-      pick(queue[(index + direction + queue.length) % queue.length] ?? queue[0]);
+      const index = from ? list.findIndex((entry) => entry.id === from.id) : -1;
+      pick(list[(index + direction + list.length) % list.length] ?? list[0]);
     },
-    [queue, picked, currentEntry, pick],
+    [stepList, queue, picked, currentEntry, pick],
   );
   // The pick ends once its place leaves the screen, so Enter never opens a place the user cannot see.
   useEffect(() => {
@@ -326,6 +331,63 @@ export function SkyExplorer({
     else void document.documentElement.requestFullscreen().catch(() => undefined);
   }, []);
 
+  // The tour (decision #61): once by itself after the intro on a browser's first visit, and from Menu at any time.
+  const [tourStep, setTourStep] = useState<number | null>(null);
+  useEffect(() => {
+    if (initialSelection || initialView) return;
+    let done = false;
+    try {
+      done = window.localStorage.getItem(TOUR_DONE_KEY) === "1";
+    } catch {
+      // Storage blocked: the tour would come back every visit, so it does not start by itself.
+      done = true;
+    }
+    if (done) return;
+    const root = document.documentElement;
+    let observer: MutationObserver | undefined;
+    // The intro sets data-intro just after the first paint; wait for it to start and finish, then begin.
+    const timer = setTimeout(() => {
+      if (!root.dataset.intro) return setTourStep(0);
+      observer = new MutationObserver(() => {
+        if (root.dataset.intro) return;
+        observer?.disconnect();
+        setTourStep(0);
+      });
+      observer.observe(root, { attributes: true, attributeFilter: ["data-intro"] });
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      observer?.disconnect();
+    };
+  }, [initialSelection, initialView]);
+  const endTour = useCallback(() => {
+    setTourStep(null);
+    try {
+      window.localStorage.setItem(TOUR_DONE_KEY, "1");
+    } catch {
+      // Storage blocked: nothing to remember.
+    }
+  }, []);
+  // Moving to a step sets up its scene: the plain sky, the queue open, or Barnard's Star open in the panel.
+  const goToTourStep = useCallback(
+    (next: number) => {
+      setTourStep(next);
+      const scene = TOUR_STEPS[next].scene;
+      if (scene === "panel") {
+        const barnard = TEST_TARGETS.find((target) => target.id === TOUR_TARGET_ID);
+        const open = selectionRef.current?.target?.id === TOUR_TARGET_ID || flyingRef.current?.target?.id === TOUR_TARGET_ID;
+        if (!open && barnard) goToTarget(barnard);
+        return;
+      }
+      if (selectionRef.current) closePanel();
+      if (scene === "queue") {
+        setQueueOpen(true);
+        showCandidates();
+      } else foldQueue();
+    },
+    [goToTarget, closePanel, showCandidates, foldQueue],
+  );
+
   useSkyShortcuts(
     {
       zoom: zoomBy,
@@ -357,7 +419,7 @@ export function SkyExplorer({
 
   return (
     <div data-sky-framed={framed} className="relative h-dvh w-full overflow-hidden bg-ink text-paper">
-      <div data-sky-surface className="absolute inset-0">
+      <div data-sky-surface data-tour="sky" className="absolute inset-0">
         <SkyView
           initialView={startView}
           flight={flight}
@@ -376,7 +438,9 @@ export function SkyExplorer({
       <SkyFrame on={framed} dim={selection !== null} />
       <SiteHeader
         className={cn(
-          "absolute inset-x-0 top-0 z-20 transition-opacity duration-300",
+          // Steps aside over 300 ms while dragging, and comes back quicker (150 ms) once the drag ends.
+          "absolute inset-x-0 top-0 z-20 transition-opacity",
+          dragging && !framed && !searchOpen ? "duration-300" : "duration-150",
           framed || searchOpen
             ? "opacity-100"
             : dragging
@@ -391,9 +455,10 @@ export function SkyExplorer({
             onSearchOpenChange={setSearchOpen}
             menuGroups={[
               [
-                { label: "Keyboard shortcuts", key: "?", onSelect: () => setShortcutsOpen(true) },
+                { label: t("tour.menu"), onSelect: () => goToTourStep(0) },
+                { label: t("shortcuts.title"), key: "?", onSelect: () => setShortcutsOpen(true) },
                 {
-                  label: "How to rate",
+                  label: t("review.howToRate"),
                   onSelect: () => {
                     setQueueOpen(true);
                     setGuideOpen(true);
@@ -402,14 +467,14 @@ export function SkyExplorer({
               ],
               [
                 {
-                  label: "Test targets",
+                  label: t("common.testTargets"),
                   items: TEST_TARGETS.map((target) => ({ label: target.name, onSelect: () => goToTarget(target) })),
                 },
               ],
               [
-                { label: "Data sources and credits", href: "/method#sources" },
+                { label: t("common.sourcesAndCredits"), href: "/method#sources" },
                 {
-                  label: "Clear places you opened",
+                  label: t("explorer.clearOpened"),
                   hint: opened.length ? opened.length.toLocaleString("en-US") : undefined,
                   disabled: opened.length === 0,
                   onSelect: clearPlaces,
@@ -430,7 +495,7 @@ export function SkyExplorer({
             nearly full height, and "How to rate" sits at the top right. */}
         {queueOpen ? (
           <>
-            <div className="pointer-events-auto absolute top-4 bottom-[76px] left-4">
+            <div data-tour="queue" className="pointer-events-auto absolute top-4 bottom-[76px] left-4">
               <ReviewQueuePanel
                 queue={queue}
                 currentId={currentEntry?.id}
@@ -441,6 +506,7 @@ export function SkyExplorer({
                 onOpenPlace={goTo}
                 onOpenPicked={openPicked}
                 onStep={step}
+                onStepListChange={setStepList}
                 onClose={foldQueue}
               />
             </div>
@@ -458,16 +524,15 @@ export function SkyExplorer({
               className="flex h-8 w-[214px] items-center gap-2 rounded-[2px] bg-ink/80 pr-2 pl-2.5 text-[13px] font-medium text-paper transition-colors hover:bg-ink"
             >
               <ListIcon className="size-4 stroke-[1.5]" aria-hidden />
-              Review queue
+              {t("review.title")}
               <span className="text-xs font-normal text-ash">{candidates.length.toLocaleString("en-US")}</span>
               <Keycap className="ml-auto">Q</Keycap>
             </button>
-            {/* Most rated places (from main, decision #35). Not in the Figma screens yet, so it sits under the button. */}
-            <MostRated onSelect={goTo} />
           </div>
         )}
         {/* Centred on the screen rather than on this box (Figma: icons 20px from the edge, 34px apart). */}
         <div
+          data-tour="tools"
           className={cn(
             "pointer-events-auto absolute top-1/2 right-3.5 -translate-y-1/2 transition-[margin] duration-500 ease-out-expo",
             framed ? "-mt-2" : "-mt-7",
@@ -507,15 +572,15 @@ export function SkyExplorer({
             onClick={showCandidates}
             className="pointer-events-auto absolute bottom-[52px] left-6 flex h-8 items-center gap-3 rounded-[2px] bg-ink/80 pr-2 pl-3 text-[13px] text-bone hover:text-paper"
           >
-            Candidates hidden
-            <span className="font-medium text-paper">Show</span>
+            {t("explorer.candidatesHidden")}
+            <span className="font-medium text-paper">{t("explorer.showCandidates")}</span>
             <Keycap>C</Keycap>
           </button>
         )}
         {/* The credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
         <div className="absolute right-4 bottom-[29px] text-right [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]">
-          {SKY_SURVEY.notice && <p className="text-xs leading-4 text-signal">{SKY_SURVEY.notice}</p>}
-          <p className="mt-0.5 text-[11px] leading-[15px] text-ash">{SKY_SURVEY.credit}</p>
+          {/* The credit names the background; "not SPHEREx" is said in the This view panel (decision #60). */}
+          <p className="text-[11px] leading-[15px] text-ash">{SKY_SURVEY.credit}</p>
         </div>
       </div>
       {error && (
@@ -523,15 +588,33 @@ export function SkyExplorer({
           role="alert"
           className="absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded-sm bg-red-950/80 px-3 py-2 text-sm"
         >
-          Sky view unavailable: {error}
+          {t("explorer.loadError", { error })}
         </p>
       )}
       <SkyIntro enabled={!initialSelection && !initialView} />
       <ShortcutSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} onGoTo={goTo} />
+      {tourStep !== null && (
+        <SkyTour
+          step={tourStep}
+          point={selection}
+          onStep={goToTourStep}
+          onFinish={endTour}
+          onDone={() => {
+            endTour();
+            setQueueOpen(true);
+            showCandidates();
+          }}
+        />
+      )}
     </div>
   );
 }
+
+/** Set once the tour is finished or skipped, so it does not start by itself again. */
+const TOUR_DONE_KEY = "heimdallr:tour-done";
+/** The tour practises on Barnard's Star: a test target whose motion is known (decision #61). */
+const TOUR_TARGET_ID = "barnard";
 
 /** The coordinates under the pointer, bottom left while exploring (Figma "I · Explore"). */
 function CursorReadout({ hidden }: { hidden: boolean }) {
@@ -551,8 +634,9 @@ function CursorReadout({ hidden }: { hidden: boolean }) {
   );
 }
 
-// v2: known movers turned on by default (decision #51); older saved settings had them off.
-const OVERLAYS_KEY = "heimdallr:show-on-sky:v2";
+// v3: the coordinate grid turned on by default (decision #55); v2 turned known movers on (decision #51). Older saved
+// settings had them off.
+const OVERLAYS_KEY = "heimdallr:show-on-sky:v3";
 
 /** "Show on sky" settings, remembered in this browser (decision #40). Read after mount so the server render matches. */
 function useStoredOverlays() {
@@ -582,7 +666,7 @@ function useStoredOverlays() {
 }
 
 /**
- * True while the sky is being dragged and for 600 ms after release, so the header can step aside. A drag (not a
+ * True while the sky is being dragged and for 150 ms after release, so the header can step aside. A drag (not a
  * click) also calls onDragStart, which folds the queue: dragging means looking around (decision #38).
  */
 function useSkyDrag(onDragStart: () => void) {
@@ -607,7 +691,7 @@ function useSkyDrag(onDragStart: () => void) {
       start = null;
       if (!active) return;
       active = false;
-      timer = setTimeout(() => setDragging(false), 600);
+      timer = setTimeout(() => setDragging(false), 150);
     };
     window.addEventListener("pointerdown", down, true);
     window.addEventListener("pointermove", move, true);

@@ -8,6 +8,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { MISSIONS } from "@/app/_lib/sky/missions";
 import type { Epoch } from "@/app/_lib/sky/types";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { FrameView } from "./frame-view";
 import { formatElapsed, formatPeriod, useStm } from "./stm-state";
 import { TimelineStrip } from "./timeline-tab";
@@ -31,6 +32,7 @@ function EpochSelect({ label, value, onChange }: { label: string; value: string 
 }
 
 export function CompareTab() {
+  const t = useT();
   const { epochs } = useStm();
   const [aId, setA] = useState<string | undefined>(undefined);
   const [bId, setB] = useState<string | undefined>(undefined);
@@ -45,48 +47,55 @@ export function CompareTab() {
 
   useEffect(() => {
     if (mode !== "blink") return;
-    const t = setInterval(() => setShowB((v) => !v), blinkMs);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setShowB((v) => !v), blinkMs);
+    return () => clearInterval(timer);
   }, [mode, blinkMs]);
 
   const differentBand = a && b && (a.mission !== b.mission || a.band !== b.band);
 
   return (
-    <div className="grid gap-3 pt-2">
+    <div className={mode === "blink" ? "grid gap-x-5 gap-y-3 pt-2 @3xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] @3xl:items-start" : "grid gap-3 pt-2"}>
+      <div className={mode === "blink" ? "grid min-w-0 content-start gap-3 @3xl:col-start-2 @3xl:row-start-1" : "grid min-w-0 gap-3"}>
       <TimelineStrip value={null} highlight={[a?.id, b?.id].filter(Boolean) as string[]} onSelect={(e) => setB(e.id)} />
       <div className="flex flex-wrap items-end gap-3">
-        <EpochSelect label="A (reference)" value={a?.id} onChange={setA} />
-        <EpochSelect label="B (comparison)" value={b?.id} onChange={setB} />
-        <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as Mode)} aria-label="Comparison mode">
-          <ToggleGroupItem value="blink">Blink</ToggleGroupItem>
-          <ToggleGroupItem value="side">Side by side</ToggleGroupItem>
+        <EpochSelect label={t("stm.epochA")} value={a?.id} onChange={setA} />
+        <EpochSelect label={t("stm.epochB")} value={b?.id} onChange={setB} />
+        <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as Mode)} aria-label={t("stm.compareMode")}>
+          <ToggleGroupItem value="blink">{t("blink.blink")}</ToggleGroupItem>
+          <ToggleGroupItem value="side">{t("stm.modeSide")}</ToggleGroupItem>
         </ToggleGroup>
         {mode === "blink" && (
-          <NativeSelect size="sm" value={String(blinkMs)} onChange={(e) => setBlinkMs(Number(e.target.value))} aria-label="Blink interval">
+          <NativeSelect size="sm" value={String(blinkMs)} onChange={(e) => setBlinkMs(Number(e.target.value))} aria-label={t("stm.blinkInterval")}>
             <NativeSelectOption value="400">0.4 s</NativeSelectOption>
             <NativeSelectOption value="800">0.8 s</NativeSelectOption>
             <NativeSelectOption value="1500">1.5 s</NativeSelectOption>
           </NativeSelect>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">Click a timeline bar to change B. Both images share the same sky grid, so only objects that moved change position.</p>
+      <p className="text-xs text-muted-foreground">{t("stm.compareHelp")}</p>
 
       {a && b && (
         <p className="text-xs">
-          Time between <span className="font-mono">{formatElapsed(b.timeStart - a.timeStart)}</span> · A {MISSIONS[a.mission].label} {a.wavelengthLabel} · B {MISSIONS[b.mission].label} {b.wavelengthLabel}
+          {t("stm.timeBetween")} <span className="font-mono">{formatElapsed(b.timeStart - a.timeStart, t)}</span> · A {MISSIONS[a.mission].label} {a.wavelengthLabel} · B {MISSIONS[b.mission].label} {b.wavelengthLabel}
         </p>
       )}
       {differentBand && (
         <Alert>
           <AlertTriangleIcon />
           <AlertDescription>
-            These observations differ in band, sensitivity and resolution. Use them only to compare positions, and do not read brightness differences as variability. An object seen in only one image may reflect a difference in sensitivity or wavelength.
+            {t("stm.bandWarning")}
           </AlertDescription>
         </Alert>
       )}
+      {hover && (
+        <p className="font-mono text-xs text-muted-foreground">
+          {t("stm.cursor", { ra: hover.ra.toFixed(5), dec: hover.dec.toFixed(5) })}
+        </p>
+      )}
+      </div>
 
       {mode === "blink" ? (
-        <div className="mx-auto w-full max-w-xl">
+        <div className="w-full max-w-xl @3xl:col-start-1 @3xl:row-start-1">
           {/* Both frames stay mounted so switching is instant. */}
           <div className={showB ? "hidden" : ""}>
             <FrameView epoch={a} tag="A" crosshair={hover} onHover={setHover} />
@@ -100,11 +109,6 @@ export function CompareTab() {
           <FrameView epoch={a} tag="A" crosshair={hover} onHover={setHover} />
           <FrameView epoch={b} tag="B" crosshair={hover} onHover={setHover} />
         </div>
-      )}
-      {hover && (
-        <p className="font-mono text-xs text-muted-foreground">
-          Cursor RA {hover.ra.toFixed(5)}° Dec {hover.dec.toFixed(5)}° (pink cross at the same position in both images)
-        </p>
       )}
     </div>
   );

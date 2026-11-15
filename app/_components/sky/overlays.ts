@@ -18,15 +18,16 @@ export const DEFAULT_OVERLAYS: SkyOverlays = {
   candidates: true,
   marks: true,
   // Known movers start on: they are the answer key to compare unidentified pairs with (decision #51). The coordinate
-  // grid starts off (Figma "I · Explore, layers panel open").
+  // grid starts on and leads; constellation names start off (decision #55, Figma "I · Sky lines · C · Grid first").
   statuses: { noteworthy: true, "needs-ratings": true, recommended: true, known: true },
   opened: true,
   pins: true,
   constellations: true,
-  grid: false,
+  constellationNames: false,
+  grid: true,
 };
 
-/** The part Aladin Lite draws today. */
-export function skyLayers({ pins, constellations, grid }: SkyOverlays): SkyLayers {
-  return { pins, constellations, grid };
+/** The part the sky view draws (pins by the painter, lines and grid by sky-lines.ts). */
+export function skyLayers({ pins, constellations, constellationNames, grid }: SkyOverlays): SkyLayers {
+  return { pins, constellations, constellationNames, grid };
 }

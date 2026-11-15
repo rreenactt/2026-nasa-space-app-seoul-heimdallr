@@ -9,12 +9,14 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PAPERS, PAPER_STATEMENTS, PUBLISHED_RATES } from "@/app/_lib/comet/published";
 import type { PublishedRate } from "@/app/_lib/comet/types";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { useCometState } from "./comet-state";
 
 const SPECIES_ORDER = ["H₂O", "CO₂", "CO", "¹³CO₂", "C-H organics"];
 const LOG_MIN = 24.8;
 const LOG_MAX = 28.4;
-const STATUS_LABEL = { detection: "Reported detection", tentative: "Reported tentative", "upper-limit": "Reported upper limit" } as const;
+const STATUS_LABEL: Record<PublishedRate["status"], MessageKey> = { detection: "comet.statusDetection", tentative: "comet.statusTentative", "upper-limit": "comet.statusUpperLimit" };
 
 export function formatRate(q: number) {
   const exp = Math.floor(Math.log10(q));
@@ -37,6 +39,7 @@ const SERIES = {
 } as const;
 
 export function RatesPanel() {
+  const t = useT();
   const { selected } = useCometState();
   const [showPrelim, setShowPrelim] = useState(false);
   const [hover, setHover] = useState<PublishedRate | null>(null);
@@ -59,23 +62,23 @@ export function RatesPanel() {
     <div className="flex flex-col gap-4 pt-2">
       <Alert>
         <InfoIcon />
-        <AlertTitle>Selected observation {date ?? "—"}</AlertTitle>
+        <AlertTitle>{t("comet.selectedObservation", { date: date ?? "—" })}</AlertTitle>
         <AlertDescription>
           {coveringPapers.length > 0
-            ? `Falls within the analysis period of ${coveringPapers.map(paperName).join(", ")}. The values below are estimates for that whole period, not for this single exposure.`
-            : "No paper's analysis period covers this date. No production rates are shown."}
+            ? t("comet.coveredBy", { papers: coveringPapers.map(paperName).join(", ") })
+            : t("comet.notCovered")}
         </AlertDescription>
       </Alert>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">Gas production rates cited from papers (molecules/s, log axis)</h3>
+        <h3 className="text-sm font-medium">{t("comet.ratesHeading")}</h3>
         <Label className="flex items-center gap-2 text-xs font-normal">
-          <Switch size="sm" checked={showPrelim} onCheckedChange={setShowPrelim} /> Show initial analysis (superseded values)
+          <Switch size="sm" checked={showPrelim} onCheckedChange={setShowPrelim} /> {t("comet.showPrelim")}
         </Label>
       </div>
 
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px]" role="img" aria-label="Production rates by species">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px]" role="img" aria-label={t("comet.ratesAria")}>
           {[25, 26, 27, 28].map((e) => (
             <g key={e}>
               <line x1={x(10 ** e)} x2={x(10 ** e)} y1={top} y2={H - 28} className="stroke-border" />
@@ -140,29 +143,37 @@ export function RatesPanel() {
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
         {(["aug", "dec", ...(showPrelim ? (["prelim"] as const) : [])] as const).map((k) => (
           <span key={k} className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full" style={{ background: SERIES[k].color }} /> {SERIES[k].label}
+            <span className="size-2.5 rounded-full" style={{ background: SERIES[k].color }} /> {k === "prelim" ? t("comet.seriesPrelim") : SERIES[k].label}
           </span>
         ))}
-        <span>As reported by each paper: ● detection · ○ tentative · ◁ upper limit (arrow) · horizontal bar ±1σ</span>
+        <span>{t("comet.ratesLegend")}</span>
       </div>
 
       <p className="min-h-5 text-xs" aria-live="polite">
         {hover
-          ? `${hover.species} · ${paperName(hover.sourceId)} · ${STATUS_LABEL[hover.status]} ${hover.status === "upper-limit" ? "≤ " : ""}${formatRate(hover.productionRate)} molecules/s (${hover.uncertaintyNote}) · ${hover.location}`
-          : "Hover over a point to see its source and how the uncertainty is defined."}
+          ? t("comet.ratesHover", {
+              species: hover.species,
+              paper: paperName(hover.sourceId),
+              status: t(STATUS_LABEL[hover.status]),
+              le: hover.status === "upper-limit" ? "≤ " : "",
+              rate: formatRate(hover.productionRate),
+              uncertainty: hover.uncertaintyNote,
+              location: hover.location,
+            })
+          : t("comet.ratesHoverHint")}
       </p>
 
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Species</TableHead>
-              <TableHead>Analysis period</TableHead>
-              <TableHead className="text-right">Q (molecules/s)</TableHead>
-              <TableHead>Uncertainty</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Method · aperture</TableHead>
-              <TableHead>Source</TableHead>
+              <TableHead>{t("comet.colSpecies")}</TableHead>
+              <TableHead>{t("comet.colPeriod")}</TableHead>
+              <TableHead className="text-right">{t("comet.colRate")}</TableHead>
+              <TableHead>{t("comet.colUncertainty")}</TableHead>
+              <TableHead>{t("comet.colStatus")}</TableHead>
+              <TableHead>{t("comet.colMethod")}</TableHead>
+              <TableHead>{t("comet.colSource")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -178,14 +189,14 @@ export function RatesPanel() {
                 </TableCell>
                 <TableCell className="text-xs">{r.uncertaintyNote}</TableCell>
                 <TableCell>
-                  <Badge variant={r.status === "detection" ? "secondary" : "outline"}>{STATUS_LABEL[r.status]}</Badge>
-                  {r.superseded && <Badge variant="outline" className="ml-1">Superseded</Badge>}
+                  <Badge variant={r.status === "detection" ? "secondary" : "outline"}>{t(STATUS_LABEL[r.status])}</Badge>
+                  {r.superseded && <Badge variant="outline" className="ml-1">{t("comet.superseded")}</Badge>}
                 </TableCell>
                 <TableCell className="max-w-64 text-xs whitespace-normal">
                   {r.method} · {r.aperture}
                 </TableCell>
                 <TableCell className="text-xs whitespace-normal">
-                  {paperName(r.sourceId)} {r.location} · cited from paper
+                  {t("comet.citedFrom", { paper: paperName(r.sourceId), location: r.location })}
                 </TableCell>
               </TableRow>
             ))}
@@ -194,7 +205,7 @@ export function RatesPanel() {
       </div>
 
       <div className="grid gap-1.5 rounded-md border p-3">
-        <h4 className="text-xs font-medium">Changes in the paper’s own words (not converted to production-rate ratios)</h4>
+        <h4 className="text-xs font-medium">{t("comet.statementsHeading")}</h4>
         <ul className="list-disc pl-4 text-xs text-muted-foreground">
           {PAPER_STATEMENTS.map((s) => (
             <li key={s.text}>

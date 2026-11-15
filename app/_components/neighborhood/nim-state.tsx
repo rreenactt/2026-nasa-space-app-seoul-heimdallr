@@ -3,14 +3,18 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/ky";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { buildModel, skyAt, type MotionModel } from "@/app/_lib/nim/motion";
 import type { NeighborCatalog, NeighborObject } from "@/app/_lib/nim/types";
 
 export type RangeMode = "near" | "extrapolation";
-export const RANGES: Record<RangeMode, { min: number; max: number; step: number; label: string }> = {
-  near: { min: 1800, max: 2250, step: 1, label: "1800–2250 (model near the observations)" },
-  extrapolation: { min: -10000, max: 32000, step: 50, label: "10,000 BC – 32,000 AD (educational extrapolation)" },
+export const RANGES: Record<RangeMode, { min: number; max: number; step: number; label: MessageKey }> = {
+  near: { min: 1800, max: 2250, step: 1, label: "nim.rangeNear" },
+  extrapolation: { min: -10000, max: 32000, step: 50, label: "nim.rangeExtrapolation" },
 };
+
+/** A translated note: the key and its placeholder values, turned into text where it is shown. */
+export type NimNote = { key: MessageKey; values?: Record<string, string | number> };
 
 interface NimState {
   catalog: ReturnType<typeof useCatalog>;
@@ -29,7 +33,7 @@ interface NimState {
   showUncertainty: boolean;
   setShowUncertainty: (v: boolean) => void;
   /** Why the current object was (or was not) chosen when opened from the analysis panel. */
-  focusNote: string | null;
+  focusNote: NimNote | null;
 }
 
 export const catalogQuery = () => ({
@@ -76,7 +80,7 @@ export function NimStateProvider({ focus, children }: { focus?: NimFocus; childr
 
   const objects = useMemo(() => catalog.data?.objects ?? [], [catalog.data]);
   const models = useMemo(() => new Map(objects.map((o) => [o.id, buildModel(o, assumedRv[o.id] ?? 0)])), [objects, assumedRv]);
-  const [focusNote, setFocusNote] = useState<string | null>(null);
+  const [focusNote, setFocusNote] = useState<NimNote | null>(null);
   const [focusApplied, setFocusApplied] = useState(false);
 
   // Opened from the analysis panel: select the object at that point, if there is one (within 0.1°).
@@ -87,10 +91,18 @@ export function NimStateProvider({ focus, children }: { focus?: NimFocus; childr
     setFocusApplied(true);
     if (near && near.sepDeg <= 0.1) {
       setSelectedId(near.o.id);
-      setFocusNote(`Selected ${near.o.name}, ${(near.sepDeg * 3600).toFixed(0)}″ from the point you opened.`);
+      setFocusNote({ key: "nim.focusSelected", values: { name: near.o.name, sep: (near.sepDeg * 3600).toFixed(0) } });
     } else {
+      const point = focus.name ?? "";
+      const closest = near ? { name: near.o.name, sep: near.sepDeg.toFixed(1) } : null;
       setFocusNote(
-        `No object of this map (within about 3.6 pc) lies near the point you opened${focus.name ? ` (${focus.name})` : ""}${near ? `; the closest is ${near.o.name}, ${near.sepDeg.toFixed(1)}° away` : ""}.`,
+        focus.name
+          ? closest
+            ? { key: "nim.focusNoneNamedClosest", values: { point, ...closest } }
+            : { key: "nim.focusNoneNamed", values: { point } }
+          : closest
+            ? { key: "nim.focusNoneClosest", values: closest }
+            : { key: "nim.focusNone" },
       );
     }
     /* eslint-enable react-hooks/set-state-in-effect */

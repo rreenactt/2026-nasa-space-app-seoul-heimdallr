@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { SKY_SURVEY } from "../_components/sky/constants";
 import skyHero from "./sky-hero.jpg";
 import { PageShell } from "../_components/site/page-shell";
 import { BlinkDiagram, PlanetXDiagram, RevisitDiagram } from "./_components/about-diagrams";
@@ -57,7 +56,6 @@ export default function AboutPage() {
           </Link>
         </div>
       </section>
-      <p className="mx-3 mt-2.5 px-4 text-right text-[11px] text-signal">{SKY_SURVEY.notice}</p>
       <div className="px-14">
         {SECTIONS.map((section, index) => (
           <section key={section.title} className="grid gap-x-6 gap-y-8 border-t border-rule pt-7 pb-[52px] first:mt-14 md:grid-cols-[64px_minmax(0,1fr)] lg:grid-cols-[64px_minmax(0,600px)_minmax(0,1fr)]">

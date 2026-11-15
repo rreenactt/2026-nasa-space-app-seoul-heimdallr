@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import type { SkyView } from "./sky-coordinates";
 
 /** Imagery for the sky screen: one HiPS that Aladin Lite renders at every field of view. */
@@ -10,8 +11,10 @@ export type SkySurvey = {
   shortName: string;
   /** About when the imagery was taken (year), for overlays that place moving stars at a date. */
   year: number;
-  /** Shown when the survey stands in for the SPHEREx imagery. */
+  /** Shown when the survey stands in for the SPHEREx imagery. English; screens show `t(noticeKey)`. */
   notice?: string;
+  /** Translation key for `notice`. */
+  noticeKey?: MessageKey;
 };
 
 /** Intended imagery: the SPHEREx QR2 color HiPS published by CDS. Browsing only; analysis uses IRSA DR1/QR3 cutouts. */
@@ -32,8 +35,10 @@ export const TWO_MASS_COLOR_SURVEY: SkySurvey = {
   shortName: "2MASS color (temporary, not SPHEREx)",
   // Observed 1997–2001 (PLAN.md chapter 9 uses about 1999 for the Barnard's Star offset).
   year: 1999,
-  // Figma "I · Explore": one line. Why (the CDS outage) is on the Method page under "Data sources and credits".
+  // Shown in the This view panel only (decision #60); the sky screen keeps just the credit line. Why 2MASS is on the
+  // Method page under "Data sources and credits".
   notice: "Temporary background: 2MASS, not SPHEREx",
+  noticeKey: "sky.backgroundNotice",
 };
 
 /** Switch back to SPHEREX_COLOR_SURVEY once CDS serves the SPHEREx tiles again. */

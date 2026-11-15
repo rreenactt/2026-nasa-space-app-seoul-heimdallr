@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { CHECK_PARAMS } from "@/app/_lib/fpl/checks";
 import type { FplExposure } from "@/app/_lib/fpl/types";
 import { compareModelWithImage } from "@/app/_lib/nim/measure";
@@ -24,6 +25,7 @@ import { useNim } from "./nim-state";
 const DEFAULT_DETECTOR = "D6";
 
 export function SpherexTab({ search, predicted }: { search: ReturnType<typeof useSpherexSearch>; predicted: { ra: number; dec: number } | null }) {
+  const t = useT();
   const { selected, models } = useNim();
   const [detectorChoice, setDetectorChoice] = useState<string | null>(null);
   const [pickedKey, setPickedKey] = useState<string | null>(null);
@@ -42,32 +44,32 @@ export function SpherexTab({ search, predicted }: { search: ReturnType<typeof us
   const range = useMemo(() => (frame ? sharedDisplayRange([frame]) : { lo: 0, hi: 1 }), [frame]);
   const cmp = useMemo(() => (frame && atExposure ? compareModelWithImage(frame, atExposure.ra, atExposure.dec) : null), [frame, atExposure?.ra, atExposure?.dec]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!selected || !predicted) return <p className="pt-2 text-sm text-muted-foreground">Select an object.</p>;
-  if (search.isPending) return <p className="flex items-center gap-2 pt-2 text-sm text-muted-foreground"><Spinner /> Searching SPHEREx DR1 at the model position for 2025.8…</p>;
+  if (!selected || !predicted) return <p className="pt-2 text-sm text-muted-foreground">{t("nim.selectObject")}</p>;
+  if (search.isPending) return <p className="flex items-center gap-2 pt-2 text-sm text-muted-foreground"><Spinner /> {t("nim.searchingModel")}</p>;
   if (search.isError) return <p className="pt-2 text-sm text-destructive">{search.error.message}</p>;
-  if (!exposures.length) return <p className="pt-2 text-sm text-muted-foreground">No SPHEREx DR1 exposure covers the model position of {selected.name}.</p>;
+  if (!exposures.length) return <p className="pt-2 text-sm text-muted-foreground">{t("nim.noExposure", { name: selected.name })}</p>;
 
   return (
     <div className="grid gap-3 pt-2 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <Label className="text-xs">Detector</Label>
+        <Label className="text-xs">{t("fpl.detector")}</Label>
         <NativeSelect size="sm" value={detector} onChange={(e) => { setDetectorChoice(e.target.value); setPickedKey(null); }}>
           {dets.map((d) => (
-            <NativeSelectOption key={d} value={d}>{d} · {visitsOf(exposures.filter((e) => e.detector === d)).length} visit(s)</NativeSelectOption>
+            <NativeSelectOption key={d} value={d}>{t("fpl.detectorVisits", { detector: d, n: visitsOf(exposures.filter((e) => e.detector === d)).length })}</NativeSelectOption>
           ))}
         </NativeSelect>
-        <span className="text-muted-foreground">{exposures.length} exposures found at the 2025.8 model position (DR1). D6 is the default: shorter-wavelength detectors usually saturate on these bright neighbours.</span>
+        <span className="text-muted-foreground">{t("nim.exposuresFound", { n: exposures.length })}</span>
       </div>
       {visits.length === 1 && (
         <Alert>
           <AlertCircleIcon />
-          <AlertDescription>Additional analysis needed: one SPHEREx visit only. Compare with the model path and with Sky Time Machine (2MASS/WISE) for a longer baseline.</AlertDescription>
+          <AlertDescription>{t("nim.oneVisit")}</AlertDescription>
         </Alert>
       )}
       <div className="grid gap-1 text-xs">
         {visits.map((v, i) => (
           <div key={v[0].key} className="flex flex-wrap items-center gap-1">
-            <span className="w-36 text-muted-foreground">Visit {i + 1} · {mjdIso(v[0].tStart).slice(0, 10)}</span>
+            <span className="w-36 text-muted-foreground">{t("fpl.visitDate", { n: i + 1, date: mjdIso(v[0].tStart).slice(0, 10) })}</span>
             {v.map((e) => (
               <button
                 key={e.key}
@@ -84,7 +86,7 @@ export function SpherexTab({ search, predicted }: { search: ReturnType<typeof us
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,22rem)_1fr]">
         {frames[0]?.isPending ? (
-          <div className="flex aspect-square items-center justify-center gap-2 rounded-md border border-dashed text-xs text-muted-foreground"><Spinner /> Reading the exposure…</div>
+          <div className="flex aspect-square items-center justify-center gap-2 rounded-md border border-dashed text-xs text-muted-foreground"><Spinner /> {t("nim.readingExposure")}</div>
         ) : frame && grid && atExposure ? (
           <LayeredCanvas
             frame={frame}
@@ -99,39 +101,38 @@ export function SpherexTab({ search, predicted }: { search: ReturnType<typeof us
           />
         ) : (
           <div className="flex aspect-square flex-col items-center justify-center gap-2 rounded-md border border-dashed text-xs text-destructive">
-            {frames[0]?.error?.message ?? "Not loaded"}
-            {frames[0] && <Button size="xs" variant="outline" onClick={() => frames[0].refetch()}>Retry</Button>}
+            {frames[0]?.error?.message ?? t("nim.notLoaded")}
+            {frames[0] && <Button size="xs" variant="outline" onClick={() => frames[0].refetch()}>{t("fpl.retry")}</Button>}
           </div>
         )}
         <dl className="grid content-start gap-x-3 gap-y-1 text-xs [grid-template-columns:auto_1fr]">
-          <dt className="text-muted-foreground">Exposure</dt>
+          <dt className="text-muted-foreground">{t("nim.exposure")}</dt>
           <dd className="font-mono">{picked?.obsId} {picked?.detector}</dd>
-          <dt className="text-muted-foreground">Observed</dt>
+          <dt className="text-muted-foreground">{t("nim.observed")}</dt>
           <dd className="font-mono">{picked && mjdIso((picked.tStart + picked.tEnd) / 2)}</dd>
-          <dt className="text-muted-foreground">Wavelength here</dt>
+          <dt className="text-muted-foreground">{t("nim.wavelengthHere")}</dt>
           <dd className="font-mono">{cmp?.wavelengthUm != null ? `${cmp.wavelengthUm.toFixed(3)} µm` : "—"}</dd>
-          <dt className="text-muted-foreground">Model position</dt>
-          <dd className="font-mono">{atExposure && `${atExposure.ra.toFixed(5)}, ${atExposure.dec.toFixed(5)}`} <span className="text-sky-500">(blue circle)</span></dd>
-          <dt className="text-muted-foreground">Signal at model position</dt>
+          <dt className="text-muted-foreground">{t("nim.modelPosition")}</dt>
+          <dd className="font-mono">{atExposure && `${atExposure.ra.toFixed(5)}, ${atExposure.dec.toFixed(5)}`} <span className="text-sky-500">{t("nim.blueCircle")}</span></dd>
+          <dt className="text-muted-foreground">{t("nim.signalAtModel")}</dt>
           <dd>
-            {cmp ? (cmp.snr != null ? `S/N ${cmp.snr.toFixed(1)} in a 2-px aperture` : "Not measurable (pixels excluded, e.g. saturated)") : "—"}
+            {cmp ? (cmp.snr != null ? t("nim.snrInAperture", { snr: cmp.snr.toFixed(1) }) : t("nim.notMeasurable")) : "—"}
             {cmp && cmp.snr != null && cmp.coreExcludedPixels > 0 && (
               <span className="block text-amber-600 dark:text-amber-400">
-                {cmp.coreExcludedPixels} centre pixel(s) excluded ({cmp.coreExcludedFlags.join(", ") || "no valid data"}): the brightness is a lower limit.
+                {t("nim.centreExcluded", { n: cmp.coreExcludedPixels, flags: cmp.coreExcludedFlags.join(", ") || t("nim.noValidData") })}
               </span>
             )}
           </dd>
-          <dt className="text-muted-foreground">Measured centroid</dt>
+          <dt className="text-muted-foreground">{t("nim.measuredCentroid")}</dt>
           <dd>
             {cmp?.measured
-              ? `${cmp.offsetArcsec!.toFixed(1)}″ from the model (yellow +), from ${cmp.usablePixels} pixels above 2σ`
-              : "No centroid: too few usable pixels above 2σ near the model position"}
+              ? t("nim.centroidOffset", { offset: cmp.offsetArcsec!.toFixed(1), n: cmp.usablePixels })
+              : t("nim.noCentroid")}
           </dd>
         </dl>
       </div>
       <p className="text-xs text-muted-foreground">
-        The model gives the barycentric direction. SPHEREx observes from Earth orbit, so the true position also shifts by up to the parallax ({selected.parallax.value.toFixed(0)} mas) — far below the {(cmp?.pixelScaleArcsec ?? 6.15).toFixed(1)}″ pixels.
-        A signal at the model position is not proof that this object was detected: other sources can sit there, and bright stars saturate (see Fake Planet Lab).
+        {t("nim.footnote", { parallax: selected.parallax.value.toFixed(0), pixel: (cmp?.pixelScaleArcsec ?? 6.15).toFixed(1) })}
       </p>
     </div>
   );

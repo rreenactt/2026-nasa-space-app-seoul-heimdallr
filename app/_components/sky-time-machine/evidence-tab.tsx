@@ -4,21 +4,24 @@ import { ExternalLinkIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MISSION_ORDER, MISSIONS, PROCESSING_VERSION } from "@/app/_lib/sky/missions";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { formatPeriod, useStm } from "./stm-state";
 import { useEpochFrame, useLoadedFrames } from "./use-sky-data";
 
-const LIMITATIONS = [
-  "Each WISE/NEOWISE date is a median stack, computed by this tool, of up to 5 single exposures from one visit (every ~6 months, lasting a few days). These are not the official unWISE time-resolved coadds (we could not find a public image path for them).",
-  "Quality flags and mask files for WISE single exposures are not used. The median stack removes most cosmic rays and satellite trails, but they may remain in dates built from a single image.",
-  "In SPHEREx, the wavelength at this position differs between exposures. The wavelength shown is for the field center, and it can differ between dates even for the same detector number.",
-  "SPHEREx OUTLIER flags are not masked, because they can also mark moving objects.",
-  "The brightness scale is set separately for each frame. Comparing brightness across missions cannot tell you about variability.",
-  "A finer shared grid does not improve resolution (the original pixel size is shown for each date).",
-  "The Gaia predicted path applies only linear proper motion from the 2016.0 position (parallax and radial velocity ignored). It may differ from the actual measured position.",
-  "A missing object may reflect differences in sensitivity or wavelength; it does not mean the object was absent then and appeared later.",
+const LIMITATIONS: MessageKey[] = [
+  "stm.limitWiseStack",
+  "stm.limitWiseFlags",
+  "stm.limitSpherexWavelength",
+  "stm.limitSpherexOutlier",
+  "stm.limitBrightnessScale",
+  "stm.limitGrid",
+  "stm.limitGaiaPath",
+  "stm.limitMissing",
 ];
 
 export function EvidenceTab() {
+  const t = useT();
   const { epochs, current, grid, searches, target } = useStm();
   const frame = useEpochFrame(current, grid);
   const loadedFrames = useLoadedFrames(epochs, grid);
@@ -26,14 +29,14 @@ export function EvidenceTab() {
   return (
     <div className="grid gap-3 pt-2 text-xs">
       <section className="grid gap-2 rounded-md border p-3">
-        <h3 className="text-sm font-medium">① Field shown</h3>
+        <h3 className="text-sm font-medium">{t("stm.sectionField")}</h3>
         <p className="font-mono">
-          Center RA {target.ra.toFixed(5)}° Dec {target.dec.toFixed(5)}° · Field {target.fovArcmin}′ · Grid {grid.n}×{grid.n} (TAN, north up) · Source {target.source}
+          {t("stm.fieldLine", { ra: target.ra.toFixed(5), dec: target.dec.toFixed(5), fov: target.fovArcmin, n: grid.n, source: target.source })}
         </p>
       </section>
 
       <section className="grid gap-2 rounded-md border p-3">
-        <h3 className="text-sm font-medium">② Search (IRSA SIA2)</h3>
+        <h3 className="text-sm font-medium">{t("stm.sectionSearch")}</h3>
         <ul className="grid gap-1">
           {MISSION_ORDER.map((m, i) => {
             const q = searches[i].data;
@@ -41,9 +44,9 @@ export function EvidenceTab() {
               <li key={m}>
                 <span className="font-medium">{MISSIONS[m].label}</span> — {MISSIONS[m].product}
                 {q ? (
-                  <span className="text-muted-foreground"> · {q.exposureCount} exposures → {q.epochs.length} visits (per band) · {q.collections.join(", ")}</span>
+                  <span className="text-muted-foreground"> · {t("stm.searchSummary", { exposures: q.exposureCount, visits: q.epochs.length, collections: q.collections.join(", ") })}</span>
                 ) : (
-                  <span className="text-muted-foreground"> · {searches[i].isError ? `Failed: ${searches[i].error?.message}` : "Searching"}</span>
+                  <span className="text-muted-foreground"> · {searches[i].isError ? t("stm.searchFailed", { message: String(searches[i].error?.message) }) : t("analyses.stepSearching")}</span>
                 )}
                 {q?.queryUrls.map((u) => (
                   <div key={u} className="truncate font-mono text-muted-foreground">
@@ -57,17 +60,17 @@ export function EvidenceTab() {
       </section>
 
       <section className="grid gap-2 rounded-md border p-3">
-        <h3 className="text-sm font-medium">③ Source data for the current date</h3>
+        <h3 className="text-sm font-medium">{t("stm.sectionSource")}</h3>
         {!current ? (
           "—"
         ) : !frame.data ? (
-          <span className="text-muted-foreground">The exposures used will be listed once the image is loaded.</span>
+          <span className="text-muted-foreground">{t("stm.sourcePending")}</span>
         ) : (
           <>
             <p>
-              {MISSIONS[current.mission].label} {current.wavelengthLabel} · {frame.data.combine} · Time span of exposures used{" "}
+              {MISSIONS[current.mission].label} {current.wavelengthLabel} · {frame.data.combine} · {t("stm.exposureSpan")}{" "}
               <span className="font-mono">{formatPeriod(frame.data.timeStart, frame.data.timeEnd)}</span>
-              {frame.data.wavelengthUm != null && <> · Wavelength at field center {frame.data.wavelengthUm.toFixed(3)} µm</>}
+              {frame.data.wavelengthUm != null && <> · {t("stm.centerWavelength", { um: frame.data.wavelengthUm.toFixed(3) })}</>}
             </p>
             <ul className="grid gap-0.5 font-mono">
               {frame.data.used.map((u) => (
@@ -79,16 +82,16 @@ export function EvidenceTab() {
                 </li>
               ))}
               {frame.data.failed.map((f) => (
-                <li key={f.id} className="truncate text-destructive">Not loaded · {f.id} · {f.reason}</li>
+                <li key={f.id} className="truncate text-destructive">{t("stm.notLoadedItem", { id: f.id, reason: f.reason })}</li>
               ))}
             </ul>
-            <p className="text-muted-foreground">Processing: {frame.data.processingVersion}</p>
+            <p className="text-muted-foreground">{t("stm.processing", { version: frame.data.processingVersion })}</p>
           </>
         )}
       </section>
 
       <section className="grid gap-2 rounded-md border p-3">
-        <h3 className="text-sm font-medium">④ All dates (common format)</h3>
+        <h3 className="text-sm font-medium">{t("stm.sectionDates")}</h3>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -97,7 +100,7 @@ export function EvidenceTab() {
                 <TableHead>mission · release</TableHead>
                 <TableHead>band</TableHead>
                 <TableHead>time_start ~ time_end</TableHead>
-                <TableHead>Exposures</TableHead>
+                <TableHead>{t("stm.colExposures")}</TableHead>
                 <TableHead>coverage</TableHead>
               </TableRow>
             </TableHeader>
@@ -111,21 +114,21 @@ export function EvidenceTab() {
                     <TableCell>{e.band}</TableCell>
                     <TableCell>{formatPeriod(e.timeStart, e.timeEnd)}</TableCell>
                     <TableCell>{f ? `${f.used.length}/${e.totalExposures}` : `${e.exposures.length}/${e.totalExposures}`}</TableCell>
-                    <TableCell>{f ? `${(f.coverage * 100).toFixed(0)}%` : <Badge variant="outline">Not loaded</Badge>}</TableCell>
+                    <TableCell>{f ? `${(f.coverage * 100).toFixed(0)}%` : <Badge variant="outline">{t("stm.notLoaded")}</Badge>}</TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </div>
-        <p className="text-muted-foreground">time_start ~ time_end are the actual observation times (SIA2 t_min, t_max), not data release dates. Processing version: {PROCESSING_VERSION}</p>
+        <p className="text-muted-foreground">{t("stm.datesNote", { version: PROCESSING_VERSION })}</p>
       </section>
 
       <section className="grid gap-2 rounded-md border p-3">
-        <h3 className="text-sm font-medium">⑤ Limitations</h3>
+        <h3 className="text-sm font-medium">{t("stm.sectionLimitations")}</h3>
         <ul className="list-disc pl-4 text-muted-foreground">
           {LIMITATIONS.map((l) => (
-            <li key={l}>{l}</li>
+            <li key={l}>{t(l)}</li>
           ))}
         </ul>
       </section>

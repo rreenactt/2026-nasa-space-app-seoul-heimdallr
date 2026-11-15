@@ -1,11 +1,12 @@
 import "client-only";
 
 import A, { type Aladin } from "aladin-lite";
-import { cn } from "cn";
 import { useEffect, useRef } from "react";
 import { AIM_FOV, CUTOUT_ARCMIN, MAX_FOV, MIN_FOV, SKY_SURVEY } from "./constants";
-import constellationLines from "./data/constellation-lines.json";
 import { angularDistance, type EquatorialCoordinates, normalizeRa, type SkyView } from "./sky-coordinates";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
+import { type ConstellationLabel, drawSkyLines } from "./sky-lines";
 import { TEST_TARGETS, type TestTarget } from "./test-targets";
 import { setView } from "./view-store";
 
@@ -13,7 +14,7 @@ import { setView } from "./view-store";
 export type Flight = SkyView & { id: number };
 
 /** Overlays that can be switched off; the sky image itself always shows. */
-export type SkyLayers = { pins: boolean; constellations: boolean; grid: boolean };
+export type SkyLayers = { pins: boolean; constellations: boolean; constellationNames: boolean; grid: boolean };
 
 /** What a painter gets on each redraw: a sky-to-screen projection (null beyond the view) and the view size. */
 export type SkyPaintFrame = {
@@ -22,8 +23,12 @@ export type SkyPaintFrame = {
   ra: number;
   dec: number;
   fov: number;
+  /** Angular distance (degrees) from the center to the farthest screen corner, measured through the projection. */
+  radius: number;
   width: number;
   height: number;
+  /** Whether a screen point (CSS px) is hidden under the page's interface (a panel, a card, the tool bar). */
+  covered: (x: number, y: number) => boolean;
 };
 /**
  * Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes, or on
@@ -36,6 +41,11 @@ export type SettledSky = SkyView & {
   /** Size of the view in CSS pixels. */
   width: number;
   height: number;
+  /** Angular distance (degrees) from the center to the farthest screen corner. */
+  radius: number;
+  covered: SkyPaintFrame["covered"];
+  /** Screen position (CSS px) of a sky position in the current view, or null when it is outside the projection. */
+  project: (ra: number, dec: number) => [number, number] | null;
 };
 
 /** How long the view must hold still before onSettle runs. */
@@ -64,20 +74,6 @@ type SkyViewProps = {
 /** A click this close (CSS pixels) to a test target's pin selects the target itself. */
 const PIN_HIT_RADIUS = 12;
 
-type ConstellationData = { features: { geometry: { coordinates: number[][][] } }[] };
-
-/**
- * Constellation stick figures from d3-celestial (BSD-3-Clause, see data/LICENSE-d3-celestial.txt; positions J2000,
- * lines after the IAU constellation pages). Longitude in the file is RA in −180…180°. In the TAN projection a great
- * circle is a straight line, so straight segments between the stars are exact.
- *
- * They are drawn on our own canvas over the sky, not as an Aladin Lite polyline overlay: in 3.8.2 a polyline with a
- * point outside the TAN projection throws inside Aladin's draw loop and freezes the whole view.
- */
-const CONSTELLATION_LINES = (constellationLines as ConstellationData).features.flatMap((feature) =>
-  feature.geometry.coordinates.map((line) => line.map(([ra, dec]): [number, number] => [normalizeRa(ra), dec])),
-);
-
 /**
  * The whole sky screen in one Aladin Lite view. TAN is the perspective view from the center of the sphere, so the
  * wide view looks like a first-person sky, and HiPS tiles sharpen continuously as the view zooms in: no hand-off, no
@@ -101,6 +97,9 @@ export default function SkyView({
   const markCanvas = useRef<HTMLCanvasElement>(null);
   const painterRef = useRef(painter);
   const painterVersion = useRef(0);
+  const t = useT();
+  /** Constellation labels in the chosen language; the version makes the lines redraw when the language changes. */
+  const labelRef = useRef<{ label: ConstellationLabel; version: number }>({ label: (_id, name) => name, version: 0 });
   const aladinRef = useRef<Aladin | null>(null);
   const layersRef = useRef(layers);
   const pendingFlight = useRef<Flight | null>(null);
@@ -112,6 +111,12 @@ export default function SkyView({
   useEffect(() => {
     callbacks.current = { onCursorMove, onFovChange, onFlightEnd, onSelect, onError, onSettle };
   });
+  useEffect(() => {
+    labelRef.current = {
+      label: (id, name) => (id.length <= 3 ? t(`constellation.${id}` as MessageKey) : name),
+      version: labelRef.current.version + 1,
+    };
+  }, [t]);
   useEffect(() => {
     painterRef.current = painter;
     painterVersion.current += 1;
@@ -160,13 +165,12 @@ export default function SkyView({
           showCooLocation: false,
           showStatusBar: false,
           showContextMenu: false,
-          gridOptions: { enabled: true, color: "rgb(111, 143, 184)", opacity: 0.35, thickness: 1, showLabels: false },
         });
         aladin.setFoVRange(MIN_FOV, MAX_FOV);
 
         // Every frame, from the view's actual state: Aladin's zoomChanged event is throttled, so anything sized from it
-        // steps during a zoom. The constellation lines are redrawn only on frames where the view moved, zoomed, or
-        // resized.
+        // steps during a zoom. The grid and constellation lines are redrawn only on frames where the view moved, zoomed,
+        // resized, or a layer was switched.
         let drawnFor = "";
         let paintedFor = "";
         let placedFor = "";
@@ -175,6 +179,38 @@ export default function SkyView({
         let settleKey = "";
         let changedAt = 0;
         let settledWith: ((settled: SettledSky | null) => void) | null = null;
+        const project = (ra: number, dec: number): [number, number] | null => {
+          const pixel = aladin.world2pix(ra, dec);
+          return pixel ? [pixel[0], pixel[1]] : null;
+        };
+        // Hit-tests the page: a point is covered when what sits on top there is not part of the sky view. When even the
+        // center is covered (the intro, a dialog), nothing counts as covered, so a full-screen layer does not hide all.
+        const outside = (box: DOMRect, x: number, y: number) => {
+          const hit = document.elementFromPoint(box.left + x, box.top + y);
+          return hit !== null && !element.contains(hit);
+        };
+        const covered = (x: number, y: number) => {
+          const box = element.getBoundingClientRect();
+          return outside(box, x, y) && !outside(box, box.width / 2, box.height / 2);
+        };
+        // The view's reach, from where its corners actually land on the sky (the field of view alone is only the
+        // horizontal span, and the projection stretches toward the corners). Worked out again when the view changes.
+        let radiusFor = "";
+        let radius = 0;
+        const reach = (key: string, center: EquatorialCoordinates, fov: number, width: number, height: number) => {
+          if (key === radiusFor) return radius;
+          radiusFor = key;
+          radius = (fov / 2) * Math.hypot(1, height / Math.max(width, 1));
+          for (const [x, y] of [[0, 0], [width, 0], [0, height], [width, height]]) {
+            const world = aladin.pix2world(x, y);
+            if (world && Number.isFinite(world[0]) && Number.isFinite(world[1])) {
+              radius = Math.max(radius, angularDistance(center, { ra: world[0], dec: world[1] }));
+            } else {
+              radius = 180; // a corner beyond the projection: the whole sky
+            }
+          }
+          return radius;
+        };
         const onFrame = () => {
           frame = requestAnimationFrame(onFrame);
           const [centerRa, centerDec] = aladin.getRaDec();
@@ -186,9 +222,30 @@ export default function SkyView({
             setView({ ra: centerRa, dec: centerDec, fov: width });
           }
           const key = `${viewKey} ${element.clientWidth} ${element.clientHeight}`;
-          if (canvas && key !== drawnFor) {
-            drawnFor = key;
-            drawConstellations(canvas, aladin, element.clientWidth, element.clientHeight);
+          const { constellations, constellationNames, grid } = layersRef.current;
+          const linesKey = `${key} ${constellations} ${constellationNames} ${grid} ${labelRef.current.version}`;
+          if (canvas && linesKey !== drawnFor) {
+            drawnFor = linesKey;
+            const context = prepareCanvas(canvas, element.clientWidth, element.clientHeight);
+            if (context) {
+              drawSkyLines(
+                context,
+                {
+                  project: (pointRa, pointDec) => {
+                    const pixel = aladin.world2pix(pointRa, pointDec);
+                    return pixel ? [pixel[0], pixel[1]] : null;
+                  },
+                  ra: centerRa,
+                  dec: centerDec,
+                  fov: width,
+                  width: element.clientWidth,
+                  height: element.clientHeight,
+                },
+                { constellations, constellationNames, grid },
+                lineFont(),
+                labelRef.current.label,
+              );
+            }
           }
           // Settling: the view (or its size) unchanged for SETTLE_MS.
           const onSettleNow = callbacks.current.onSettle;
@@ -200,7 +257,16 @@ export default function SkyView({
             settledWith = null;
           } else if (onSettleNow && settledWith !== onSettleNow && performance.now() - changedAt >= SETTLE_MS) {
             settledWith = onSettleNow;
-            onSettleNow({ ra: centerRa, dec: centerDec, fov: width, width: element.clientWidth, height: element.clientHeight });
+            onSettleNow({
+              ra: centerRa,
+              dec: centerDec,
+              fov: width,
+              radius: reach(key, { ra: centerRa, dec: centerDec }, width, element.clientWidth, element.clientHeight),
+              width: element.clientWidth,
+              height: element.clientHeight,
+              project,
+              covered,
+            });
           }
           const marks = markCanvas.current;
           const markKey = `${key} ${painterVersion.current}`;
@@ -209,15 +275,14 @@ export default function SkyView({
             const context = prepareCanvas(marks, element.clientWidth, element.clientHeight);
             if (context && painterRef.current) {
               const again = painterRef.current(context, {
-                project: (ra, dec) => {
-                  const pixel = aladin.world2pix(ra, dec);
-                  return pixel ? [pixel[0], pixel[1]] : null;
-                },
+                project,
                 ra: centerRa,
                 dec: centerDec,
                 fov: width,
+                radius: reach(key, { ra: centerRa, dec: centerDec }, width, element.clientWidth, element.clientHeight),
                 width: element.clientWidth,
                 height: element.clientHeight,
+                covered,
               });
               if (again) paintedFor = "";
             }
@@ -249,7 +314,6 @@ export default function SkyView({
         onFrame();
 
         // Test target pins and their names are drawn by the painter (candidate-layer.ts), in the site type.
-        applyLayers(aladin, layersRef.current);
 
         aladin.on("click", (event) => {
           if (event.isDragging) return;
@@ -290,7 +354,6 @@ export default function SkyView({
 
   useEffect(() => {
     layersRef.current = layers;
-    if (aladinRef.current) applyLayers(aladinRef.current, layers);
   }, [layers]);
 
   useEffect(() => {
@@ -308,11 +371,7 @@ export default function SkyView({
   return (
     <div className="absolute inset-0">
       <div ref={container} className="h-full w-full" />
-      <canvas
-        ref={linesCanvas}
-        aria-hidden
-        className={cn("pointer-events-none absolute inset-0 h-full w-full", !layers.constellations && "hidden")}
-      />
+      <canvas ref={linesCanvas} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
       <canvas ref={markCanvas} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
       {/* Aiming square the size of the analysis cutout; clicking opens the analysis panel for that point. */}
       <div
@@ -324,8 +383,10 @@ export default function SkyView({
   );
 }
 
-function applyLayers(aladin: Aladin, layers: SkyLayers) {
-  aladin.setCooGrid({ enabled: layers.grid });
+/** Grid labels and constellation names in the data face (Fragment Mono), as in Figma. */
+function lineFont() {
+  const family = getComputedStyle(document.documentElement).getPropertyValue("--font-data-face").trim() || "monospace";
+  return `400 10px ${family}`;
 }
 
 /** Sizes a canvas to its box at the device pixel ratio and clears it; returns a context in CSS pixels. */
@@ -340,35 +401,6 @@ function prepareCanvas(canvas: HTMLCanvasElement, width: number, height: number)
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
   return context;
-}
-
-function drawConstellations(canvas: HTMLCanvasElement, aladin: Aladin, width: number, height: number) {
-  const ratio = window.devicePixelRatio || 1;
-  if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
-    canvas.width = Math.round(width * ratio);
-    canvas.height = Math.round(height * ratio);
-  }
-  const context = canvas.getContext("2d");
-  if (!context) return;
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
-  context.clearRect(0, 0, width, height);
-  context.strokeStyle = "rgba(168, 200, 255, 0.45)";
-  context.lineWidth = 1;
-  context.beginPath();
-  for (const line of CONSTELLATION_LINES) {
-    let previous: [number, number] | null = null;
-    for (const [ra, dec] of line) {
-      // Points more than 90° from the view center have no TAN position; the segment to them is skipped.
-      const pixel = aladin.world2pix(ra, dec);
-      const point: [number, number] | null = pixel ? [pixel[0], pixel[1]] : null;
-      if (previous && point) {
-        context.moveTo(previous[0], previous[1]);
-        context.lineTo(point[0], point[1]);
-      }
-      previous = point;
-    }
-  }
-  context.stroke();
 }
 
 /** Curvature of the flight path: how much a long flight widens the view on the way (van Wijk and Nuij use √2). */

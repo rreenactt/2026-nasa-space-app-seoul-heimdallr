@@ -1,6 +1,9 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { latestReviewBatch, type ReviewCandidateRow } from "@/data/motion-candidates";
+import { cellTallies, type Tally } from "@/data/ratings";
+import { ratingStatus } from "@/app/_lib/ratings/status";
+import { RATING_RELEASE } from "@/app/api/ratings/_server/ratings";
 import type { CandidateBatch, MovementCandidate } from "./review-queue";
 
 const MJD_UNIX_EPOCH = 40587;
@@ -19,8 +22,24 @@ function coordinateName(ra: number, dec: number) {
   return `J${pad(hh, 2)}${pad(mm, 2)}${ss.toFixed(1).padStart(4, "0")}${dec < 0 ? "-" : "+"}${pad(dd, 2)}${pad(dm, 2)}${pad(ds, 2)}`;
 }
 
-/** A database row as the sky screen sees it (the batch list and the search lookup share this). */
-export function toMovementCandidate(row: ReviewCandidateRow, surveyId: string): MovementCandidate {
+/**
+ * Ratings are of DR1 cells; the survey names its release "spherex_dr1". Only a DR1 survey's candidates take statuses
+ * from the ratings.
+ */
+const ratedRelease = (release: string) => release.toUpperCase().endsWith(RATING_RELEASE);
+
+/** The tallies of the cells these candidates sit in, or none when the survey is not of the rated release. */
+export async function talliesFor(rows: ReviewCandidateRow[], release: string): Promise<Map<number, Tally>> {
+  if (!ratedRelease(release)) return new Map();
+  return cellTallies(RATING_RELEASE, [...new Set(rows.map((row) => row.hpxIndex))]);
+}
+
+/**
+ * A database row as the sky screen sees it (the batch list and the search lookup share this). The status comes from
+ * the ratings of the candidate's cell (decision #57); without ratings it has none.
+ */
+export function toMovementCandidate(row: ReviewCandidateRow, surveyId: string, tally?: Tally): MovementCandidate {
+  const match = row.match === "KNOWN_MOVER" ? "known" : "unidentified";
   return {
     id: coordinateName(row.raDeg, row.decDeg),
     ra: row.raDeg,
@@ -30,7 +49,7 @@ export function toMovementCandidate(row: ReviewCandidateRow, surveyId: string): 
     detector: row.detector,
     wavelengthUm: row.wavelengthUm,
     snr: row.snr,
-    match: row.match === "KNOWN_MOVER" ? "known" : "unidentified",
+    match,
     pmTotalMasYr: row.pmTotalMasYr,
     separationArcsec: row.separationArcsec,
     baselineYears: row.baselineYears,
@@ -39,13 +58,15 @@ export function toMovementCandidate(row: ReviewCandidateRow, surveyId: string): 
     gaiaPmMasYr: row.gaiaPmMasYr,
     synthetic: row.isSynthetic,
     batchId: surveyId,
+    status: ratingStatus(tally, match),
   };
 }
 
 async function load(): Promise<CandidateBatch> {
   const batch = await latestReviewBatch();
   if (!batch) return { state: "empty" };
-  const candidates = batch.candidates.map((row) => toMovementCandidate(row, batch.surveyId));
+  const tallies = await talliesFor(batch.candidates, batch.release);
+  const candidates = batch.candidates.map((row) => toMovementCandidate(row, batch.surveyId, tallies.get(row.hpxIndex)));
   return {
     state: "ready",
     batchId: batch.surveyId,
@@ -60,7 +81,7 @@ async function load(): Promise<CandidateBatch> {
 // Candidates can be added to or removed from the database at any time, so the list is kept for one minute only; the
 // search asks the database directly (api/candidates/lookup). Bump the version in the key whenever the shape of a
 // MovementCandidate changes, so a cached old shape is never served.
-const cachedLoad = unstable_cache(load, ["sky-candidate-batch", "v2"], { revalidate: 60 });
+const cachedLoad = unstable_cache(load, ["sky-candidate-batch", "v3"], { revalidate: 60 });
 
 /**
  * The latest survey batch for the sky screen. If the database cannot be reached the screen says so rather than

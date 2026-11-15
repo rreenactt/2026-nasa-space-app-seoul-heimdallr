@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { findReviewCandidate } from "@/data/motion-candidates";
-import { toMovementCandidate } from "@/app/_components/sky/candidate-batch";
+import { talliesFor, toMovementCandidate } from "@/app/_components/sky/candidate-batch";
 import type { CandidateLookup } from "@/app/_components/sky/review-queue";
 import { parseSkyName } from "@/app/_components/sky/sky-search";
 
@@ -30,8 +30,9 @@ export async function GET(request: NextRequest) {
         ? { tmassDesignation: `2MASS ${name.designation}` }
         : { ...name.point, radiusArcsec: NAME_RADIUS_ARCSEC },
     );
+    const tallies = found ? await talliesFor([found.row], found.release) : new Map();
     const body: CandidateLookup = {
-      candidate: found ? toMovementCandidate(found.row, found.surveyId) : null,
+      candidate: found ? toMovementCandidate(found.row, found.surveyId, tallies.get(found.row.hpxIndex)) : null,
       point: name.point,
     };
     return Response.json(body, { headers: NO_STORE });

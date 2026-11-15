@@ -5,6 +5,8 @@ import { EyeIcon, PlayIcon, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { useAnalyses } from "./analyses-context";
 import { AnalysisIllustration } from "./analysis-illustrations";
 import { ANALYSIS_TITLES } from "./analysis-views";
@@ -24,9 +26,10 @@ function eta(progress: P, startedAt: number) {
  * (several can download at once, with files done, files left and an estimate), then opens it as a tab on the left.
  */
 export function AdditionalAnalyses() {
+  const t = useT();
   const { selection, stmFov, jobs, run, cancel, opened, view, setView } = useAnalyses();
   const { target } = selection;
-  const name = target?.name ?? "Selected point";
+  const name = target?.name ?? t("panel.selectedPoint");
   const nearby = target ? NEARBY_PINS.has(target.id) : false;
 
   // Refresh the remaining-time estimate every second while something downloads.
@@ -34,78 +37,80 @@ export function AdditionalAnalyses() {
   const anyRunning = Object.values(jobs).some((j) => j.status === "running");
   useEffect(() => {
     if (!anyRunning) return;
-    const t = setInterval(() => setNow((n) => n + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow((n) => n + 1), 1000);
+    return () => clearInterval(timer);
   }, [anyRunning]);
 
-  const items: { id: AnalysisId; summary: string; badge: { label: string; ready: boolean }; note: string }[] = [
+  const items: { id: AnalysisId; summary: MessageKey; badge: { label: MessageKey; ready: boolean }; note: string }[] = [
     {
       id: "sky-time-machine",
-      summary: "The same patch of sky from 2MASS (≈2000), WISE/NEOWISE (2010–2024) and SPHEREx, in real observation order.",
-      badge: { label: "Any position", ready: true },
-      note: `${stmFov}′ field on this point. The largest download (about 30 images); 2MASS images come from IRSA, two at a time.`,
+      summary: "analyses.stmSummary",
+      badge: { label: "analyses.anyPosition", ready: true },
+      note: t("analyses.stmNote", { fov: stmFov }),
     },
     {
       id: "fake-planet-lab",
-      summary: "Is a dot real or a defect? Quality flags, uncertainty and other observations for any spot you click.",
-      badge: { label: "Any position", ready: true },
-      note: "SPHEREx search and up to 3 exposures of this point.",
+      summary: "analyses.fplSummary",
+      badge: { label: "analyses.anyPosition", ready: true },
+      note: t("analyses.fplNote"),
     },
     {
       id: "neighborhood-in-motion",
-      summary: "Nearby stars and brown dwarfs in 3D from measured distance and motion, linked to SPHEREx.",
-      badge: nearby ? { label: "Object in the map", ready: true } : { label: "Nearby objects only", ready: false },
-      note: nearby ? `${name} is in the map and will be selected.` : "This point is matched to the nearest object within about 3.6 pc; the map says if none is close.",
+      summary: "analyses.nimSummary",
+      badge: nearby ? { label: "analyses.objectInMap", ready: true } : { label: "analyses.nearbyOnly", ready: false },
+      note: nearby ? t("analyses.nimNoteInMap", { name }) : t("analyses.nimNoteNearest"),
     },
     {
       id: "sky-sonata",
-      summary: "Hear the sky: position becomes left/right and pitch, brightness becomes loudness. Keyboard-first.",
-      badge: { label: "Any position", ready: true },
-      note: "SPHEREx search and two observations (A and B) of this point.",
+      summary: "analyses.sonataSummary",
+      badge: { label: "analyses.anyPosition", ready: true },
+      note: t("analyses.sonataNote"),
     },
     {
       id: "comet-breath",
-      summary: "Water, CO₂ and CO from the interstellar comet 3I/ATLAS, before and after perihelion.",
-      badge: { label: "3I/ATLAS only", ready: false },
-      note: "Uses the dedicated 3I/ATLAS dataset, not this point (the comet moves, so fixed coordinates cannot find it).",
+      summary: "analyses.cometSummary",
+      badge: { label: "analyses.cometOnly", ready: false },
+      note: t("analyses.cometNote"),
     },
   ];
 
   return (
-    <ul className="grid gap-2">
+    <ul className="grid">
       {items.map((it) => {
-        const title = ANALYSIS_TITLES[it.id];
+        const title = t(ANALYSIS_TITLES[it.id]);
         const j = jobs[it.id];
         const p = j.status === "running" ? j.progress : null;
         const left = j.status === "running" ? eta(j.progress, j.startedAt) : null;
         const isOpen = opened.includes(it.id);
         return (
-          <li key={it.id} className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-3 rounded-md border p-3">
+          <li key={it.id} className="grid grid-cols-[56px_minmax(0,1fr)] items-start gap-2.5 border-t py-2.5 first:border-t-0 first:pt-0">
             <AnalysisIllustration id={it.id} className="h-auto w-full rounded-sm bg-muted/40 p-1 text-muted-foreground" />
-            <div className="grid min-w-0 gap-2">
+            <div className="grid min-w-0 gap-1.5">
               <div className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
-                <Badge variant={it.badge.ready ? "secondary" : "outline"}>{it.badge.label}</Badge>
+                <Badge variant={it.badge.ready ? "secondary" : "outline"}>{t(it.badge.label)}</Badge>
               </div>
               <details className="text-xs">
-                <summary className="cursor-pointer text-muted-foreground select-none">{it.summary}</summary>
+                <summary className="cursor-pointer text-muted-foreground select-none">{t(it.summary)}</summary>
                 <p className="mt-1 text-muted-foreground">{it.note}</p>
               </details>
 
               {j.status === "idle" && (
                 <Button size="sm" variant="secondary" className="w-fit" onClick={() => run(it.id)}>
-                  <PlayIcon /> Run
+                  <PlayIcon /> {t("analyses.run")}
                 </Button>
               )}
               {j.status === "running" && p && (
                 <div className="grid gap-1">
-                  <Progress value={(p.done / Math.max(1, p.total)) * 100} aria-label={`${title} download`} />
+                  <Progress value={(p.done / Math.max(1, p.total)) * 100} aria-label={t("analyses.downloadLabel", { title })} />
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground" aria-live="polite">
                     <span>
-                      {p.step} · {p.done} / {p.total} done, {p.total - p.done} left{left != null ? ` · about ${left} s` : ""}. Opens when ready.
+                      {left != null
+                        ? t("analyses.progressEta", { step: t(p.step), done: p.done, total: p.total, left: p.total - p.done, seconds: left })
+                        : t("analyses.progress", { step: t(p.step), done: p.done, total: p.total, left: p.total - p.done })}
                     </span>
                     <Button size="xs" variant="ghost" onClick={() => cancel(it.id)}>
-                      <XIcon /> Cancel
+                      <XIcon /> {t("analyses.cancel")}
                     </Button>
                   </div>
                 </div>
@@ -113,18 +118,19 @@ export function AdditionalAnalyses() {
               {j.status === "done" && (
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Button size="sm" variant={view === it.id ? "default" : "secondary"} onClick={() => (isOpen ? setView(it.id) : run(it.id))}>
-                    <EyeIcon /> {view === it.id ? "Showing on the left" : "Show"}
+                    <EyeIcon /> {t(view === it.id ? "analyses.showingLeft" : "analyses.show")}
                   </Button>
                   <span className="text-muted-foreground">
-                    {j.progress.done - j.progress.failed} files in {j.seconds} s{j.progress.failed ? ` · ${j.progress.failed} failed (shown inside)` : ""}
+                    {t("analyses.filesDone", { n: j.progress.done - j.progress.failed, seconds: j.seconds })}
+                    {j.progress.failed ? ` · ${t("analyses.filesFailed", { n: j.progress.failed })}` : ""}
                   </span>
                 </div>
               )}
               {j.status === "error" && (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-destructive">
-                  {j.message}
+                  {j.message ?? t("analyses.downloadFailed")}
                   <Button size="xs" variant="outline" onClick={() => run(it.id)}>
-                    Try again
+                    {t("analyses.tryAgain")}
                   </Button>
                 </div>
               )}
