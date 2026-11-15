@@ -1,8 +1,7 @@
 "use client";
 
 import { InfoIcon, LayersIcon, LocateFixedIcon, MaximizeIcon, MinimizeIcon, MinusIcon, PlusIcon } from "lucide-react";
-import Link from "next/link";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "cn";
@@ -11,7 +10,9 @@ import { MAX_FOV, MIN_FOV } from "./constants";
 import type { SkyOverlays, StatusKey } from "./overlays";
 import { MOVEMENT_CANDIDATES } from "./review-queue";
 import { MARK_LABELS, StatusMark } from "./status-mark";
+import { angularDistance } from "./sky-coordinates";
 import { useView } from "./view-store";
+import { ViewInfo } from "./view-info";
 
 const toolClass =
   "grid size-[29px] place-items-center rounded-sm text-paper/90 transition-colors duration-300 hover:bg-paper/10 hover:text-paper disabled:opacity-35 disabled:hover:bg-transparent aria-expanded:outline aria-expanded:outline-1 aria-expanded:outline-paper/50 [&_svg]:size-[17px] [&_svg]:stroke-[1.25]";
@@ -24,7 +25,7 @@ function ToolTip({ label, keyName, children }: { label: string; keyName?: string
       <TooltipContent
         side="left"
         sideOffset={8}
-        className="flex items-center gap-3 rounded-sm bg-ink/90 px-2.5 py-1 font-ui text-[12.5px] text-bone [&>svg]:hidden"
+        className="flex items-center gap-3 rounded-sm bg-ink/90 px-2.5 py-1 font-ui text-[12.5px] text-bone [&>[data-side]]:hidden"
       >
         {label}
         {keyName && <Keycap>{keyName}</Keycap>}
@@ -44,6 +45,8 @@ type SkyToolsProps = {
   layersPanel: ReactNode;
   layersOpen: boolean;
   onLayersOpenChange: (open: boolean) => void;
+  /** Candidates switched off: a small dot on the layers tool (Figma "I · Explore, candidates hidden"). */
+  candidatesOff: boolean;
 };
 
 /** The tool column on the sky's right edge (Eyes on the Solar System style): line icons, no fill. */
@@ -55,26 +58,43 @@ export function SkyTools({
   layersPanel,
   layersOpen,
   onLayersOpenChange,
+  candidatesOff,
 }: SkyToolsProps) {
   const view = useView();
+  const [infoOpen, setInfoOpen] = useState(false);
   return (
     <div role="toolbar" aria-orientation="vertical" aria-label="Sky tools" className="flex flex-col gap-[5px]">
-      <ToolTip label="About this site">
-        <Link href="/about" className={toolClass} aria-label="About this site">
-          <InfoIcon />
-        </Link>
-      </ToolTip>
-      <Popover open={layersOpen} onOpenChange={onLayersOpenChange}>
-        <ToolTip label="Show on sky" keyName="L">
-          <PopoverTrigger className={toolClass} aria-label="Show on sky">
-            <LayersIcon />
+      {/* Figma "I · This view": what is on screen now. The About page itself is the header tab. */}
+      <Popover open={infoOpen} onOpenChange={setInfoOpen}>
+        <ToolTip label="This view">
+          <PopoverTrigger className={toolClass} aria-label="This view">
+            <InfoIcon />
           </PopoverTrigger>
         </ToolTip>
         <PopoverContent
           side="left"
-          align="center"
-          sideOffset={12}
-          className="dark w-[300px] gap-0 rounded-sm border-0 bg-ink/90 p-0 font-ui text-bone ring-0"
+          align="start"
+          sideOffset={26}
+          alignOffset={-74}
+          className="dark w-[272px] gap-0 rounded-[2px] border-0 bg-ink/88 p-0 font-ui text-bone ring-0"
+        >
+          <ViewInfo onClose={() => setInfoOpen(false)} />
+        </PopoverContent>
+      </Popover>
+      <Popover open={layersOpen} onOpenChange={onLayersOpenChange}>
+        <ToolTip label="Show on sky" keyName="L">
+          <PopoverTrigger className={cn(toolClass, "relative")} aria-label={candidatesOff ? "Show on sky, candidates hidden" : "Show on sky"}>
+            <LayersIcon />
+            {candidatesOff && <span aria-hidden className="absolute top-[3px] right-[3px] size-[5px] rounded-full bg-ash" />}
+          </PopoverTrigger>
+        </ToolTip>
+        {/* Figma: 272 wide, 26px left of the tool, its top 74px above the tool's top. */}
+        <PopoverContent
+          side="left"
+          align="start"
+          sideOffset={26}
+          alignOffset={-74}
+          className="dark w-[272px] gap-0 rounded-[2px] border-0 bg-ink/88 p-0 font-ui text-bone ring-0"
         >
           {layersPanel}
         </PopoverContent>
@@ -165,13 +185,17 @@ const OTHER_LAYERS: { key: "opened" | "pins" | "constellations" | "grid"; label:
   { key: "grid", label: "Coordinate grid" },
 ];
 
-function Row({ children, dim }: { children: ReactNode; dim?: boolean }) {
+function Row({ children, dim, className }: { children: ReactNode; dim?: boolean; className?: string }) {
   return (
-    <label className={cn("flex items-center justify-between gap-3 text-[13px]", dim && "opacity-40")}>{children}</label>
+    <label
+      className={cn("flex h-[26px] items-center justify-between gap-3 text-[13px] text-bone", dim && "opacity-40", className)}
+    >
+      {children}
+    </label>
   );
 }
 
-/** "Show on sky" (decision #40): candidate layers first, then the other overlays. */
+/** "Show on sky" (decision #40), laid out as Figma "I · Explore, layers panel open". */
 export function ShowOnSky({
   overlays,
   onChange,
@@ -182,28 +206,37 @@ export function ShowOnSky({
   onClose: () => void;
 }) {
   const off = !overlays.candidates;
+  const view = useView();
+  const inView = view
+    ? MOVEMENT_CANDIDATES.filter((candidate) => angularDistance(view, candidate) <= view.fov / 2).length
+    : 0;
   return (
     <div>
-      <div className="flex items-center justify-between border-b border-rule px-[18px] py-3.5">
+      <div className="flex h-[46px] items-center justify-between border-b border-rule px-[18px]">
         <p className="text-sm font-medium text-paper">Show on sky</p>
         <button type="button" className="text-xs text-ash hover:text-paper" onClick={onClose}>
           Close
         </button>
       </div>
-      <div className="grid gap-3 border-b border-rule px-[18px] py-3.5">
-        <Row>
-          <span className="flex items-center gap-2">
-            Candidates
-            <Keycap>C</Keycap>
+      <div className="border-b border-rule px-[18px] pt-3 pb-2.5">
+        <label className="flex items-start justify-between gap-3">
+          <span>
+            <span className="block text-sm font-medium text-paper">Candidates</span>
+            <span className="block text-[11.5px] text-ash">
+              {MOVEMENT_CANDIDATES.length === 0
+                ? "No candidates yet, so nothing is drawn"
+                : `${inView.toLocaleString("en-US")} in view`}
+            </span>
           </span>
           <SkySwitch
+            className="mt-0.5"
             checked={overlays.candidates}
             label="Candidates"
             onChange={(candidates) => onChange({ ...overlays, candidates })}
           />
-        </Row>
-        <div className="grid gap-2.5 pl-3">
-          <Row dim={off}>
+        </label>
+        <div className="mt-2 pl-4">
+          <Row dim={off} className="h-7">
             Density cells
             <SkySwitch
               checked={overlays.density}
@@ -211,36 +244,45 @@ export function ShowOnSky({
               onChange={(density) => onChange({ ...overlays, density })}
             />
           </Row>
-          <Row dim={off}>
+          <Row dim={off} className="h-7">
             Status marks
             <SkySwitch checked={overlays.marks} label="Status marks" onChange={(marks) => onChange({ ...overlays, marks })} />
           </Row>
-          <div className={cn("grid grid-cols-2 gap-x-3 gap-y-2 pt-0.5", (off || !overlays.marks) && "opacity-40")}>
+          <div className={cn("mt-1 grid pl-4", (off || !overlays.marks) && "opacity-40")}>
             {STATUS_KEYS.map((key) => (
-              <label key={key} className="flex items-center gap-2 text-xs text-bone">
+              <label
+                key={key}
+                className={cn(
+                  "flex h-6 items-center gap-2 text-[12.5px]",
+                  overlays.statuses[key] ? "text-bone" : "text-ash",
+                )}
+              >
                 <input
                   type="checkbox"
-                  className="size-3.5 accent-paper"
+                  className="size-3.5 rounded-[2px] accent-paper"
                   checked={overlays.statuses[key]}
                   onChange={(event) =>
                     onChange({ ...overlays, statuses: { ...overlays.statuses, [key]: event.target.checked } })
                   }
                 />
                 <StatusMark kind={key} className="size-2.5" />
-                {MARK_LABELS[key]}
+                {key === "known" ? "Known asteroids" : MARK_LABELS[key]}
               </label>
             ))}
           </div>
-          {MOVEMENT_CANDIDATES.length === 0 && <p className="text-xs text-smoke">No candidates yet, so nothing is drawn.</p>}
         </div>
       </div>
-      <div className="grid gap-3 px-[18px] py-3.5">
+      <div className="px-[18px] pt-2 pb-1.5">
         {OTHER_LAYERS.map(({ key, label }) => (
           <Row key={key}>
             {label}
             <SkySwitch checked={overlays[key]} label={label} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
           </Row>
         ))}
+        <p className="mt-1 flex items-center gap-2 text-[11px] text-smoke">
+          Show or hide candidates
+          <Keycap>C</Keycap>
+        </p>
       </div>
     </div>
   );
