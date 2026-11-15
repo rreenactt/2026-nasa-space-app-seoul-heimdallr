@@ -4,7 +4,7 @@ import { ChevronDownIcon, CircleHelpIcon } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { cn } from "cn";
 import { MOST_RATED_LIMIT, RATING_LABELS, type MostRatedPlace, type RatingState } from "@/app/_lib/ratings/types";
-import { ratingSummary } from "./rating-section";
+import { RatedSummary } from "./rating-section";
 import { clearPlaces, type PlaceVisit, samePlace, usePlaceHistory } from "./place-history";
 import { useCandidateBatch, useCandidates } from "./candidates-context";
 import {
@@ -15,6 +15,7 @@ import {
   type ReviewEntry,
 } from "./review-queue";
 import { angularDistance, type EquatorialCoordinates, formatDec, formatRa } from "./sky-coordinates";
+import { STATUS_RULES } from "@/app/_lib/ratings/status";
 import { MARK_LABELS, type MarkKind, StatusMark } from "./status-mark";
 import { findTestTarget } from "./test-targets";
 import { useMostRated, useRatingSummary } from "./use-ratings";
@@ -393,8 +394,6 @@ function RatedRow({
 }) {
   const candidate = entry.kind === "candidate" ? entry.candidate : null;
   const match = candidate?.match ?? place.candidate?.match;
-  // "You rated 🌠 Moving · 3 ratings · …", only where this browser rated (decision #6).
-  const rated = ratingSummary(place.state);
   return (
     <li className="relative after:absolute after:right-5 after:bottom-0 after:left-[50px] after:h-px after:bg-rule last:after:hidden">
       <button
@@ -418,7 +417,12 @@ function RatedRow({
           <span className="block font-data text-[10.5px] text-bone/80">
             {formatRa(entry.point.ra)}&nbsp;&nbsp;{formatDec(entry.point.dec)}
           </span>
-          {rated && <span className="mt-0.5 block truncate text-[11px] text-paper">{rated}</span>}
+          {/* "You rated [icon] Moving · 3 ratings · …", only where this browser rated (decision #6). */}
+          {place.state?.mine && (
+            <span className="mt-0.5 block truncate text-[11px] text-paper">
+              <RatedSummary state={place.state} />
+            </span>
+          )}
         </span>
         <span className="text-right text-sm font-medium text-paper">{count(place.total)}</span>
       </button>
@@ -699,6 +703,29 @@ const RATING_GUIDE: { label: string; body: string; drawing: ReactNode }[] = [
   },
 ];
 
+const percent = (share: number) => `${Math.round(share * 100)}%`;
+
+/** How ratings become a status (decision #57); the numbers come from STATUS_RULES so the guide follows the rules. */
+const RATING_NOTES = [
+  "One rating per browser; you can change it.",
+  "Ratings are pooled over a sky cell about 1.7′ across.",
+  "Other people's ratings show after you rate.",
+  `${STATUS_RULES.minRatings} ratings give a status: agreement, not a discovery.`,
+];
+
+/** What each mark on the sky and in the lists means (Figma "I · Review, rating guide open · ratings and marks"). */
+const MARK_NOTES: { kind: MarkKind; note: string }[] = [
+  { kind: "needs-ratings", note: `Under ${STATUS_RULES.minRatings} ratings` },
+  { kind: "recommended", note: `${STATUS_RULES.minRatings} or more ratings` },
+  {
+    kind: "noteworthy",
+    note: `${STATUS_RULES.noteworthyRatings}+ ratings, ${percent(STATUS_RULES.noteworthyMoving)}+ Moving`,
+  },
+  // Known movers keep their own mark whatever their status (decision #39).
+  { kind: "known", note: "Answer key; keeps its mark" },
+  { kind: "test", note: "A known object to practise on" },
+];
+
 /**
  * "How to rate" (decision #38): a button at the top right of the frame while reviewing; the guide opens in its place,
  * 316px wide, above the tool column.
@@ -721,7 +748,7 @@ export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChang
     <section
       aria-label="How to rate"
       onKeyDown={(event) => event.key === "Escape" && onOpenChange(false)}
-      className="w-[316px] rounded-[2px] bg-ink/86 px-[18px] pt-4 pb-3.5 text-bone backdrop-blur-sm"
+      className="max-h-[calc(100dvh-8rem)] w-[316px] overflow-y-auto rounded-[2px] bg-ink/86 px-[18px] pt-4 pb-3.5 text-bone backdrop-blur-sm"
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-paper">What does a moving object look like?</h2>
@@ -740,6 +767,32 @@ export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChang
           </div>
         ))}
       </dl>
+      <h3 className="mt-3 border-t border-rule pt-3 text-[10.5px] font-medium tracking-wide text-smoke uppercase">
+        How ratings add up
+      </h3>
+      <ul className="mt-1.5 grid gap-0.5 text-[11px] leading-4 text-ash">
+        {RATING_NOTES.map((note) => (
+          <li key={note} className="flex gap-1.5">
+            <span aria-hidden>·</span>
+            {note}
+          </li>
+        ))}
+      </ul>
+      <h3 className="mt-3 border-t border-rule pt-3 text-[10.5px] font-medium tracking-wide text-smoke uppercase">Marks</h3>
+      <dl className="mt-2 grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">
+        {MARK_NOTES.map(({ kind, note }) => (
+          <div key={kind} className="col-span-3 grid grid-cols-subgrid items-center">
+            <StatusMark kind={kind} className="size-2.5" />
+            <dt className={cn("pr-2 text-xs font-medium", kind === "noteworthy" ? "text-signal" : "text-paper")}>
+              {MARK_LABELS[kind]}
+            </dt>
+            <dd className="text-[11px] text-ash">{note}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2.5 text-[10.5px] leading-[14px] text-smoke">
+        Under {percent(STATUS_RULES.recommendMoving)} Moving, or half Noise or artifact: leaves the queue.
+      </p>
     </section>
   );
 }

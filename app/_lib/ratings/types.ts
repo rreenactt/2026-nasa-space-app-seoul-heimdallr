@@ -8,13 +8,6 @@ export const RATING_LABELS: Record<RatingChoiceId, string> = {
   "noise-or-artifact": "Noise or artifact",
 };
 
-/** Decorative emoji shown before each label (hidden from screen readers). */
-export const RATING_EMOJI: Record<RatingChoiceId, string> = {
-  moving: "🌠",
-  "not-moving": "📍",
-  "noise-or-artifact": "⚡",
-};
-
 /** Below this many ratings the point shows "Too few ratings" (PLAN.md chapter 8). */
 export const MIN_RATINGS = 5;
 
