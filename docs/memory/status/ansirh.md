@@ -11,11 +11,15 @@
 
 ## 진행 중
 
-- 결정 #47 기록 문서 PR (`feat/ui-redesign` → `main`)
+- 검토 목록 선택과 열기 분리(결정 #49), 화면 중심 십자선(결정 #50) PR (`feat/web-design-fix` → `main`)
+- 다음: 검토 목록에 실제 후보 연결(`MOVEMENT_CANDIDATES` ↔ `data/motion-candidates.ts`), 이어서 접힌 아래 막대·마우스 올림 이름표·"Most rated places" 위치를 Figma에 반영
 - (실험) 하늘 화면 "빠르게 움직이는 별" 겹쳐 보기: 시야 1° 이하에서 Gaia DR3 고유운동으로 연도 슬라이더(1950–2050)에 맞춘 예상 위치·궤적 (브랜치 `feat/sky-fast-stars`, `main` 미반영). 이 브랜치의 결정 초안 번호 #35는 `main`의 #35(평가 저장 방식)와 겹치므로 반영할 때 번호를 다시 매긴다. 보기 좋지 않으면 통째로 뺀다
 
 ## 완료
 
+- 검토 목록 선택과 열기 분리 (결정 #49): 행 클릭·`N` `P`는 선택하고 날아가기만, 하늘에 링과 ID·RA/Dec 이름표. `Enter`·Open blink·다시 클릭으로 연다. 목록을 접으면 선택 해제. 선택이 없으면 `Enter`는 화면 가운데 분석
+- 화면 중심 십자선 (결정 #50): 5° 이하·액자 없음에서 가운데가 빈 십자선과 RA/Dec, `Enter` 키 표시
+- Figma 정리: 현재 시안을 줄별(Explore, Review screens, Pages)로 배치하고 예전 시안은 "Sky screen · Archive" 페이지로 옮김. "nothing selected", "aiming (view center)" 프레임 추가
 - 하늘 화면 UI 개편 2차 (PR #13, 결정 #47): Figma와 어긋난 곳 수정(시야 눈금, 검토 목록, Show on sky, 단축키 창, About 도식·히어로), 정보 도구 "This view"와 Menu 재구성, 이동 중 커서 좌표 갱신
 - 하늘 화면 UI 개편 (PR #10, `main` 병합 fa402b4, 결정 #36–#40):
   - 상단 메뉴: Sky / About / Method 탭, About·Method 페이지

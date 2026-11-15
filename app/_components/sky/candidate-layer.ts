@@ -1,6 +1,7 @@
 import type { SkyOverlays, StatusKey } from "./overlays";
 import type { PlaceVisit } from "./place-history";
 import type { MovementCandidate } from "./review-queue";
+import { angularDistance, type EquatorialCoordinates, formatDec, formatRa } from "./sky-coordinates";
 import type { SkyPaintFrame } from "./sky-view";
 import { TEST_TARGETS } from "./test-targets";
 
@@ -47,11 +48,14 @@ export function paintCandidates(
     overlays,
     opened,
     selected,
+    picked,
   }: {
     candidates: MovementCandidate[];
     overlays: SkyOverlays;
     opened: PlaceVisit[];
     selected: { ra: number; dec: number } | null;
+    /** The queue row picked but not opened yet (decision #49): a ring with its name and position beside it. */
+    picked: (EquatorialCoordinates & { name: string }) | null;
   },
 ) {
   const visible = (candidate: MovementCandidate) =>
@@ -102,7 +106,8 @@ export function paintCandidates(
       context.beginPath();
       context.arc(x, y, 1.5, 0, Math.PI * 2);
       context.fill();
-      context.fillText(target.name, x + 12, y + 0.5);
+      // The picked target carries its name in the name tag instead.
+      if (!(picked && angularDistance(picked, target) <= 1 / 3600)) context.fillText(target.name, x + 12, y + 0.5);
     }
     context.restore();
   }
@@ -117,15 +122,39 @@ export function paintCandidates(
   // The place being flown to or open: a paper ring, as in Figma "Flying to a target" and the selected candidate.
   if (selected) {
     const pixel = frame.project(selected.ra, selected.dec);
+    if (pixel) paintRing(context, pixel[0], pixel[1]);
+  }
+
+  // The picked row (Figma "I · Review, queue open"): the ring, the ID in Host Grotesk Medium 13px 16px right of the
+  // center, and the RA/Dec in Fragment Mono 10.5px just below it.
+  if (picked) {
+    const pixel = frame.project(picked.ra, picked.dec);
     if (pixel) {
-      context.setLineDash([]);
-      context.strokeStyle = `rgb(${PAPER})`;
-      context.lineWidth = 1.5;
-      context.beginPath();
-      context.arc(pixel[0], pixel[1], 9, 0, Math.PI * 2);
-      context.stroke();
+      const [x, y] = pixel;
+      paintRing(context, x, y);
+      context.save();
+      context.textAlign = "left";
+      context.textBaseline = "top";
+      context.shadowColor = "rgba(0, 0, 0, 0.9)";
+      context.shadowBlur = 3;
+      context.font = siteFont(13, "--font-ui-face", 500);
+      context.fillStyle = `rgb(${PAPER})`;
+      context.fillText(picked.name, x + 16, y - 16);
+      context.font = siteFont(10.5, "--font-data-face");
+      context.fillStyle = BONE;
+      context.fillText(`${formatRa(picked.ra)}  ${formatDec(picked.dec)}`, x + 16, y + 2);
+      context.restore();
     }
   }
+}
+
+function paintRing(context: CanvasRenderingContext2D, x: number, y: number) {
+  context.setLineDash([]);
+  context.strokeStyle = `rgb(${PAPER})`;
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.arc(x, y, 9, 0, Math.PI * 2);
+  context.stroke();
 }
 
 function inside([x, y]: number[], { width, height }: SkyPaintFrame) {
