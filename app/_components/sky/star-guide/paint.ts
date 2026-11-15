@@ -8,9 +8,8 @@ import {
   positionAt,
   SPHEREX_EPOCH,
   type StarGuideState,
-  starsNear,
+  starsOnScreen,
   totalPm,
-  viewRadius,
 } from "./use-star-guide";
 
 /** Same light blue as the constellation lines, so guide marks read as "help", not as candidates (yellow). */
@@ -90,13 +89,8 @@ export function paintStarGuide(
 
   const zoomedOut = frame.fov > GUIDE_MAX_FOV;
   // Picked from the catalog around the current center on every frame (well under a millisecond), so a fast pan is
-  // followed at once; the epoch-2026 position decides whether a star is on screen.
-  const visible = zoomedOut
-    ? []
-    : starsNear(state.catalog, frame.ra, frame.dec, viewRadius(frame) + 0.05).filter((star) => {
-        const point = frame.project(...positionAt(star, SPHEREX_EPOCH));
-        return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= frame.width && point[1] <= frame.height;
-      });
+  // followed at once; the same on-screen test as the card's list.
+  const visible = zoomedOut ? [] : starsOnScreen(state.catalog, frame);
   const numbered = zoomedOut ? [] : !state.moving && state.listed.length > 0 ? state.listed : visible.slice(0, GUIDE_STARS);
   const visibleIds = new Set(visible.map((star) => star.sourceId));
   const rankOf = new Map(numbered.map((star, index) => [star.sourceId, index + 1]));

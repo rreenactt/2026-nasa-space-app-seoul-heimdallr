@@ -63,9 +63,21 @@ export function buildCatalog(rows: CatalogRow[]): Catalog {
   return { stars, cells };
 }
 
-/** Radius (degrees) of the circle around the view's center that contains the whole view. */
-export function viewRadius(view: { fov: number; width: number; height: number }) {
-  return (view.fov / 2) * Math.hypot(1, view.height / Math.max(view.width, 1));
+/** Search radius around the view's center: out to its farthest corner, plus room for motion since 2016 (0.1°). */
+const searchRadius = (view: { radius: number }) => view.radius + 0.1;
+
+/**
+ * Catalog stars whose 2026 position is on screen, fastest first. The same test for the sky marks and the card, through
+ * the view's own projection, so the two always agree.
+ */
+export function starsOnScreen(
+  catalog: Catalog,
+  view: { ra: number; dec: number; radius: number; width: number; height: number; project: SettledSky["project"] },
+): GaiaStar[] {
+  return starsNear(catalog, view.ra, view.dec, searchRadius(view)).filter((star) => {
+    const point = view.project(...positionAt(star, SPHEREX_EPOCH));
+    return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= view.width && point[1] <= view.height;
+  });
 }
 
 /** Catalog stars within `radius` degrees of a point, fastest first, from the index cells that circle touches. */
@@ -105,14 +117,6 @@ export function totalPm(star: GaiaStar) {
 /** Light years from a Gaia parallax (mas); null when the parallax is too small to say. */
 export function lightYears(parallax: number | null) {
   return parallax && parallax > 1 ? 3261.56 / parallax : null;
-}
-
-/** Whether a star's position now falls inside the view (flat-sky approximation, fine below a few degrees). */
-function onScreen(star: GaiaStar, view: SettledSky) {
-  const [ra, dec] = positionAt(star, SPHEREX_EPOCH);
-  const dx = (((ra - view.ra + 540) % 360) - 180) * Math.cos((view.dec * Math.PI) / 180);
-  const halfHeight = (view.fov / 2) * (view.height / Math.max(view.width, 1));
-  return Math.abs(dx) <= view.fov / 2 && Math.abs(dec - view.dec) <= halfHeight;
 }
 
 export type GuidePhase =
@@ -156,9 +160,7 @@ export function useStarGuide(enabled: boolean) {
   const listed = useMemo(
     () =>
       catalog.data && view && view.fov <= GUIDE_MAX_FOV
-        ? starsNear(catalog.data, view.ra, view.dec, viewRadius(view) + 0.05)
-            .filter((star) => onScreen(star, view))
-            .slice(0, GUIDE_STARS)
+        ? starsOnScreen(catalog.data, view).slice(0, GUIDE_STARS)
         : [],
     [catalog.data, view],
   );
