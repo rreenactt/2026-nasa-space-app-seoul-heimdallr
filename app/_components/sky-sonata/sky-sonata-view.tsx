@@ -145,7 +145,7 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
       {/* Always-available controls */}
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 p-2">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b bg-background/95 pb-2">
         {!audioOn ? (
           <Button size="sm" onClick={startAudio}>
             <Volume2Icon /> {t("sonata.startSound")}
@@ -175,7 +175,7 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
         <span className="text-xs text-muted-foreground">{t("sonata.headphones")}</span>
       </div>
 
-      <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-2 border-b pb-3 text-xs [&>[role=alert]]:basis-full [&>p]:basis-full [&>span]:basis-full">
         <div className="flex flex-wrap items-end gap-2">
           {/* In the analysis panel the point is already chosen; only its sound rules can change here. */}
           {!fixed && (

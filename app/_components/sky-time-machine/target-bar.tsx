@@ -46,7 +46,7 @@ export function TargetBar() {
   };
 
   return (
-    <div className="grid gap-3 rounded-lg border bg-muted/30 p-3">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b pb-3">
       <div className="flex flex-wrap items-end gap-2">
         {!fixed && (
         <>
@@ -82,8 +82,8 @@ export function TargetBar() {
         <Button size="sm" onClick={apply}>{t("stm.viewCoordinates")}</Button>
         </>
         )}
-        <div className="grid gap-1">
-          <Label className="text-xs">{t("stm.field")}</Label>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground">{t("stm.field")}</Label>
           <NativeSelect size="sm" value={String(target.fovArcmin)} onChange={(e) => setTarget({ ...target, fovArcmin: Number(e.target.value) })}>
             {FOVS.map((f) => (
               <NativeSelectOption key={f} value={f}>
@@ -101,24 +101,24 @@ export function TargetBar() {
       </div>
       {example && !fixed && <p className="text-xs text-muted-foreground">{example.note} <span className="opacity-70">{t("stm.exampleCoordinates", { source: example.source })}</span></p>}
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex flex-wrap gap-2">
         {MISSION_ORDER.map((m, i) => {
           const q = searches[i];
           const cfg = MISSIONS[m];
           const count = q.data?.epochs.filter((e) => e.band === bands[m]).length;
           return (
-            <div key={m} className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-xs">
+            <div key={m} className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs">
               <Switch size="sm" checked={enabled[m]} onCheckedChange={(v) => setEnabled(m, v)} aria-label={t("stm.showMission", { mission: cfg.label })} />
               <span className="size-2 shrink-0 rounded-full" style={{ background: MISSION_COLOR[m] }} />
               <span className="font-medium">{cfg.label}</span>
-              <NativeSelect size="sm" className="ml-auto" value={bands[m]} onChange={(e) => setBand(m, e.target.value)} aria-label={t("stm.missionBand", { mission: cfg.label })}>
+              <NativeSelect size="sm" value={bands[m]} onChange={(e) => setBand(m, e.target.value)} aria-label={t("stm.missionBand", { mission: cfg.label })}>
                 {cfg.bands.map((b) => (
                   <NativeSelectOption key={b.id} value={b.id}>
                     {b.label}
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
-              <span className="w-14 text-right text-muted-foreground">
+              <span className="whitespace-nowrap text-muted-foreground">
                 {q.isPending ? (
                   <Spinner className="ml-auto size-3" />
                 ) : q.isError ? (

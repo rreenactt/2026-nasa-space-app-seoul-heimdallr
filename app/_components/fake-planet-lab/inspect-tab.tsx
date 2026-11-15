@@ -53,7 +53,11 @@ function ObservationPicker() {
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid gap-1">
+      <details>
+        <summary className="cursor-pointer text-muted-foreground select-none hover:text-foreground">
+          {t("fpl.chooseExposures", { n: selected.length, total: visits.reduce((sum, v) => sum + v.length, 0) })}
+        </summary>
+      <div className="mt-2 grid gap-1">
         {visits.map((v, vi) => (
           <div key={v[0].key} className="flex flex-wrap items-center gap-1">
             <span className="w-40 shrink-0 text-muted-foreground">
@@ -77,6 +81,7 @@ function ObservationPicker() {
           </div>
         ))}
       </div>
+      </details>
     </div>
   );
 }
@@ -177,7 +182,7 @@ export function InspectTab() {
             <span className="text-xs text-muted-foreground">{t("fpl.gridNote", { fov: GRID_FOV_ARCMIN })}</span>
           </div>
           {mode === "side" ? (
-            <div className={`grid gap-2 ${selected.length > 1 ? "sm:grid-cols-2" : "max-w-md"}`}>{selected.map((_, i) => renderFrame(i))}</div>
+            <div className={`grid gap-2 ${selected.length > 2 ? "sm:grid-cols-3" : selected.length > 1 ? "sm:grid-cols-2" : "max-w-md"}`}>{selected.map((_, i) => renderFrame(i))}</div>
           ) : (
             <div className="max-w-xl">{renderFrame(frames.findIndex((f) => f === loaded[blinkIdx % loaded.length]))}</div>
           )}

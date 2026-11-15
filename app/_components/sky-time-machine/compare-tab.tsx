@@ -54,7 +54,8 @@ export function CompareTab() {
   const differentBand = a && b && (a.mission !== b.mission || a.band !== b.band);
 
   return (
-    <div className="grid gap-3 pt-2">
+    <div className={mode === "blink" ? "grid gap-x-5 gap-y-3 pt-2 @3xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] @3xl:items-start" : "grid gap-3 pt-2"}>
+      <div className={mode === "blink" ? "grid min-w-0 content-start gap-3 @3xl:col-start-2 @3xl:row-start-1" : "grid min-w-0 gap-3"}>
       <TimelineStrip value={null} highlight={[a?.id, b?.id].filter(Boolean) as string[]} onSelect={(e) => setB(e.id)} />
       <div className="flex flex-wrap items-end gap-3">
         <EpochSelect label={t("stm.epochA")} value={a?.id} onChange={setA} />
@@ -86,9 +87,15 @@ export function CompareTab() {
           </AlertDescription>
         </Alert>
       )}
+      {hover && (
+        <p className="font-mono text-xs text-muted-foreground">
+          {t("stm.cursor", { ra: hover.ra.toFixed(5), dec: hover.dec.toFixed(5) })}
+        </p>
+      )}
+      </div>
 
       {mode === "blink" ? (
-        <div className="mx-auto w-full max-w-xl">
+        <div className="w-full max-w-xl @3xl:col-start-1 @3xl:row-start-1">
           {/* Both frames stay mounted so switching is instant. */}
           <div className={showB ? "hidden" : ""}>
             <FrameView epoch={a} tag="A" crosshair={hover} onHover={setHover} />
@@ -102,11 +109,6 @@ export function CompareTab() {
           <FrameView epoch={a} tag="A" crosshair={hover} onHover={setHover} />
           <FrameView epoch={b} tag="B" crosshair={hover} onHover={setHover} />
         </div>
-      )}
-      {hover && (
-        <p className="font-mono text-xs text-muted-foreground">
-          {t("stm.cursor", { ra: hover.ra.toFixed(5), dec: hover.dec.toFixed(5) })}
-        </p>
       )}
     </div>
   );

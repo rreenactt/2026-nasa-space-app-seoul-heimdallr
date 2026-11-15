@@ -82,7 +82,7 @@ export interface Map3DProps {
 export default function Map3D(props: Map3DProps) {
   return (
     <Canvas frameloop="demand" camera={{ position: [5, 3.5, 5], fov: 50, near: 0.01, far: 500 }} className="absolute! inset-0">
-      <color attach="background" args={["#020617"]} />
+      <color attach="background" args={["#030304"]} />
       <ambientLight intensity={1} />
       <Controls />
       <Scene {...props} />
