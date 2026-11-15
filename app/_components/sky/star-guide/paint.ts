@@ -30,6 +30,8 @@ const MARK_MS = 420;
 const CALLOUT_MS = 460;
 /** Callouts that start together follow one another by this share of CALLOUT_MS, fastest star first. */
 const CALLOUT_STAGGER = 0.18;
+/** Shortest motion line (CSS px) that gets its start and end years written at its ends. */
+const YEAR_MIN_PX = 36;
 /** Longest frame step the animation takes, so a pause between repaints does not skip an animation. */
 const MAX_STEP_MS = 50;
 
@@ -145,7 +147,8 @@ export function paintStarGuide(
     context.fillStyle = color;
     context.lineWidth = lit ? 2 : big ? 1.25 : 1;
     context.strokeRect(Math.round(then[0] - size / 2) + 0.5, Math.round(then[1] - size / 2) + 0.5, size, size);
-    if (Math.hypot(later[0] - then[0], later[1] - then[1]) > 3) {
+    const length = Math.hypot(later[0] - then[0], later[1] - then[1]);
+    if (length > 3) {
       context.beginPath();
       context.moveTo(then[0], then[1]);
       context.lineTo(then[0] + (later[0] - then[0]) * own, then[1] + (later[1] - then[1]) * own);
@@ -154,6 +157,21 @@ export function paintStarGuide(
         context.beginPath();
         context.arc(later[0], later[1], 3, 0, Math.PI * 2);
         context.fill();
+      }
+      // Years at both ends, once the path is long enough to read them against: the start year behind the square
+      // (opposite the motion), the end year past the dot.
+      if (big && length >= YEAR_MIN_PX) {
+        const ux = (later[0] - then[0]) / length;
+        const uy = (later[1] - then[1]) / length;
+        context.globalAlpha = clamp01((own - 0.7) / 0.3) * 0.85;
+        context.font = font("--font-data-face", 10);
+        context.textBaseline = "middle";
+        const reach = BOX / 2 + 6;
+        context.textAlign = ux > 0 ? "right" : "left";
+        context.fillText(String(SKY_SURVEY.year), then[0] - ux * reach, then[1] - uy * reach);
+        context.textAlign = ux > 0 ? "left" : "right";
+        context.fillText(SPHEREX_EPOCH.toFixed(0), later[0] + ux * 9, later[1] + uy * 9);
+        context.textAlign = "left";
       }
     }
   }
