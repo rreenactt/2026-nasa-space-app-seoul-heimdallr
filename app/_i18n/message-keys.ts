@@ -372,6 +372,8 @@ export type MessageKey =
   | "constellation.Vir"
   | "constellation.Vol"
   | "constellation.Vul"
+  | "errors.archiveUnavailable"
+  | "errors.dataLookupFailed"
   | "explorer.candidatesHidden"
   | "explorer.clearOpened"
   | "explorer.loadError"

@@ -370,6 +370,8 @@ constellation.Vel,Vela,Vela (돛자리),"Constellation name on the sky (drawn in
 constellation.Vir,Virgo,Virgo (처녀자리),"Constellation name on the sky (drawn in capitals): IAU name, Korean name in brackets"
 constellation.Vol,Volans,Volans (날치자리),"Constellation name on the sky (drawn in capitals): IAU name, Korean name in brackets"
 constellation.Vul,Vulpecula,Vulpecula (여우자리),"Constellation name on the sky (drawn in capitals): IAU name, Korean name in brackets"
+errors.archiveUnavailable,Data lookup failed because the {service} server is currently not responding normally. Please try again shortly.,{service} 서버가 현재 정상적으로 응답하지 않아 데이터를 조회하지 못했습니다. 잠시 후 다시 시도해 주세요.,Analysis API 502 error; service names the external archive whose request failed
+errors.dataLookupFailed,Data lookup failed. Please try again shortly.,데이터를 조회하지 못했습니다. 잠시 후 다시 시도해 주세요.,Analysis API 502 error when the failing external service cannot be identified
 explorer.candidatesHidden,Candidates hidden,후보 숨김,"Sky screen, bottom left: pill shown while candidate marks are switched off (C key)"
 explorer.clearOpened,Clear places you opened,연 위치 기록 지우기,Sky site menu: forgets the places this browser opened (their square marks on the sky); the count sits beside it
 explorer.loadError,Sky view unavailable: {error},하늘 화면을 불러오지 못했습니다: {error},"Sky screen alert when the Aladin Lite sky fails to load; {error} is the technical reason, left as is"
