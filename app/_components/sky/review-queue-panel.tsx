@@ -47,13 +47,17 @@ const count = (n: number) => n.toLocaleString("en-US");
 type ReviewQueuePanelProps = {
   /** The review order with the current filter applied (review-queue.ts). */
   queue: ReviewEntry[];
+  /** The entry whose analysis is open. */
   currentId: string | undefined;
+  /** The entry picked with a click, N or P; Enter and "Open blink" open it (decision #48). */
+  pickedId: string | undefined;
   filter: CandidateFilter;
   onFilterChange: (filter: CandidateFilter) => void;
+  /** A row click: picks the row, or opens it when it is already picked. */
   onSelect: (entry: ReviewEntry) => void;
   onOpenPlace: (place: EquatorialCoordinates) => void;
-  /** "Open blink": the place on screen, else the first in the review order. */
-  onOpenCurrent: () => void;
+  /** "Open blink": the picked place. Disabled with nothing picked. */
+  onOpenPicked: () => void;
   /** "Previous" and "Next" through the review order. */
   onStep: (direction: 1 | -1) => void;
   onClose: () => void;
@@ -67,11 +71,12 @@ type ReviewQueuePanelProps = {
 export function ReviewQueuePanel({
   queue,
   currentId,
+  pickedId,
   filter,
   onFilterChange,
   onSelect,
   onOpenPlace,
-  onOpenCurrent,
+  onOpenPicked,
   onStep,
   onClose,
 }: ReviewQueuePanelProps) {
@@ -182,7 +187,7 @@ export function ReviewQueuePanel({
               <EntryRow
                 key={entry.id}
                 entry={entry}
-                current={entry.id === currentId}
+                current={entry.id === (pickedId ?? currentId)}
                 rating={ratingOf(entry)}
                 seen={history.some((visit) => samePlace(visit, entry.point))}
                 onSelect={onSelect}
@@ -193,7 +198,7 @@ export function ReviewQueuePanel({
               <EntryRow
                 key={entry.id}
                 entry={entry}
-                current={entry.id === currentId}
+                current={entry.id === (pickedId ?? currentId)}
                 rating={ratingOf(entry)}
                 seen={history.some((visit) => samePlace(visit, entry.point))}
                 onSelect={onSelect}
@@ -204,8 +209,8 @@ export function ReviewQueuePanel({
           <div className="flex items-center gap-2 border-t border-rule px-5 py-2.5">
             <button
               type="button"
-              onClick={onOpenCurrent}
-              disabled={queue.length === 0}
+              onClick={onOpenPicked}
+              disabled={!pickedId}
               className="h-8 w-[150px] rounded-[2px] bg-paper text-sm font-medium text-ink transition-colors hover:bg-bone disabled:opacity-40"
             >
               Open blink

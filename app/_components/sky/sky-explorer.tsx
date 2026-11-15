@@ -7,6 +7,7 @@ import { AnalysisPanel } from "./analysis-panel";
 import { AIM_FOV, CLICK_ZOOM_FOV, INITIAL_VIEW, MAX_FOV, MIN_FOV, SKY_SURVEY, TARGET_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";
 import {
+  angularDistance,
   clamp,
   type EquatorialCoordinates,
   formatDec,
@@ -36,7 +37,7 @@ import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
 import type { Flight, SkyPainter } from "./sky-view";
 import { FovScale } from "./fov-scale";
 import { paintCandidates } from "./candidate-layer";
-import { clearPlaces, recordPlace, usePlaceHistory } from "./place-history";
+import { clearPlaces, recordPlace, samePlace, usePlaceHistory } from "./place-history";
 import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
 import { MostRated } from "./most-rated";
 import { findTestTarget, TEST_TARGETS, type TestTarget } from "./test-targets";
@@ -81,6 +82,11 @@ export function SkyExplorer({
   useEffect(() => {
     flyingRef.current = flyingTo;
   }, [flyingTo]);
+  // The queue row picked with a click, N or P (decision #48): the camera flies there and a ring with its name and
+  // position marks it, but the analysis opens only with Enter, "Open blink" or a second click on the row.
+  const [picked, setPicked] = useState<ReviewEntry | null>(null);
+  // True while the camera flies to the picked place, which may start off screen.
+  const pickFlight = useRef(false);
   const painter = useMemo<SkyPainter>(
     () => (context, frame) =>
       paintCandidates(context, frame, {
@@ -88,8 +94,9 @@ export function SkyExplorer({
         overlays,
         opened,
         selected: flyingTo ?? selection,
+        picked: picked && { ...picked.point, name: picked.kind === "candidate" ? picked.candidate.id : picked.name },
       }),
-    [overlays, opened, selection, flyingTo],
+    [overlays, opened, selection, flyingTo, picked],
   );
   const [queueOpen, setQueueOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -103,16 +110,21 @@ export function SkyExplorer({
     setSearchOpen(true);
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
   }, []);
-  const foldQueue = useCallback(() => setQueueOpen(false), []);
+  // The pick lives only while the queue is open: folding the queue (Hide, Q, Esc, a drag) drops it (decision #48).
+  const foldQueue = useCallback(() => {
+    setQueueOpen(false);
+    setPicked(null);
+  }, []);
   // A drag takes the view back: the queue folds and a flight in progress is abandoned (its panel does not open).
   const onDragStart = useCallback(() => {
-    setQueueOpen(false);
+    foldQueue();
     setFlyingTo(null);
-  }, []);
+    pickFlight.current = false;
+  }, [foldQueue]);
   const dragging = useSkyDrag(onDragStart);
   // The frame comes in for a scene (flying to a place, the queue open, a place open) and stays off while looking
   // around or in full screen (decision #38, Figma "I · Frame states").
-  const framed = !fullscreen && (selection !== null || queueOpen || flyingTo !== null);
+  const framed = !fullscreen && (selection !== null || queueOpen || flyingTo !== null || picked !== null);
   const flightId = useRef(0);
   const selectionRef = useRef(selection);
   useEffect(() => {
@@ -126,6 +138,8 @@ export function SkyExplorer({
   // The URL follows the open panel without adding history entries (PLAN.md chapter 5).
   const openPanel = useCallback((next: SkySelection) => {
     setSelection(next);
+    // Opening another place drops the pick; opening the picked place keeps it.
+    setPicked((entry) => (entry && samePlace(entry.point, next) ? entry : null));
     setLinkedAnalysis(undefined);
     recordPlace({ ra: next.ra, dec: next.dec, name: next.target?.name });
     window.history.replaceState(null, "", selectionUrl(next));
@@ -178,6 +192,7 @@ export function SkyExplorer({
   }, []);
   const onFlightEnd = useCallback(
     (id: number) => {
+      pickFlight.current = false;
       const flying = flyingRef.current;
       if (!flying) return;
       // Another flight (zoom, pan, back to the first view) replaced this one: the place is not opened.
@@ -193,7 +208,9 @@ export function SkyExplorer({
   // A wheel zoom also takes the view back from a flight, which then never lands.
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
-      if (event.target instanceof Element && event.target.closest("[data-sky-surface]")) setFlyingTo(null);
+      if (!(event.target instanceof Element && event.target.closest("[data-sky-surface]"))) return;
+      setFlyingTo(null);
+      pickFlight.current = false;
     };
     window.addEventListener("wheel", onWheel, { capture: true, passive: true });
     return () => window.removeEventListener("wheel", onWheel, { capture: true });
@@ -214,7 +231,7 @@ export function SkyExplorer({
     [goTo, openPanel, zoomTo],
   );
 
-  // A list entry flies there and opens the panel like a pin; N and P walk the same order.
+  // Opening a list entry flies there and opens the panel like a pin.
   const goToEntry = useCallback(
     (entry: ReviewEntry) => (entry.kind === "test" ? goTo(entry.point, entry.target) : goTo(entry.point)),
     [goTo],
@@ -227,24 +244,50 @@ export function SkyExplorer({
     [setOverlays],
   );
   const toggleQueue = useCallback(() => {
-    setQueueOpen((open) => !open);
+    if (queueOpen) return foldQueue();
+    setQueueOpen(true);
     showCandidates();
-  }, [showCandidates]);
-  // "Open blink" in the queue: the place on screen, else the first in the review order.
-  const openCurrent = useCallback(() => {
-    const entry = currentEntry ?? queue.find((item) => item.kind === "candidate") ?? queue[0];
-    if (entry) goToEntry(entry);
-  }, [currentEntry, queue, goToEntry]);
+  }, [queueOpen, foldQueue, showCandidates]);
+  // Picking a row, N or P: fly there with the frame on and mark the place, without opening the panel (decision #48).
+  const pick = useCallback(
+    (entry: ReviewEntry) => {
+      flightId.current += 1;
+      pickFlight.current = true;
+      setFlyingTo(null);
+      setPicked(entry);
+      // N and P with the queue folded open it, so a pick is never hidden.
+      setQueueOpen(true);
+      showCandidates();
+      setFlight({ ...entry.point, fov: TARGET_FOV, id: flightId.current });
+    },
+    [showCandidates],
+  );
+  // Enter and "Open blink" open the picked place.
+  const openPicked = useCallback(() => {
+    if (picked) goToEntry(picked);
+  }, [picked, goToEntry]);
+  // A click on the picked row opens it; any other row is picked.
+  const onRow = useCallback(
+    (entry: ReviewEntry) => (picked?.id === entry.id ? goToEntry(entry) : pick(entry)),
+    [picked, goToEntry, pick],
+  );
   const step = useCallback(
     (direction: 1 | -1) => {
       if (queue.length === 0) return;
-      const index = currentEntry ? queue.findIndex((entry) => entry.id === currentEntry.id) : -1;
-      const target = queue[(index + direction + queue.length) % queue.length] ?? queue[0];
-      showCandidates();
-      goToEntry(target);
+      const from = picked ?? currentEntry;
+      const index = from ? queue.findIndex((entry) => entry.id === from.id) : -1;
+      pick(queue[(index + direction + queue.length) % queue.length] ?? queue[0]);
     },
-    [queue, currentEntry, goToEntry, showCandidates],
+    [queue, picked, currentEntry, pick],
   );
+  // The pick ends once its place leaves the screen, so Enter never opens a place the user cannot see.
+  useEffect(() => {
+    if (!picked) return;
+    return subscribeView(() => {
+      const view = getView();
+      if (view && !pickFlight.current && angularDistance(view, picked.point) > view.fov / 2) setPicked(null);
+    });
+  }, [picked]);
   const pan = useCallback((dx: number, dy: number) => {
     const view = getView();
     if (!view) return;
@@ -279,7 +322,10 @@ export function SkyExplorer({
       queue: toggleQueue,
       next: () => step(1),
       previous: () => step(-1),
-      analyzeCenter: () => {
+      // Enter: the picked place; with nothing picked, the view center, unless the queue is open (decision #48).
+      open: () => {
+        if (picked) return openPicked();
+        if (queueOpen) return;
         const view = getView();
         if (view) selectPoint(view, view.fov);
       },
@@ -290,7 +336,7 @@ export function SkyExplorer({
       escape: () => {
         if (layersOpen) setLayersOpen(false);
         else if (searchOpen) setSearchOpen(false);
-        else if (queueOpen) setQueueOpen(false);
+        else if (queueOpen) foldQueue();
       },
     },
     // The analysis panel and the shortcut sheet are dialogs with their own keys.
@@ -373,11 +419,12 @@ export function SkyExplorer({
               <ReviewQueuePanel
                 queue={queue}
                 currentId={currentEntry?.id}
+                pickedId={picked?.id}
                 filter={candidateFilter}
                 onFilterChange={setCandidateFilter}
-                onSelect={goToEntry}
+                onSelect={onRow}
                 onOpenPlace={goTo}
-                onOpenCurrent={openCurrent}
+                onOpenPicked={openPicked}
                 onStep={step}
                 onClose={foldQueue}
               />

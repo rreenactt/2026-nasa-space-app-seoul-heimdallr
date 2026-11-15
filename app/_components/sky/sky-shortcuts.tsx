@@ -7,7 +7,7 @@ import { Keycap } from "../site/keycap";
 
 /**
  * What each key does (decision #40), grouped as in Figma "I · Explore, keyboard shortcuts". Kept in one place so the
- * help sheet and the handler never disagree. F and Enter keep labels that say what they really do here.
+ * help sheet and the handler never disagree. F keeps a label that says what it really does here.
  */
 export const SHORTCUT_GROUPS: { title: string; column: 0 | 1; keys: { keys: string[]; or?: boolean; label: string }[] }[] = [
   {
@@ -26,7 +26,7 @@ export const SHORTCUT_GROUPS: { title: string; column: 0 | 1; keys: { keys: stri
       { keys: ["C"], label: "Show or hide candidates" },
       { keys: ["N"], label: "Next place" },
       { keys: ["P"], label: "Previous place" },
-      { keys: ["Enter"], label: "Analyze the center of the view" },
+      { keys: ["Enter"], label: "Open the selected place, or the view center" },
     ],
   },
   {
@@ -49,7 +49,8 @@ export type ShortcutActions = {
   queue: () => void;
   next: () => void;
   previous: () => void;
-  analyzeCenter: () => void;
+  /** Enter: the place picked in the queue, else the view center (decision #48). */
+  open: () => void;
   candidates: () => void;
   layers: () => void;
   search: () => void;
@@ -88,7 +89,7 @@ export function useSkyShortcuts(actions: ShortcutActions, enabled: boolean) {
         q: a.queue,
         n: a.next,
         p: a.previous,
-        Enter: a.analyzeCenter,
+        Enter: a.open,
         c: a.candidates,
         l: a.layers,
         "/": a.search,
