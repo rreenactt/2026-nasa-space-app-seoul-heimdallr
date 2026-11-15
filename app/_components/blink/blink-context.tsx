@@ -63,7 +63,7 @@ interface BlinkState {
   loadingFrames: boolean;
   /** Gaia DR3 stars (G < 16) moved to each visit's date, by visit index. */
   gaia: Map<number, BrightNeighbor[]>;
-  /** Everything the viewer needs: plan, every image, Gaia per visit. */
+  /** Blocking downloads only: plan and images. Gaia loads independently. */
   progress: { done: number; total: number; step: KeyText };
   ready: boolean;
 }
@@ -179,17 +179,15 @@ export function BlinkProvider({ selection, children }: { selection: SkySelection
 
   const planSettled = !plan.isPending;
   const framesDone = frames.filter((f) => !f.loading).length;
-  const gaiaDone = gaiaQs.filter((q) => !q.isPending).length;
-  const total = 1 + frames.length + gaiaQs.length;
-  const done = (planSettled ? 1 : 0) + framesDone + gaiaDone;
+  const total = 1 + frames.length;
+  const done = (planSettled ? 1 : 0) + framesDone;
   const step: KeyText = !planSettled
     ? { key: "blink.stepPlan" }
     : framesDone < frames.length
       ? { key: "blink.stepImages", values: { done: framesDone, total: frames.length } }
-      : gaiaDone < gaiaQs.length
-        ? { key: "blink.stepGaia", values: { done: gaiaDone, total: gaiaQs.length } }
-        : { key: "blink.stepDone" };
-  const ready = planSettled && (plan.isError || plan.data?.status === "no-observations" || (framesDone === frames.length && gaiaDone === gaiaQs.length));
+      : { key: "blink.stepDone" };
+  // Gaia overlays arrive independently; a slow or failed catalog query must not hide ready images.
+  const ready = planSettled && (plan.isError || plan.data?.status === "no-observations" || framesDone === frames.length);
 
   const value: BlinkState = {
     selection,

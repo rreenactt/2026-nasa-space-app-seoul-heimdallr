@@ -581,7 +581,7 @@ export function BlinkLoading() {
   );
 }
 
-/** Renders the panel once the blink data is complete. */
+/** Renders the panel once the plan and images are complete; Gaia overlays may arrive later. */
 export function BlinkGate({ children }: { children: React.ReactNode }) {
   const { ready } = useBlink();
   return ready ? <>{children}</> : <BlinkLoading />;
