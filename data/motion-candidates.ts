@@ -202,3 +202,19 @@ export async function findReviewCandidate(
     .sort((a, b) => a.arcsec - b.arcsec)[0];
   return nearest ? { surveyId: survey.id, row: nearest.row } : null;
 }
+
+/**
+ * The reviewed candidates (latest survey run) sitting in the given HEALPix order-11 cells, the same fixed cells the
+ * ratings use, with the run's release so the caller can check it matches the ratings' release.
+ */
+export async function reviewCandidatesInCells(hpxIndexes: number[]) {
+  if (hpxIndexes.length === 0) return null;
+  const survey = await latestSurvey();
+  if (!survey) return null;
+  const rows = await db.motionCandidate.findMany({
+    where: { surveyId: survey.id, match: { in: REVIEWED_MATCHES }, hpxIndex: { in: hpxIndexes } },
+    orderBy: { snr: "desc" },
+    select: { ...REVIEW_CANDIDATE_FIELDS, hpxIndex: true },
+  });
+  return { surveyId: survey.id, release: survey.release, rows };
+}

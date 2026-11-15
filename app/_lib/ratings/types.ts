@@ -36,7 +36,7 @@ export const movingShare = (tally: RatingTally) => Math.round((tally.moving / ta
 export const MOST_RATED_LIMIT = 10;
 
 /**
- * One row of the "Most rated places" board: the sky cell's center, how many ratings it has, and this browser's
+ * One row of the Review queue's "Most rated" tab (decision #58): the sky cell's center, how many ratings it has, and this browser's
  * state there. Shares appear only where this browser has rated (decision #6); the count alone shows no direction.
  */
 export interface MostRatedPlace {
@@ -44,4 +44,9 @@ export interface MostRatedPlace {
   dec: number;
   total: number;
   state: RatingState;
+  /**
+   * The reviewed candidate in this cell (the one with the highest SNR if there are several), at its SPHEREx position,
+   * so the row can name it and open it where it is. Null for a cell with no candidate.
+   */
+  candidate: { id: string; match: "known" | "unidentified"; ra: number; dec: number } | null;
 }

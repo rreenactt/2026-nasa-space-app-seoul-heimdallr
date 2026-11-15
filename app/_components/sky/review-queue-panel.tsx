@@ -1,9 +1,10 @@
 "use client";
 
 import { ChevronDownIcon, CircleHelpIcon } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { cn } from "cn";
-import { RATING_LABELS, type RatingState } from "@/app/_lib/ratings/types";
+import { MOST_RATED_LIMIT, RATING_LABELS, type MostRatedPlace, type RatingState } from "@/app/_lib/ratings/types";
+import { ratingSummary } from "./rating-section";
 import { clearPlaces, type PlaceVisit, samePlace, usePlaceHistory } from "./place-history";
 import { useCandidateBatch, useCandidates } from "./candidates-context";
 import {
@@ -16,16 +17,17 @@ import {
 import { angularDistance, type EquatorialCoordinates, formatDec, formatRa } from "./sky-coordinates";
 import { MARK_LABELS, type MarkKind, StatusMark } from "./status-mark";
 import { findTestTarget } from "./test-targets";
-import { useRatingSummary } from "./use-ratings";
+import { useMostRated, useRatingSummary } from "./use-ratings";
 import { useView } from "./view-store";
 
-type Tab = "view" | "sky" | "recent";
+type Tab = "view" | "sky" | "recent" | "rated";
 type Sort = "priority" | "snr" | "visits";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "view", label: "In view" },
   { id: "sky", label: "Whole sky" },
   { id: "recent", label: "Recent" },
+  { id: "rated", label: "Most rated" },
 ];
 
 const SORTS: { id: Sort; label: string }[] = [
@@ -74,6 +76,8 @@ type ReviewQueuePanelProps = {
   onOpenPicked: () => void;
   /** "Previous" and "Next" through the review order. */
   onStep: (direction: 1 | -1) => void;
+  /** The list that Previous, Next, N and P walk while a tab other than the review order is shown; null for the queue. */
+  onStepListChange: (list: ReviewEntry[] | null) => void;
   onClose: () => void;
 };
 
@@ -92,6 +96,7 @@ export function ReviewQueuePanel({
   onOpenPlace,
   onOpenPicked,
   onStep,
+  onStepListChange,
   onClose,
 }: ReviewQueuePanelProps) {
   const [tab, setTab] = useState<Tab>("view");
@@ -116,7 +121,9 @@ export function ReviewQueuePanel({
   const tests = entries.filter((entry) => entry.kind === "test");
   const total = all.filter((candidate) => candidate.status !== "excluded").length;
   const summary =
-    tab === "recent"
+    tab === "rated"
+      ? `Places people rated most, top ${MOST_RATED_LIMIT}`
+      : tab === "recent"
       ? `${count(history.length)} ${history.length === 1 ? "place" : "places"} opened in this browser`
       : batch.state === "unavailable"
         ? "Candidates could not be loaded"
@@ -140,7 +147,7 @@ export function ReviewQueuePanel({
       </header>
 
       <div className="mt-3 flex items-center px-5">
-        <div role="tablist" aria-label="Which places" className="flex gap-3.5">
+        <div role="tablist" aria-label="Which places" className="flex shrink-0 gap-3">
           {TABS.map((item) => (
             <button
               key={item.id}
@@ -149,7 +156,7 @@ export function ReviewQueuePanel({
               aria-selected={tab === item.id}
               onClick={() => setTab(item.id)}
               className={cn(
-                "border-b pb-0.5 text-[13px] transition-colors",
+                "border-b pb-0.5 text-[13px] whitespace-nowrap transition-colors",
                 tab === item.id ? "border-paper font-medium text-paper" : "border-transparent text-ash hover:text-paper",
               )}
             >
@@ -157,9 +164,10 @@ export function ReviewQueuePanel({
             </button>
           ))}
         </div>
-        {tab !== "recent" && (
+        {/* Four tabs leave no room for a visible "Sort" word (Figma "I · Review, queue open · real candidates"). */}
+        {(tab === "view" || tab === "sky") && (
           <label className="ml-auto flex items-center gap-2 text-[13px]">
-            <span className="text-smoke">Sort</span>
+            <span className="sr-only">Sort</span>
             <span className="relative flex items-center">
               <select
                 value={sort}
@@ -178,7 +186,14 @@ export function ReviewQueuePanel({
         )}
       </div>
 
-      {tab === "recent" ? (
+      {tab === "rated" ? (
+        <MostRatedPlaces
+          currentId={pickedId ?? currentId}
+          onSelect={onSelect}
+          onStepListChange={onStepListChange}
+          actions={<QueueActions canOpen={!!pickedId} canStep onOpen={onOpenPicked} onStep={onStep} />}
+        />
+      ) : tab === "recent" ? (
         <RecentPlaces history={history} onOpen={onOpenPlace} />
       ) : (
         <>
@@ -226,35 +241,188 @@ export function ReviewQueuePanel({
             ))}
           </ol>
           <p className="px-5 py-2 text-[11px] text-smoke">Candidates, not detections.</p>
-          <div className="flex items-center gap-2 border-t border-rule px-5 py-2.5">
-            <button
-              type="button"
-              onClick={onOpenPicked}
-              disabled={!pickedId}
-              className="h-8 w-[150px] rounded-[2px] bg-paper text-sm font-medium text-ink transition-colors hover:bg-bone disabled:opacity-40"
-            >
-              Open blink
-            </button>
-            <button
-              type="button"
-              onClick={() => onStep(-1)}
-              disabled={queue.length === 0}
-              className="ml-auto px-3 text-sm text-ash hover:text-paper disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={() => onStep(1)}
-              disabled={queue.length === 0}
-              className="pl-3 text-sm font-medium text-paper hover:text-bone disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
+          <QueueActions canOpen={!!pickedId} canStep={queue.length > 0} onOpen={onOpenPicked} onStep={onStep} />
         </>
       )}
     </section>
+  );
+}
+
+/** "Open blink", "Previous" and "Next" under a list of places to review. */
+function QueueActions({
+  canOpen,
+  canStep,
+  onOpen,
+  onStep,
+}: {
+  canOpen: boolean;
+  canStep: boolean;
+  onOpen: () => void;
+  onStep: (direction: 1 | -1) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 border-t border-rule px-5 py-2.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={!canOpen}
+        className="h-8 w-[150px] rounded-[2px] bg-paper text-sm font-medium text-ink transition-colors hover:bg-bone disabled:opacity-40"
+      >
+        Open blink
+      </button>
+      <button
+        type="button"
+        onClick={() => onStep(-1)}
+        disabled={!canStep}
+        className="ml-auto px-3 text-sm text-ash hover:text-paper disabled:opacity-40"
+      >
+        Previous
+      </button>
+      <button
+        type="button"
+        onClick={() => onStep(1)}
+        disabled={!canStep}
+        className="pl-3 text-sm font-medium text-paper hover:text-bone disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  );
+}
+
+/** A rated cell as a stop in the queue: the listed candidate it holds, or the cell itself. */
+function ratedEntry(place: MostRatedPlace, candidates: MovementCandidate[]): ReviewEntry {
+  const listed = place.candidate && candidates.find((candidate) => samePlace(candidate, place.candidate!));
+  if (listed) return { kind: "candidate", id: listed.id, name: listed.id, point: listed, candidate: listed };
+  if (place.candidate) {
+    // A candidate the page's list does not have (added since it loaded): still opened at its SPHEREx position.
+    const { id, ra, dec } = place.candidate;
+    return { kind: "place", id, name: id, point: { ra, dec } };
+  }
+  return { kind: "place", id: `cell ${place.ra} ${place.dec}`, name: "Sky cell", point: { ra: place.ra, dec: place.dec } };
+}
+
+/**
+ * The "Most rated" tab (decision #58, Figma "I · Review, Most rated tab"): the sky cells with the most ratings. Only the
+ * count is public; how people rated shows only where this browser rated too (decision #6). A cell holding a candidate
+ * is named after it and opens at the candidate's SPHEREx position. Rows pick and open like the review order (#49).
+ */
+function MostRatedPlaces({
+  currentId,
+  onSelect,
+  onStepListChange,
+  actions,
+}: {
+  currentId: string | undefined;
+  onSelect: (entry: ReviewEntry) => void;
+  onStepListChange: (list: ReviewEntry[] | null) => void;
+  actions: ReactNode;
+}) {
+  const places = useMostRated(true);
+  const candidates = useCandidates();
+  const rows = useMemo(
+    () => (places.data ?? []).map((place) => ({ place, entry: ratedEntry(place, candidates) })),
+    [places.data, candidates],
+  );
+  useEffect(() => {
+    onStepListChange(rows.map((row) => row.entry));
+    return () => onStepListChange(null);
+  }, [rows, onStepListChange]);
+
+  return (
+    <>
+      <div className="px-5 pt-3.5 pb-3 text-xs leading-[18px]">
+        <p className="text-ash">A count is attention, not a result.</p>
+        <p className="text-smoke">How people rated shows only where you rated too.</p>
+      </div>
+      <div className="grid grid-cols-[12px_minmax(0,1fr)_48px] gap-x-2.5 border-t border-rule px-5 pt-2.5 pb-1 text-[11px] text-smoke">
+        <span />
+        <span>Place, RA Dec</span>
+        <span className="text-right">Ratings</span>
+      </div>
+      <ol className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
+        {places.isPending &&
+          Array.from({ length: 4 }, (_, i) => (
+            <li key={i} aria-hidden className="grid h-12 grid-cols-[12px_minmax(0,1fr)_48px] items-center gap-x-2.5 px-5">
+              <span className="h-2.5 rounded-[2px] bg-paper/8" />
+              <span className="h-2.5 w-44 rounded-[2px] bg-paper/8" />
+              <span className="h-2.5 rounded-[2px] bg-paper/8" />
+            </li>
+          ))}
+        {places.isError && (
+          <li className="px-5 py-3 text-[13px] leading-5 text-red-400">
+            Could not load the ratings just now. Switch tabs or reopen the queue to try again.
+          </li>
+        )}
+        {places.data?.length === 0 && (
+          <li className="px-5 py-3 text-[13px] leading-5 text-ash">
+            No ratings yet. Open a place, play the blink and rate it; it shows up here.
+          </li>
+        )}
+        {rows.map(({ place, entry }, index) => (
+          <RatedRow
+            key={entry.id}
+            rank={index + 1}
+            place={place}
+            entry={entry}
+            current={entry.id === currentId}
+            onSelect={onSelect}
+          />
+        ))}
+      </ol>
+      {rows.length > 0 && (
+        <p className="px-5 py-2 text-[11px] text-smoke">Top {MOST_RATED_LIMIT} sky cells, about 1.7′ each.</p>
+      )}
+      {actions}
+    </>
+  );
+}
+
+function RatedRow({
+  rank,
+  place,
+  entry,
+  current,
+  onSelect,
+}: {
+  rank: number;
+  place: MostRatedPlace;
+  entry: ReviewEntry;
+  current: boolean;
+  onSelect: (entry: ReviewEntry) => void;
+}) {
+  const candidate = entry.kind === "candidate" ? entry.candidate : null;
+  const match = candidate?.match ?? place.candidate?.match;
+  // "You rated 🌠 Moving · 3 ratings · …", only where this browser rated (decision #6).
+  const rated = ratingSummary(place.state);
+  return (
+    <li className="relative after:absolute after:right-5 after:bottom-0 after:left-[50px] after:h-px after:bg-rule last:after:hidden">
+      <button
+        type="button"
+        aria-current={current || undefined}
+        onClick={() => onSelect(entry)}
+        className={cn(
+          "relative grid w-full grid-cols-[12px_minmax(0,1fr)_48px] items-start gap-x-2.5 px-5 py-2 text-left transition-colors hover:bg-paper/5",
+          current && "bg-paper/7 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-paper",
+        )}
+      >
+        <span className="pt-0.5 font-data text-xs text-smoke">{rank}</span>
+        <span className="min-w-0">
+          <span className="flex items-center gap-2">
+            {match && (
+              <StatusMark kind={candidate ? markOf(candidate) : match === "known" ? "known" : "needs-ratings"} className="size-2.5 shrink-0" />
+            )}
+            <span className={cn("shrink-0 text-sm font-medium", match ? "text-paper" : "text-ash")}>{entry.name}</span>
+            {match && <span className="truncate text-xs text-ash">{MATCH_LABELS[match]}</span>}
+          </span>
+          <span className="block font-data text-[10.5px] text-bone/80">
+            {formatRa(entry.point.ra)}&nbsp;&nbsp;{formatDec(entry.point.dec)}
+          </span>
+          {rated && <span className="mt-0.5 block truncate text-[11px] text-paper">{rated}</span>}
+        </span>
+        <span className="text-right text-sm font-medium text-paper">{count(place.total)}</span>
+      </button>
+    </li>
   );
 }
 
