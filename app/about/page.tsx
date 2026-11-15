@@ -46,7 +46,7 @@ export default function AboutPage() {
         </h1>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
           <p className="max-w-[640px] text-lg text-bone">
-            A public tool where machines suggest moving-object candidates and people check them.
+            A public tool where our team regularly updates moving-object candidates and anyone can check them.
           </p>
           <Link
             href="/"

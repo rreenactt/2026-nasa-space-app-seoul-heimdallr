@@ -46,9 +46,9 @@ https://github.com/user-attachments/assets/c49f52a2-24e4-4d8c-8571-d3116e4a3b55
 
 Since 2025, NASA's SPHEREx mission has imaged the whole sky every six months in 102 near-infrared colors. Things that move or change — nearby stars, brown dwarfs, comets, maybe even an unknown planet — show up as differences between those images. There is far too much sky for one person to look at, so the challenge asked for a public web tool that lets anyone see how the sky changes over time.
 
-HEIMDALLR is that tool. You explore the whole sky in the browser, click any point, and the SPHEREx images of that patch play one after another as a **blink animation**, the method Clyde Tombaugh used to find Pluto in 1930. Our own survey points to places worth a look; people look and rate them.
+HEIMDALLR is that tool. You explore the whole sky in the browser, click any point, and the SPHEREx images of that patch play one after another as a **blink animation**, the method Clyde Tombaugh used to find Pluto in 1930. Our team analyzes the survey and updates a list of candidates regularly; anyone can check and rate them.
 
-> **Machines suggest where to look; people check.** Everything the tool flags is a *candidate*, never a discovery.
+> **Our team analyzes and updates the candidates; anyone can check them.** Everything the tool lists is a *candidate*, never a discovery.
 
 ## What you can do
 
