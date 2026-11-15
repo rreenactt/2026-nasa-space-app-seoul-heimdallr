@@ -35,7 +35,8 @@ export const TWO_MASS_COLOR_SURVEY: SkySurvey = {
   shortName: "2MASS color (temporary, not SPHEREx)",
   // Observed 1997–2001 (PLAN.md chapter 9 uses about 1999 for the Barnard's Star offset).
   year: 1999,
-  // Figma "I · Explore": one line. Why (the CDS outage) is on the Method page under "Data sources and credits".
+  // Shown in the This view panel only (decision #60); the sky screen keeps just the credit line. Why 2MASS is on the
+  // Method page under "Data sources and credits".
   notice: "Temporary background: 2MASS, not SPHEREx",
   noticeKey: "sky.backgroundNotice",
 };

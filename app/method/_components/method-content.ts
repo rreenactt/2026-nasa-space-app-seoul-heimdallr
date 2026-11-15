@@ -357,15 +357,24 @@ export const METHOD_SECTIONS: MethodSection[] = [
     title: "Data sources and credits",
     simple: [
       "SPHEREx images come from NASA's infrared archive IRSA (data release DR1, or QR3 where DR1 has nothing). Older images come from the 2MASS, WISE and NEOWISE surveys, and star positions and motions from ESA's Gaia mission. The original image files are linked, never stored here.",
+      "The sky you browse is, for now, a 2MASS picture, not SPHEREx: the SPHEREx colour map we planned to use is offline. It is only there to find your way around. The blink and every analysis use SPHEREx images.",
     ],
     detail: [
       { kind: "list", items: [
         "SPHEREx DR1: found with IRSA SIA2 and DataLink; pixels are read by HTTP byte range from the public AWS copy of the L2b files (IMAGE, FLAGS, VARIANCE, ZODI, WCS-WAVE), only the rows around the chosen position.",
-        "Background sky of the 3D view: a CDS HiPS colour map, used for browsing only and never for analysis.",
+        "Background sky of the 3D view: for now the 2MASS J, H, Ks colour HiPS mirrored by IRSA, used for browsing only and never for analysis.",
         "2MASS Atlas images and Point Source Catalog; WISE, AllWISE and NEOWISE single exposures; all from IRSA.",
         "Gaia DR3 from the ESA Gaia Archive, with IRSA as fallback.",
         "Known asteroids: JPL and the Minor Planet Center (reference; an overlay on the images is not built yet).",
         "Comet 3I/ATLAS: IRSA's dedicated observation list and JPL Horizons.",
+      ] },
+      { kind: "h", text: "Why the background is 2MASS" },
+      { kind: "list", items: [
+        "The plan: the SPHEREx QR2 colour HiPS published by CDS (Strasbourg). CDS has been offline since a cybersecurity incident on 9 November 2026, and no other archive mirrors that map.",
+        "IRSA's own SPHEREx DR1 all-sky map is reachable, but it shows one wavelength at a time, without colour, and its finest level is about 13″ per pixel, which turns blurry when you zoom in.",
+        "2MASS (1.2–2.2 µm) covers the whole sky in colour, stays sharp when zoomed in, and lies inside the SPHEREx range (0.75–5 µm), so dusty regions look like they do in the SPHEREx panels. DSS2 colour from the same mirror looks more familiar but is visible light (0.4–0.6 µm), outside that range.",
+        "2MASS was observed in 1997–2001. A star with a large proper motion, such as Barnard's Star, sits in the background where it was then, not where SPHEREx saw it in 2025.",
+        "When CDS serves the SPHEREx tiles again, the background switches back.",
       ] },
       { kind: "p", text: "This project is not affiliated with or endorsed by NASA. It uses public data from the missions and archives listed here." },
     ],
