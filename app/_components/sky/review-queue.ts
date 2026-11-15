@@ -5,7 +5,7 @@ import { TEST_TARGETS, type TestTarget } from "./test-targets";
 export type CandidateStatus = "noteworthy" | "needs-ratings" | "recommended" | "excluded";
 
 /**
- * One movement candidate from the detection pipeline (PLAN.md chapter 7, "후보 항목"). Fields follow the batch files
+ * One movement candidate from the detection pipeline (PLAN.md chapter 7, "candidate items"). Fields follow the batch files
  * the website will read (candidates/index.json); nothing here is computed in the browser.
  */
 export type MovementCandidate = EquatorialCoordinates & {
@@ -96,12 +96,4 @@ export function findReviewEntry(
     const dRa = (((ra - point.ra + 540) % 360) - 180) * Math.cos((dec * Math.PI) / 180);
     return Math.hypot(dRa, dec - point.dec) <= toleranceDeg;
   });
-}
-
-/** The entry after the current one, wrapping around; the first entry when the current point is not in the queue. */
-export function nextReviewEntry(queue: ReviewEntry[], current: ReviewEntry | undefined): ReviewEntry | undefined {
-  if (queue.length === 0) return undefined;
-  const index = current ? queue.findIndex((entry) => entry.id === current.id) : -1;
-  const next = queue[(index + 1) % queue.length];
-  return next.id === current?.id ? undefined : next;
 }

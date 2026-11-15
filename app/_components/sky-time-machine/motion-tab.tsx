@@ -35,7 +35,7 @@ export function MotionTab() {
     setNote(
       c
         ? null
-        : "중심을 찾지 못했습니다. 별 중심이 포화로 가려졌거나(빗금) 주변에 밝은 픽셀이 부족합니다. 사용자 표시 위치를 그대로 씁니다.",
+        : "Could not find a centroid. The star's center may be saturated (hatched) or there are too few bright pixels nearby. Your marked position is used as is.",
     );
   };
 
@@ -67,40 +67,40 @@ export function MotionTab() {
         />
         <div className="grid content-start gap-3 text-xs">
           <ol className="list-decimal space-y-1 pl-4 text-muted-foreground">
-            <li>타임라인에서 시점을 고르고, 영상에서 천체를 누르세요.</li>
-            <li>필요하면 &lsquo;중심 측정&rsquo;으로 밝기 중심을 계산합니다.</li>
-            <li>다른 시점에서 같은 천체를 다시 누르면 이동 거리가 계산됩니다.</li>
+            <li>Pick a date on the timeline, then click an object in the image.</li>
+            <li>If needed, use &lsquo;Measure center&rsquo; to compute the brightness centroid.</li>
+            <li>Click the same object at another date to compute how far it moved.</li>
           </ol>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={measure} disabled={!currentMark || !frame.data}>
-              <CrosshairIcon /> 중심 측정
+              <CrosshairIcon /> Measure center
             </Button>
             <Button size="sm" variant="outline" onClick={() => current && removeMark(current.id)} disabled={!currentMark}>
-              이 시점 표시 지우기
+              Clear mark for this date
             </Button>
             <Button size="sm" variant="ghost" onClick={clearMarks} disabled={!marks.length}>
-              <Trash2Icon /> 전체 지우기
+              <Trash2Icon /> Clear all
             </Button>
           </div>
           {note && <p className="text-amber-600 dark:text-amber-400">{note}</p>}
           <Label className="flex items-center gap-2 font-normal">
             <Switch size="sm" checked={showGaia} onCheckedChange={setShowGaia} />
-            Gaia 예상 경로 (고유운동 ≥ 50 mas/년)
+            Gaia predicted paths (proper motion ≥ 50 mas/yr)
             {showGaia && gaia.isPending && <Spinner className="size-3" />}
           </Label>
           {showGaia && gaia.data && (
             <p className="text-muted-foreground">
               {gaia.data.stars.length
-                ? `${gaia.data.stars.length}개 별: Gaia DR3 2016.0 위치 + 선형 고유운동 (시차·시선속도 무시). 가장 빠른 별 ${(Math.hypot(gaia.data.stars[0].pmra, gaia.data.stars[0].pmdec) / 1000).toFixed(2)}″/년`
-                : "시야에 조건을 만족하는 Gaia 별이 없습니다."}
+                ? `${gaia.data.stars.length} stars: Gaia DR3 2016.0 position + linear proper motion (parallax and radial velocity ignored). Fastest star ${(Math.hypot(gaia.data.stars[0].pmra, gaia.data.stars[0].pmdec) / 1000).toFixed(2)}″/yr`
+                : "No Gaia stars in the field meet this criterion."}
             </p>
           )}
-          {showGaia && gaia.isError && <p className="text-destructive">Gaia 조회 실패: {gaia.error.message}</p>}
+          {showGaia && gaia.isError && <p className="text-destructive">Gaia query failed: {gaia.error.message}</p>}
           <ul className="space-y-1">
-            <li className="flex items-center gap-2"><span className="size-3 rounded-full border-2 border-sky-400" /> 사용자 표시 위치</li>
-            <li className="flex items-center gap-2"><span className="font-bold text-yellow-400">+</span> 측정 위치 (밝기 중심)</li>
-            <li className="flex items-center gap-2"><span className="size-2.5 rotate-45 border-2 border-violet-400" /> 예상 위치 / <span className="h-0.5 w-4 bg-violet-400" /> 예상 경로</li>
-            <li className="flex items-center gap-2"><span className="w-4 border-t-2 border-dashed border-sky-400" /> 표시 위치 연결 — 관측되지 않은 구간이며 실제 경로가 아님</li>
+            <li className="flex items-center gap-2"><span className="size-3 rounded-full border-2 border-sky-400" /> Your marked position</li>
+            <li className="flex items-center gap-2"><span className="font-bold text-yellow-400">+</span> Measured position (brightness centroid)</li>
+            <li className="flex items-center gap-2"><span className="size-2.5 rotate-45 border-2 border-violet-400" /> Predicted position / <span className="h-0.5 w-4 bg-violet-400" /> Predicted path</li>
+            <li className="flex items-center gap-2"><span className="w-4 border-t-2 border-dashed border-sky-400" /> Line joining marks: unobserved interval, not the actual path</li>
           </ul>
         </div>
       </div>
@@ -110,13 +110,13 @@ export function MotionTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>시점</TableHead>
-                <TableHead>망원경</TableHead>
-                <TableHead>위치 (RA, Dec)</TableHead>
-                <TableHead>종류</TableHead>
-                <TableHead className="text-right">이전 표시와 거리</TableHead>
-                <TableHead className="text-right">시간 간격</TableHead>
-                <TableHead className="text-right">속도</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Telescope</TableHead>
+                <TableHead>Position (RA, Dec)</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Distance from previous mark</TableHead>
+                <TableHead className="text-right">Time between</TableHead>
+                <TableHead className="text-right">Rate</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,18 +125,18 @@ export function MotionTab() {
                   <TableCell>{formatDate(m.mjd)}</TableCell>
                   <TableCell className="font-sans">{epoch ? `${MISSIONS[epoch.mission].label} ${epoch.band}` : "—"}</TableCell>
                   <TableCell>{pos.ra.toFixed(5)}, {pos.dec.toFixed(5)}</TableCell>
-                  <TableCell className="font-sans">{m.measured ? "측정 위치" : "사용자 표시"}</TableCell>
+                  <TableCell className="font-sans">{m.measured ? "Measured" : "Marked"}</TableCell>
                   <TableCell className="text-right">{sep != null ? `${sep.toFixed(1)}″` : "—"}</TableCell>
-                  <TableCell className="text-right">{dtYears != null ? `${dtYears.toFixed(2)}년` : "—"}</TableCell>
-                  <TableCell className="text-right">{sep != null && dtYears ? `${(sep / dtYears).toFixed(2)}″/년` : "—"}</TableCell>
+                  <TableCell className="text-right">{dtYears != null ? `${dtYears.toFixed(2)} yr` : "—"}</TableCell>
+                  <TableCell className="text-right">{sep != null && dtYears ? `${(sep / dtYears).toFixed(2)}″/yr` : "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
           {totalSep != null && totalYears > 0 && (
             <p className="mt-2 text-xs">
-              처음–마지막: <span className="font-mono">{totalSep.toFixed(1)}″ / {totalYears.toFixed(2)}년 = {(totalSep / totalYears).toFixed(2)}″/년</span>
-              <span className="text-muted-foreground"> · 표시 격자 한 칸 {scaleArcsec.toFixed(2)}″, 원본 해상도가 더 거칠 수 있음 · 위치 차이만으로 새 천체·거리·궤도를 판정하지 않습니다.</span>
+              First to last: <span className="font-mono">{totalSep.toFixed(1)}″ / {totalYears.toFixed(2)} yr = {(totalSep / totalYears).toFixed(2)}″/yr</span>
+              <span className="text-muted-foreground"> · One display grid cell is {scaleArcsec.toFixed(2)}″; the original resolution may be coarser · A position difference alone does not establish a new object, a distance or an orbit.</span>
             </p>
           )}
         </div>

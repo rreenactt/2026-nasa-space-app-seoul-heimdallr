@@ -105,7 +105,7 @@ export function FitsCanvas({ frame, values, range, stretch, showFlags, comet, ap
         <figcaption className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[11px] text-white">{label}</figcaption>
       )}
       {!comet && (
-        <div className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[11px] text-white">혜성이 이 영역 밖</div>
+        <div className="absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[11px] text-white">Comet is outside this area</div>
       )}
     </figure>
   );

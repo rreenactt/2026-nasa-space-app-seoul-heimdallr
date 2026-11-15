@@ -3,11 +3,11 @@
 import { useRef, useState } from "react";
 import { BookOpenIcon, ClipboardListIcon, MicroscopeIcon, ScrollTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFixedTarget } from "../analyses/fixed-target";
 import { FPL_EXAMPLES, FplStateProvider, useFpl, type FplTarget } from "./fpl-state";
 import { FlagGuideTab, ProvenanceTab, RecordsTab } from "./guide-tabs";
 import { InspectTab } from "./inspect-tab";
@@ -21,26 +21,14 @@ const TABS: { id: Tab; label: string; icon: React.ComponentType }[] = [
 ];
 
 /**
- * Fake Planet Lab: is a moving-looking dot a real signal, or an image defect / comparison artifact?
- * Shows SPHEREx quality flags, uncertainty and other observations for a clicked position. On-demand data only.
+ * Fake Planet Lab, shown inside the analysis panel: is a moving-looking dot a real signal, or an image defect /
+ * comparison artifact? Shows SPHEREx quality flags, uncertainty and other observations for a position. On-demand data only.
  */
-export function FakePlanetLabDialog({ trigger, initialTarget }: { trigger?: React.ReactElement; initialTarget?: FplTarget }) {
-  const [open, setOpen] = useState(false);
+export function FakePlanetLabView({ initialTarget }: { initialTarget?: FplTarget }) {
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger ?? <Button variant="outline">Open Fake Planet Lab</Button>} />
-      <DialogContent className="flex max-h-[94dvh] flex-col gap-3 overflow-hidden sm:max-w-6xl">
-        <DialogHeader>
-          <DialogTitle>Fake Planet Lab</DialogTitle>
-          <DialogDescription>Check whether a dot is a real signal or a defect: quality flags, uncertainty and other observations, with the evidence kept.</DialogDescription>
-        </DialogHeader>
-        {open && (
-          <FplStateProvider initialTarget={initialTarget}>
-            <Body />
-          </FplStateProvider>
-        )}
-      </DialogContent>
-    </Dialog>
+    <FplStateProvider initialTarget={initialTarget}>
+      <Body />
+    </FplStateProvider>
   );
 }
 
@@ -100,9 +88,11 @@ function TargetBar() {
 function Body() {
   const [tab, setTabState] = useState<Tab>("inspect");
   const ref = useRef<HTMLDivElement>(null);
+  const fixed = useFixedTarget();
   return (
     <div ref={ref} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
-      <TargetBar />
+      {/* In the analysis panel the point is already chosen; the example list and coordinates would only compete with it. */}
+      {!fixed && <TargetBar />}
       <Tabs
         value={tab}
         onValueChange={(v) => {

@@ -120,14 +120,14 @@ export function formatPeriod(start: number, end: number) {
   return a === b ? a : `${a} ~ ${b}`;
 }
 
-/** "3년 2개월" style elapsed time between two MJDs. */
+/** "3 yr 2 mo" style elapsed time between two MJDs. */
 export function formatElapsed(days: number) {
   const d = Math.abs(days);
-  if (d < 1) return `${(d * 24).toFixed(1)}시간`;
-  if (d < 60) return `${Math.round(d)}일`;
+  if (d < 1) return `${(d * 24).toFixed(1)} h`;
+  if (d < 60) return `${Math.round(d)} d`;
   const years = Math.floor(d / 365.25);
   const months = Math.round((d - years * 365.25) / 30.44);
-  return years > 0 ? `${years}년${months ? ` ${months}개월` : ""}` : `${months}개월`;
+  return years > 0 ? `${years} yr${months ? ` ${months} mo` : ""}` : `${months} mo`;
 }
 
 export const MISSION_COLOR: Record<MissionId, string> = {

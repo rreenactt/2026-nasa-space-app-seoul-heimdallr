@@ -1,13 +1,15 @@
 # 김재현 (`rreenactt`) 현재 상태
 
 > 본인 또는 본인의 AI만 고친다. 지난 작업은 쌓지 말고 최근 상태만 남긴다.
-> 최종 갱신: 2026-11-14
+> 최종 갱신: 2026-11-15
 
 ## 담당
 
 - 추가 분석 5개 모두 1차 구현: Comet Breath, Sky Time Machine, Fake Planet Lab, Neighborhood in Motion, Sky Sonata
 
 ## 진행 중
+
+- 움직임 후보(기능 A): SPHEREx × 2MASS 조사 파이프라인(`scripts/motion-survey.ts`), DB 모델·마이그레이션(적용 대기), GitHub Actions `Motion Survey`로 무작위 지점 조사 (결정 #41 제안)
 
 - 분석 패널: 기본 분석 자료를 다 받은 뒤 표시(진행바), 추가 분석은 "Download data"로 동시에 받고 진행바·남은 시간 표시 → "Open" (결정 #31 제안)
 - 데이터 속도: WISE·NEOWISE를 S3 바이트 범위로 읽고 NEOWISE 검색을 TIME 8분할 → Sky Time Machine 90초 → 48초

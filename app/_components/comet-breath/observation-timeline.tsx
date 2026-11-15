@@ -29,7 +29,7 @@ export function ObservationTimeline() {
           spacing={0}
           value={[period]}
           onValueChange={(v) => v[0] && setPeriod(v[0] as PeriodId)}
-          aria-label="관측 기간"
+          aria-label="Observation period"
         >
           {(Object.keys(PERIODS) as PeriodId[]).map((p) => (
             <ToggleGroupItem key={p} value={p}>
@@ -37,18 +37,18 @@ export function ObservationTimeline() {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <NativeSelect size="sm" value={detector} onChange={(e) => setDetector(e.target.value as DetectorFilter)} aria-label="검출기">
+        <NativeSelect size="sm" value={detector} onChange={(e) => setDetector(e.target.value as DetectorFilter)} aria-label="Detector">
           {DETECTORS.map((d) => (
             <NativeSelectOption key={d} value={d}>
-              {d === "all" ? "모든 검출기" : `검출기 ${d}`}
+              {d === "all" ? "All detectors" : `Detector ${d}`}
             </NativeSelectOption>
           ))}
         </NativeSelect>
-        <span className="text-xs text-muted-foreground">{visible.length}개 항목 (검출기별 파일 단위)</span>
+        <span className="text-xs text-muted-foreground">{visible.length} entries (one file per detector)</span>
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon-sm" onClick={() => go(index - 1)} disabled={index <= 0} aria-label="이전 관측">
+        <Button variant="outline" size="icon-sm" onClick={() => go(index - 1)} disabled={index <= 0} aria-label="Previous observation">
           <ChevronLeftIcon />
         </Button>
         <Slider
@@ -57,9 +57,9 @@ export function ObservationTimeline() {
           value={[index]}
           onValueChange={(v) => go(Array.isArray(v) ? v[0] : v)}
           disabled={visible.length < 2}
-          aria-label="관측 시각"
+          aria-label="Observation time"
         />
-        <Button variant="outline" size="icon-sm" onClick={() => go(index + 1)} disabled={index >= visible.length - 1} aria-label="다음 관측">
+        <Button variant="outline" size="icon-sm" onClick={() => go(index + 1)} disabled={index >= visible.length - 1} aria-label="Next observation">
           <ChevronRightIcon />
         </Button>
       </div>
@@ -70,10 +70,10 @@ export function ObservationTimeline() {
           <span>{selected.obsId}</span>
           <span>{selected.detector}</span>
           <span>
-            검출기 범위 {selected.emMinUm.toFixed(2)}–{selected.emMaxUm.toFixed(2)} µm
+            Detector range {selected.emMinUm.toFixed(2)}–{selected.emMaxUm.toFixed(2)} µm
           </span>
           <span>
-            혜성 RA {selected.cometRa.toFixed(4)}° Dec {selected.cometDec.toFixed(4)}°
+            Comet RA {selected.cometRa.toFixed(4)}° Dec {selected.cometDec.toFixed(4)}°
           </span>
         </div>
       )}

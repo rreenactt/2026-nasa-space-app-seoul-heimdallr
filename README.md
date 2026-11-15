@@ -15,7 +15,7 @@ Built by team HEIMDALLR for the [NASA International Space Apps Challenge](https:
 3. **Pick a point.** Zoomed in, the cursor becomes a square the size of the analysis cutout. Click it (or press `Enter` for the center of the view) to open the analysis panel.
 4. **Watch it change.** The panel plays the SPHEREx DR1 images of that point, one per visit (about six months apart), with difference and stack views. Gaia DR3 stars moved to each visit's date are drawn on top, quality flags are listed, and every frame links to its IRSA original.
 5. **Rate it.** Say whether something is Moving, Not moving, or Noise or artifact. Other people's ratings stay hidden until you rate.
-6. **Go further.** Five additional analyses open from the same panel: Sky Time Machine (25 years with 2MASS, WISE and NEOWISE), Fake Planet Lab (is the moving dot a defect?), Neighborhood in Motion (nearby stars in 3D), Sky Sonata (the sky as sound) and Comet Breath (spectra of interstellar comet 3I/ATLAS).
+6. **Go further.** Five additional analyses run from the same panel. Press **Run** on one; when its data is ready it opens as a tab beside the SPHEREx images, with the summary and rating still in view: Sky Time Machine (25 years with 2MASS, WISE and NEOWISE), Fake Planet Lab (is the moving dot a defect?), Neighborhood in Motion (nearby stars in 3D), Sky Sonata (the sky as sound) and Comet Breath (spectra of interstellar comet 3I/ATLAS).
 
 **About** and **Method** (tabs at the top) explain SPHEREx, Planet X and how the comparison works in plain language. Press `?` for all keyboard shortcuts.
 
@@ -35,7 +35,7 @@ Built by team HEIMDALLR for the [NASA International Space Apps Challenge](https:
 - A very distant solar system object shifts by several arcminutes between visits because of Earth's motion, more than the 3′ cutout, so it would appear in one visit and be absent in the next.
 - While the CDS service is down (since 2026-11-09), the all-sky background is 2MASS instead of the SPHEREx color map. Analysis always uses IRSA SPHEREx DR1 data.
 - The analysis depends on NASA/IPAC IRSA. When IRSA is slow or returns errors, panels load slowly or fail with a message.
-- Desktop browsers only.
+- Built for desktop browsers. The analysis panel also fits narrow windows by stacking the images above the summary.
 
 ## Data
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowRightIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckIcon, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AdditionalAnalyses, type AutoOpenAnalysis } from "../analyses/additional-analyses";
+import { AdditionalAnalyses } from "../analyses/additional-analyses";
+import { AnalysesProvider, type AutoOpenAnalysis } from "../analyses/analyses-context";
+import { PanelViews } from "../analyses/analysis-views";
 import { BlinkProvider } from "../blink/blink-context";
 import { BlinkGate, BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
 import { SKY_SURVEY } from "./constants";
@@ -18,23 +19,25 @@ type AnalysisPanelProps = {
   onClose: () => void;
   /** Opens one additional analysis right away (older `?stm=` / `?sonata=` links). */
   autoOpen?: AutoOpenAnalysis;
-  /** The next place in the review order (test targets, then movement candidates), if any. */
-  next?: { name: string; go: () => void };
 };
 
 /**
- * Overlay over the sky for one point (PLAN.md chapter 5): images on the left, summary, rating and additional analyses
- * on the right. A part that is not connected yet says so plainly instead of showing made-up data.
+ * Overlay over the sky for one point (PLAN.md chapter 5): the blink viewer and opened analyses as tabs on the left;
+ * summary, rating and the analysis list on the right. A part that is not connected yet says so plainly instead of
+ * showing made-up data.
  */
-export function AnalysisPanel({ selection, onClose, autoOpen, next }: AnalysisPanelProps) {
+export function AnalysisPanel({ selection, onClose, autoOpen }: AnalysisPanelProps) {
+  // Focus starts on the header, not on its first button: Space then plays the blink instead of pressing "Copy link".
+  const headerRef = useRef<HTMLDivElement>(null);
   return (
     <Dialog open={selection !== null} onOpenChange={(open) => !open && onClose()}>
       {/* Inside the frame (56px band on top, 12px at the sides and bottom; Figma "I · Frame states · Analysis open"),
-          over the sky the frame darkens by 45%. Only the placement is set here; the panel body is unchanged. */}
-      <DialogContent className="dark top-[calc(50%+22px)] grid h-[min(760px,calc(100dvh-100px))] w-[min(1200px,calc(100vw-56px))] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
+          over the sky the frame darkens by 45%. The panel fills the frame with a 16px inset, so the images get as much
+          room as the screen allows. */}
+      <DialogContent initialFocus={headerRef} className="dark top-[calc(50%+24px)] grid h-[calc(100dvh-72px)] w-[calc(100vw-16px)] max-w-none sm:top-[calc(50%+22px)] sm:h-[calc(100dvh-100px)] sm:w-[calc(100vw-56px)] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
         {/* Keyed by the point: "Next" swaps the place while the panel stays open, and every part starts fresh. */}
         {selection && (
-          <PanelBody key={`${selection.ra} ${selection.dec}`} selection={selection} autoOpen={autoOpen} next={next} />
+          <PanelBody key={`${selection.ra} ${selection.dec}`} selection={selection} autoOpen={autoOpen} headerRef={headerRef} />
         )}
       </DialogContent>
     </Dialog>
@@ -44,69 +47,68 @@ export function AnalysisPanel({ selection, onClose, autoOpen, next }: AnalysisPa
 function PanelBody({
   selection,
   autoOpen,
-  next,
+  headerRef,
 }: {
   selection: SkySelection;
   autoOpen?: AutoOpenAnalysis;
-  next?: AnalysisPanelProps["next"];
+  headerRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const { ra, dec, target } = selection;
   return (
     <>
-      <DialogHeader className="border-b px-6 pt-5 pb-4">
-        <div className="flex items-center gap-3 pr-8">
+      <DialogHeader ref={headerRef} tabIndex={-1} className="border-b px-4 pt-4 pb-3 outline-none sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pr-8">
           <DialogTitle className="text-lg">{target?.name ?? "Selected point"}</DialogTitle>
           <RatingBadge point={selection} />
-          {next && (
-            <Button variant="outline" size="sm" className="ml-auto" onClick={next.go}>
-              Next: {next.name}
-              <ArrowRightIcon />
-            </Button>
-          )}
+          <div className="ml-auto">
+            <CopyLinkButton />
+          </div>
         </div>
         <DialogDescription className="font-mono text-xs">
           RA {formatRa(ra)} · Dec {formatDec(dec)} (ICRS) · {ra.toFixed(5)}°, {dec.toFixed(5)}°
+          {target && (
+            <span className="font-sans">
+              {" "}
+              · position at epoch {target.epoch} ({target.source}); it moves, so it may sit elsewhere in other years
+            </span>
+          )}
         </DialogDescription>
-        {target && (
-          <p className="text-xs text-muted-foreground">
-            Position at epoch {target.epoch} ({target.source}). It moves, so it may sit elsewhere in other years.
-          </p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Panel images: SPHEREx DR1 cutouts from IRSA · Sky background: {SKY_SURVEY.shortName}
-        </p>
       </DialogHeader>
 
       <BlinkProvider selection={selection}>
-      <BlinkGate>
-      <div className="grid min-h-0 grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
-        <section className="flex min-h-0 items-stretch justify-center border-r p-4">
-          <BlinkViewer />
-        </section>
+        <AnalysesProvider selection={selection} autoOpen={autoOpen}>
+          <BlinkGate>
+            {/* Wide screens: images left, summary right, each scrolling on its own. Narrower than 1024px: one column
+                (images, then summary, rating and analyses) and the whole panel scrolls. */}
+            <div className="min-h-0 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(340px,2fr)] lg:overflow-hidden">
+              <div className="h-[min(calc(100vw+400px),calc(100dvh-140px))] min-h-[560px] border-b lg:h-auto lg:min-h-0 lg:border-r lg:border-b-0">
+                <PanelViews blink={<BlinkViewer />} />
+              </div>
 
-        <ScrollArea className="min-h-0">
-          <div className="grid gap-6 p-6">
-            {target && <p className="text-sm">{target.note}</p>}
+              <div className="min-h-0 lg:overflow-y-auto">
+                <div className="grid gap-6 p-4 sm:p-6">
+                  {target && <p className="text-sm">{target.note}</p>}
 
-            <PanelSection title="Summary">
-              <BlinkSummary />
-            </PanelSection>
+                  <PanelSection title="Summary">
+                    <BlinkSummary />
+                  </PanelSection>
 
-            <PanelSection title="Your assessment">
-              <RatingSection />
-            </PanelSection>
+                  <PanelSection title="Your assessment">
+                    <RatingSection />
+                  </PanelSection>
 
-            <PanelSection title="Additional analyses">
-              <AdditionalAnalyses selection={selection} autoOpen={autoOpen} />
-            </PanelSection>
+                  <PanelSection title="Additional analyses">
+                    <AdditionalAnalyses />
+                  </PanelSection>
 
-            <PanelSection title="Share">
-              <CopyLinkButton />
-            </PanelSection>
-          </div>
-        </ScrollArea>
-      </div>
-      </BlinkGate>
+                  <p className="text-xs text-muted-foreground">
+                    Panel images: SPHEREx DR1 cutouts from IRSA. Sky background: {SKY_SURVEY.shortName}, for browsing only.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </BlinkGate>
+        </AnalysesProvider>
       </BlinkProvider>
     </>
   );
@@ -121,6 +123,7 @@ function PanelSection({ title, children }: { title: string; children: React.Reac
   );
 }
 
+/** Copies the address, which holds this point (PLAN.md chapter 5, URL state). */
 function CopyLinkButton() {
   const [copied, setCopied] = useState(false);
 
@@ -132,9 +135,8 @@ function CopyLinkButton() {
 
   return (
     <Button
-      variant="secondary"
+      variant="ghost"
       size="sm"
-      className="justify-self-start"
       onClick={() => {
         navigator.clipboard.writeText(window.location.href).then(
           () => setCopied(true),
@@ -142,7 +144,8 @@ function CopyLinkButton() {
         );
       }}
     >
-      {copied ? "Link copied" : "Copy link to this point"}
+      {copied ? <CheckIcon /> : <LinkIcon />}
+      {copied ? "Link copied" : "Copy link"}
     </Button>
   );
 }

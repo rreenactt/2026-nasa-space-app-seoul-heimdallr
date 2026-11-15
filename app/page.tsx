@@ -1,4 +1,4 @@
-import type { AutoOpenAnalysis } from "./_components/analyses/additional-analyses";
+import type { AutoOpenAnalysis } from "./_components/analyses/analyses-context";
 import { TARGET_FOV } from "./_components/sky/constants";
 import { SkyExplorer } from "./_components/sky/sky-explorer";
 import { parseSelection, parseView, type SkySelection } from "./_components/sky/sky-selection";
