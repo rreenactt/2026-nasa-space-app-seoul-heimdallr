@@ -463,7 +463,7 @@ flowchart LR
   - 영어만 보고 뜻이 애매하면 `note` 열에 화면 위치와 역할을 적는다. 번역하는 사람과 AI는 `note`를 먼저 읽는다.
 - 영어로 두는 것: 머리 띠 탭(Sky, About, Method), 서비스 이름 HEIMDALLR, 데이터·임무 이름(SPHEREx, 2MASS, Gaia, IRSA), 천체 이름(테스트 대상, J 이름), 별자리 이름(영어 국제 공용 이름 뒤에 괄호로 한국어, 예: ORION (오리온자리)), RA·Dec 표기와 좌표·단위·키보드 키, SNR, 출처 표기와 배경 이름(`SKY_SURVEY.credit`·`shortName`), 서버가 돌려준 오류 원문. 숫자 표기는 영어 형식 그대로.
 - 옮긴 범위(1,059개 키): 메뉴·언어 선택, 하늘 화면 바깥 틀(도구 줄과 툴팁, 표시 설정, 화면 정보, 시야 눈금, 검색창, 공유, 단축키 창, 검토 목록과 Most rated 탭, 상태 표시, 인트로, 배경 안내, 하늘 위 후보 이름표, 별자리 이름, 테스트 대상 설명), 분석 패널(요약, 평가, 블링크 뷰어, 추가 분석 목록), 추가 분석 5개 화면(Sky Time Machine, Comet Breath, Fake Planet Lab, Neighborhood, Sky Sonata). 추가 분석 화면은 문구만 키로 옮겼고 계산·데이터 흐름은 바꾸지 않았다.
-- 아직 영어: Star guide 카드와 하늘 위 설명(PR #18 병합 뒤), About·Method 본문, `app/_lib/`와 서버가 만드는 문장(Comet Breath의 논문 인용·한계 목록·스펙트럼 특징 이름, Fake Planet Lab 점검 결과 문장, 예시 대상 설명과 미션 제품 이름, 서버의 합산 설명). 라이브러리 문장을 영어 그대로 옮겨 둔 키(`fpl.flag*`, `fpl.check*`, `nim.status*Text`, `sonata.pair*`)는 원래 문장을 고치면 함께 고친다.
+- 아직 영어: Star guide 카드와 하늘 위 설명(PR #18 병합 뒤), About 본문, Method의 참고 문헌(논문 제목. 수식과 기호는 언어와 무관하게 그대로 둠), `app/_lib/`와 서버가 만드는 문장(Comet Breath의 논문 인용·한계 목록·스펙트럼 특징 이름, Fake Planet Lab 점검 결과 문장, 예시 대상 설명과 미션 제품 이름, 서버의 합산 설명). 라이브러리 문장을 영어 그대로 옮겨 둔 키(`fpl.flag*`, `fpl.check*`, `nim.status*Text`, `sonata.pair*`)는 원래 문장을 고치면 함께 고친다.
 
 ### 프레임 데이터 계약 (API 응답)
 
