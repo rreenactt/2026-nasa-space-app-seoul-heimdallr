@@ -17,7 +17,7 @@ export type SkyOverlays = SkyLayers & {
 export const DEFAULT_OVERLAYS: SkyOverlays = {
   candidates: true,
   marks: true,
-  // Known movers start on: they are the answer key to compare unidentified pairs with (decision #48). The coordinate
+  // Known movers start on: they are the answer key to compare unidentified pairs with (decision #49). The coordinate
   // grid starts off (Figma "I · Explore, layers panel open").
   statuses: { noteworthy: true, "needs-ratings": true, recommended: true, known: true },
   opened: true,

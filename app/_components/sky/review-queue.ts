@@ -121,3 +121,9 @@ export function findReviewEntry(
     return Math.hypot(dRa, dec - point.dec) <= toleranceDeg;
   });
 }
+
+/**
+ * GET /api/candidates/lookup: the reviewed candidate a J-name points to in the latest survey run, or null, with the
+ * position the name itself spells.
+ */
+export type CandidateLookup = { candidate: MovementCandidate | null; point: EquatorialCoordinates };

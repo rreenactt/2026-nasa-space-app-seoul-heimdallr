@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { latestReviewBatch } from "@/data/motion-candidates";
+import { latestReviewBatch, type ReviewCandidateRow } from "@/data/motion-candidates";
 import type { CandidateBatch, MovementCandidate } from "./review-queue";
 
 const MJD_UNIX_EPOCH = 40587;
@@ -19,30 +19,33 @@ function coordinateName(ra: number, dec: number) {
   return `J${pad(hh, 2)}${pad(mm, 2)}${ss.toFixed(1).padStart(4, "0")}${dec < 0 ? "-" : "+"}${pad(dd, 2)}${pad(dm, 2)}${pad(ds, 2)}`;
 }
 
+/** A database row as the sky screen sees it (the batch list and the search lookup share this). */
+export function toMovementCandidate(row: ReviewCandidateRow, surveyId: string): MovementCandidate {
+  return {
+    id: coordinateName(row.raDeg, row.decDeg),
+    ra: row.raDeg,
+    dec: row.decDeg,
+    observedAt: new Date((row.epochMjd - MJD_UNIX_EPOCH) * 86_400_000).toISOString(),
+    detections: row.spherexVisits,
+    detector: row.detector,
+    wavelengthUm: row.wavelengthUm,
+    snr: row.snr,
+    match: row.match === "KNOWN_MOVER" ? "known" : "unidentified",
+    pmTotalMasYr: row.pmTotalMasYr,
+    separationArcsec: row.separationArcsec,
+    baselineYears: row.baselineYears,
+    tmassDesignation: row.tmassDesignation,
+    gaiaSourceId: row.gaiaSourceId,
+    gaiaPmMasYr: row.gaiaPmMasYr,
+    synthetic: row.isSynthetic,
+    batchId: surveyId,
+  };
+}
+
 async function load(): Promise<CandidateBatch> {
   const batch = await latestReviewBatch();
   if (!batch) return { state: "empty" };
-  const candidates = batch.candidates.map(
-    (row): MovementCandidate => ({
-      id: coordinateName(row.raDeg, row.decDeg),
-      ra: row.raDeg,
-      dec: row.decDeg,
-      observedAt: new Date((row.epochMjd - MJD_UNIX_EPOCH) * 86_400_000).toISOString(),
-      detections: row.spherexVisits,
-      detector: row.detector,
-      wavelengthUm: row.wavelengthUm,
-      snr: row.snr,
-      match: row.match === "KNOWN_MOVER" ? "known" : "unidentified",
-      pmTotalMasYr: row.pmTotalMasYr,
-      separationArcsec: row.separationArcsec,
-      baselineYears: row.baselineYears,
-      tmassDesignation: row.tmassDesignation,
-      gaiaSourceId: row.gaiaSourceId,
-      gaiaPmMasYr: row.gaiaPmMasYr,
-      synthetic: row.isSynthetic,
-      batchId: batch.surveyId,
-    }),
-  );
+  const candidates = batch.candidates.map((row) => toMovementCandidate(row, batch.surveyId));
   return {
     state: "ready",
     batchId: batch.surveyId,
@@ -54,9 +57,10 @@ async function load(): Promise<CandidateBatch> {
   };
 }
 
-// A survey run is never edited once written, so ten minutes of staleness only delays a new run's arrival. Bump the
-// version in the key whenever the shape of a MovementCandidate changes, so a cached old shape is never served.
-const cachedLoad = unstable_cache(load, ["sky-candidate-batch", "v2"], { revalidate: 600 });
+// Candidates can be added to or removed from the database at any time, so the list is kept for one minute only; the
+// search asks the database directly (api/candidates/lookup). Bump the version in the key whenever the shape of a
+// MovementCandidate changes, so a cached old shape is never served.
+const cachedLoad = unstable_cache(load, ["sky-candidate-batch", "v2"], { revalidate: 60 });
 
 /**
  * The latest survey batch for the sky screen. If the database cannot be reached the screen says so rather than

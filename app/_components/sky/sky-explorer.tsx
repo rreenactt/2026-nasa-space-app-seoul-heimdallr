@@ -475,7 +475,7 @@ function CursorReadout({ hidden }: { hidden: boolean }) {
   );
 }
 
-// v2: known movers turned on by default (decision #48); older saved settings had them off.
+// v2: known movers turned on by default (decision #49); older saved settings had them off.
 const OVERLAYS_KEY = "heimdallr:show-on-sky:v2";
 
 /** "Show on sky" settings, remembered in this browser (decision #40). Read after mount so the server render matches. */
