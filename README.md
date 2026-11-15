@@ -1,11 +1,41 @@
+<div align="center">
+
 # HEIMDALLR
 
 **Watch how the sky changes in NASA's SPHEREx survey, and help check what moves.**
 
-- **Live site:** <https://2026-nasa-space-app-seoul-heimdallr.vercel.app/>
-- **30-second overview video:** [`video/heimdallr-A-infographic.narrated.v5.20mb.mp4`](video/heimdallr-A-infographic.narrated.v5.20mb.mp4)
-- **Event:** [NASA International Space Apps Challenge](https://www.spaceappschallenge.org/) 2026, Seoul — challenge **Planet X and SPHEREx**
-- **Team HEIMDALLR:** 김재현 ([`rreenactt`](https://github.com/rreenactt)), 허한결 ([`AnsirH`](https://github.com/AnsirH)), 이순형 ([`tnsgud9`](https://github.com/tnsgud9))
+[![Live site](https://img.shields.io/badge/Live_site-open-111111?style=for-the-badge)](https://2026-nasa-space-app-seoul-heimdallr.vercel.app/)
+[![NASA Space Apps 2026](https://img.shields.io/badge/NASA_Space_Apps-2026_Seoul-0B3D91?style=for-the-badge)](https://www.spaceappschallenge.org/)
+[![Challenge](https://img.shields.io/badge/Challenge-Planet_X_and_SPHEREx-FC3D21?style=for-the-badge)](https://www.spaceappschallenge.org/)
+
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)
+![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
+![Data: SPHEREx DR1](https://img.shields.io/badge/Data-SPHEREx_DR1-4B5563)
+[![License: MIT](https://img.shields.io/badge/License-MIT-6B7280)](LICENSE)
+
+</div>
+
+### Overview (30 s)
+
+https://github.com/user-attachments/assets/c49f52a2-24e4-4d8c-8571-d3116e4a3b55
+
+<sub>Screen recording of the live tool with captions. Full-quality file: <a href="video/heimdallr-A-infographic.narrated.v5.20mb.mp4"><code>video/heimdallr-A-infographic.narrated.v5.20mb.mp4</code></a></sub>
+
+<table>
+  <tr>
+    <td align="center"><b>75,756</b><br><sub>sky fields surveyed</sub></td>
+    <td align="center"><b>262</b><br><sub>known moving stars recovered</sub></td>
+    <td align="center"><b>41</b><br><sub>unidentified candidates to check</sub></td>
+    <td align="center"><b>5 + 1</b><br><sub>analyses: blink plus five more</sub></td>
+  </tr>
+</table>
+
+| | |
+| --- | --- |
+| **Event** | [NASA International Space Apps Challenge](https://www.spaceappschallenge.org/) 2026, Seoul |
+| **Challenge** | Planet X and SPHEREx |
+| **Team HEIMDALLR** | 김재현 ([`rreenactt`](https://github.com/rreenactt)) · 허한결 ([`AnsirH`](https://github.com/AnsirH)) · 이순형 ([`tnsgud9`](https://github.com/tnsgud9)) |
 
 ## What is this?
 
