@@ -18,6 +18,9 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1164.0",
+    "@aws-sdk/lib-storage": "^3.1164.0",
+    "@aws-sdk/s3-request-presigner": "^3.1164.0",
     "@base-ui/react": "^1.9.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
