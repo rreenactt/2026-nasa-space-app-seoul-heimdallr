@@ -195,10 +195,16 @@ export function SkySwitch({
 
 const STATUS_KEYS: StatusKey[] = ["noteworthy", "needs-ratings", "recommended", "known"];
 
-const OTHER_LAYERS: { key: "opened" | "pins" | "constellations" | "grid"; label: string }[] = [
+/** `sub` rows sit indented under the row above and dim while it is off (Figma "Constellation names"). */
+const OTHER_LAYERS: {
+  key: "opened" | "pins" | "constellations" | "constellationNames" | "grid";
+  label: string;
+  sub?: "constellations";
+}[] = [
   { key: "opened", label: "Places you opened" },
   { key: "pins", label: "Test targets" },
   { key: "constellations", label: "Constellation lines" },
+  { key: "constellationNames", label: "Constellation names", sub: "constellations" },
   { key: "grid", label: "Coordinate grid" },
 ];
 
@@ -285,8 +291,8 @@ export function ShowOnSky({
         </div>
       </div>
       <div className="px-[18px] pt-2 pb-1.5">
-        {OTHER_LAYERS.map(({ key, label }) => (
-          <Row key={key}>
+        {OTHER_LAYERS.map(({ key, label, sub }) => (
+          <Row key={key} dim={sub && !overlays[sub]} className={sub && "pl-4"}>
             {label}
             <SkySwitch checked={overlays[key]} label={label} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
           </Row>
