@@ -149,7 +149,7 @@ export function ReviewQueuePanel({
     >
       <header className="px-5 pt-[18px]">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xl font-light tracking-[-0.01em] text-paper">{t("review.title")}</h2>
+          <h2 className="text-xl font-light tracking-[-0.01em] text-paper">{t("review.heading")}</h2>
           <button type="button" className="text-[13px] text-ash hover:text-paper" onClick={onClose}>
             {t("review.hide")}
           </button>

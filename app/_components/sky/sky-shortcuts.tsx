@@ -126,7 +126,7 @@ export function ShortcutSheet({ open, onOpenChange }: { open: boolean; onOpenCha
         <DialogOverlay className="bg-ink/55 supports-backdrop-filter:backdrop-blur-none" />
         <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(680px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-[2px] border border-rule bg-ink/94 font-ui text-bone outline-none data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0">
           <div className="flex items-center justify-between border-b border-rule px-6 py-[18px]">
-            <DialogTitle className="text-lg font-light text-paper">{t("shortcuts.title")}</DialogTitle>
+            <DialogTitle className="text-lg font-light text-paper">{t("shortcuts.heading")}</DialogTitle>
             <DialogPrimitive.Close className="flex items-center gap-1.5 text-[13px] text-ash hover:text-paper">
               {t("common.close")}
               <Keycap>Esc</Keycap>

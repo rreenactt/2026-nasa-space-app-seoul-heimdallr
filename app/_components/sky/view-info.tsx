@@ -62,7 +62,7 @@ export function ViewInfo({ onClose }: { onClose: () => void }) {
   return (
     <div>
       <div className="flex h-[46px] items-center justify-between border-b border-rule px-[18px]">
-        <p className="text-sm font-medium text-paper">{t("viewInfo.title")}</p>
+        <p className="text-sm font-medium text-paper">{t("viewInfo.heading")}</p>
         <button type="button" className="text-xs text-ash hover:text-paper" onClick={onClose}>
           {t("common.close")}
         </button>

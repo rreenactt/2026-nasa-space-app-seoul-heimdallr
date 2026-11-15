@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckIcon, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { AdditionalAnalyses } from "../analyses/additional-analyses";
 import { AnalysesProvider, type AutoOpenAnalysis } from "../analyses/analyses-context";
 import { PanelViews } from "../analyses/analysis-views";
@@ -64,6 +65,7 @@ function PanelBody({
   headerRef: React.RefObject<HTMLDivElement | null>;
   onGoTo?: AnalysisPanelProps["onGoTo"];
 }) {
+  const t = useT();
   const { ra, dec, target } = selection;
   const candidate = useCandidateAt(target ? null : selection);
   const position = target ? targetPositionAt(target, selection) : null;
@@ -76,7 +78,7 @@ function PanelBody({
     <>
       <DialogHeader ref={headerRef} tabIndex={-1} className="border-b px-4 pt-4 pb-3 outline-none sm:px-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pr-8">
-          <DialogTitle className="text-lg">{target?.name ?? candidate?.id ?? "Selected point"}</DialogTitle>
+          <DialogTitle className="text-lg">{target?.name ?? candidate?.id ?? t("panel.selectedPoint")}</DialogTitle>
           <RatingBadge point={selection} />
           <div className="ml-auto">
             <CopyLinkButton />
@@ -87,36 +89,43 @@ function PanelBody({
           {target && position && (
             <span className="font-sans">
               {" "}
-              · {position.atSpherexPosition ? "predicted position" : "position"} at epoch {position.epoch} ({position.source}); it
-              moves, so it may sit elsewhere in other years
+              ·{" "}
+              {t(position.atSpherexPosition ? "panel.epochPredicted" : "panel.epochPosition", {
+                epoch: position.epoch,
+                source: position.source,
+              })}
             </span>
           )}
         </DialogDescription>
         {target && later && movedArcsec != null && position && !position.atSpherexPosition && movedArcsec >= SPHEREX_PIXEL_ARCSEC && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
             <span className="min-w-0 flex-1">
-              This pin marks where {target.name} was at {target.epoch}. Its catalog proper motion puts it about {moved} away
-              by the SPHEREx observations ({later.epoch}):{" "}
-              {outsideField
-                ? `outside the ${BLINK_FOV_ARCMIN}′ images below, so they do not contain it.`
-                : `in the ${BLINK_FOV_ARCMIN}′ images below it sits that far from the centre mark.`}
+              {t(outsideField ? "panel.pinMovedOutside" : "panel.pinMovedInside", {
+                name: target.name,
+                epoch: target.epoch,
+                moved,
+                laterEpoch: later.epoch,
+                fov: BLINK_FOV_ARCMIN,
+              })}
             </span>
             {onGoTo && (
               <Button variant="outline" size="sm" onClick={() => onGoTo({ ra: later.ra, dec: later.dec }, target)}>
-                Open at the {later.epoch} position
+                {t("panel.openAtPosition", { epoch: later.epoch })}
               </Button>
             )}
           </div>
         )}
         {target && later && movedArcsec != null && movedArcsec < SPHEREX_PIXEL_ARCSEC && (
           <p className="text-xs text-muted-foreground">
-            Its catalog proper motion moves it {moved} between {target.epoch} and {later.epoch}, far below one{" "}
-            {SPHEREX_PIXEL_ARCSEC}″ SPHEREx pixel, so the images below cannot show that motion.
+            {t("panel.motionBelowPixel", { moved, epoch: target.epoch, laterEpoch: later.epoch, pixel: SPHEREX_PIXEL_ARCSEC })}
           </p>
         )}
         {target?.defaultDetector && (
           <p className="text-xs text-muted-foreground">
-            Opens on detector {target.defaultDetector.detector} instead of the usual default: {target.defaultDetector.reason}.
+            {t("panel.defaultDetector", {
+              detector: target.defaultDetector.detector,
+              reason: t(target.defaultDetector.reasonKey),
+            })}
           </p>
         )}
       </DialogHeader>
@@ -133,23 +142,23 @@ function PanelBody({
 
               <div className="min-h-0 lg:overflow-y-auto">
                 <div className="grid gap-6 p-4 sm:p-6">
-                  {target && <p className="text-sm">{target.note}</p>}
+                  {target && <p className="text-sm">{t(target.noteKey)}</p>}
                   {candidate && <CandidateNote candidate={candidate} />}
 
-                  <PanelSection title="Summary">
+                  <PanelSection title={t("panel.summary")}>
                     <BlinkSummary />
                   </PanelSection>
 
-                  <PanelSection title="Your assessment">
+                  <PanelSection title={t("panel.yourAssessment")}>
                     <RatingSection />
                   </PanelSection>
 
-                  <PanelSection title="Additional analyses">
+                  <PanelSection title={t("panel.additionalAnalyses")}>
                     <AdditionalAnalyses />
                   </PanelSection>
 
                   <p className="text-xs text-muted-foreground">
-                    Panel images: SPHEREx DR1 cutouts from IRSA. Sky background: {SKY_SURVEY.shortName}, for browsing only.
+                    {t("panel.credits", { background: SKY_SURVEY.shortName })}
                   </p>
                 </div>
               </div>
@@ -171,34 +180,46 @@ const masPerYear = (value: number) => `${Math.round(value).toLocaleString("en-US
  * 2MASS (about 25 years earlier), not between the blink frames.
  */
 function CandidateNote({ candidate }: { candidate: MovementCandidate }) {
+  const t = useT();
   const known = candidate.match === "known";
   const years = candidate.baselineYears.toFixed(0);
   return (
     <section className="grid gap-1.5 text-sm">
       <h3 className="flex items-center gap-2 font-medium">
         <StatusMark kind={known ? "known" : "needs-ratings"} className="size-2.5" />
-        {known ? "Known mover · answer key" : "Unidentified · your call"}
-        {candidate.synthetic && <span className="text-xs font-normal text-muted-foreground">(synthetic)</span>}
+        {t(known ? "panel.knownMoverHeading" : "panel.unidentifiedHeading")}
+        {candidate.synthetic && <span className="text-xs font-normal text-muted-foreground">({t("review.synthetic")})</span>}
       </h3>
       {known ? (
         <p>
-          Gaia DR3 {candidate.gaiaSourceId} already explains this star&apos;s motion
-          {candidate.gaiaPmMasYr != null && <> ({masPerYear(candidate.gaiaPmMasYr)})</>}: it accounts for both the 2MASS
-          position ({candidate.tmassDesignation}) and the SPHEREx one, {arcsec(candidate.separationArcsec)} apart over{" "}
-          {years} years. Use it to check what a real mover looks like before judging unidentified ones.
+          {candidate.gaiaPmMasYr != null
+            ? t("panel.knownExplainsPm", {
+                gaiaId: candidate.gaiaSourceId ?? "",
+                pm: masPerYear(candidate.gaiaPmMasYr),
+                tmass: candidate.tmassDesignation,
+                separation: arcsec(candidate.separationArcsec),
+                years,
+              })
+            : t("panel.knownExplains", {
+                gaiaId: candidate.gaiaSourceId ?? "",
+                tmass: candidate.tmassDesignation,
+                separation: arcsec(candidate.separationArcsec),
+                years,
+              })}
         </p>
       ) : (
         <p>
-          A SPHEREx source with no 2MASS star in place, paired with {candidate.tmassDesignation}{" "}
-          {arcsec(candidate.separationArcsec)} away that has no SPHEREx match either. No Gaia DR3 star explains the pair.
-          If it is one object it moved about {masPerYear(candidate.pmTotalMasYr)} over {years} years; it may also be a
-          chance pair or an artifact. Your rating decides.
+          {t("panel.unidentifiedPair", {
+            tmass: candidate.tmassDesignation,
+            separation: arcsec(candidate.separationArcsec),
+            pm: masPerYear(candidate.pmTotalMasYr),
+            years,
+          })}
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        The SPHEREx visits are months apart, so the blink may show little motion. Compare with the 2MASS image in Sky
-        Time Machine below.
-        {candidate.detections === 1 && " SPHEREx found this source in one visit only: needs further analysis."}
+        {t("panel.visitsApart")}
+        {candidate.detections === 1 && <> {t("panel.oneVisitOnly")}</>}
       </p>
     </section>
   );
@@ -215,6 +236,7 @@ function PanelSection({ title, children }: { title: string; children: React.Reac
 
 /** Copies the address, which holds this point (PLAN.md chapter 5, URL state). */
 function CopyLinkButton() {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -235,7 +257,7 @@ function CopyLinkButton() {
       }}
     >
       {copied ? <CheckIcon /> : <LinkIcon />}
-      {copied ? "Link copied" : "Copy link"}
+      {t(copied ? "share.copied" : "panel.copyLink")}
     </Button>
   );
 }

@@ -47,7 +47,8 @@ const CONSTELLATIONS = (constellationLines as ConstellationData).features.map((f
     line.map(([ra, dec]): [number, number] => [normalizeRa(ra), dec]),
   );
   return {
-    name: (IAU_NAMES[feature.id] ?? feature.id).toUpperCase(),
+    id: feature.id,
+    name: IAU_NAMES[feature.id] ?? feature.id,
     drawn: Number(feature.properties.rank) <= 2,
     lines,
   };
@@ -78,10 +79,19 @@ const LABEL_BOTTOM_CLEAR = 140;
  * our own canvas, not as an Aladin Lite overlay: in 3.8.2 a polyline with a point outside the TAN projection throws
  * inside Aladin's draw loop, and its own grid could not be styled or labelled to match.
  */
-export function drawSkyLines(context: CanvasRenderingContext2D, frame: LineFrame, layers: LineLayers, font: string) {
+/** IAU abbreviation (e.g. "Ori") and English name → the label to draw (decision #56: Korean adds its name in brackets). */
+export type ConstellationLabel = (id: string, name: string) => string;
+
+export function drawSkyLines(
+  context: CanvasRenderingContext2D,
+  frame: LineFrame,
+  layers: LineLayers,
+  font: string,
+  label: ConstellationLabel = (_id, name) => name,
+) {
   if (layers.grid) drawGrid(context, frame, font);
   const fade = Math.min(Math.max((frame.fov - FADE_END_FOV) / (FADE_START_FOV - FADE_END_FOV), 0), 1);
-  if (layers.constellations && fade > 0) drawConstellations(context, frame, layers.constellationNames, fade, font);
+  if (layers.constellations && fade > 0) drawConstellations(context, frame, layers.constellationNames, fade, font, label);
 }
 
 function drawConstellations(
@@ -90,6 +100,7 @@ function drawConstellations(
   names: boolean,
   fade: number,
   font: string,
+  label: ConstellationLabel,
 ) {
   context.strokeStyle = `rgba(${ASH}, ${0.22 * fade})`;
   context.lineWidth = 1;
@@ -113,7 +124,7 @@ function drawConstellations(
         previous = point;
       }
     }
-    if (names && seen >= 3) labels.push({ name: constellation.name, x: sumX / seen, y: sumY / seen });
+    if (names && seen >= 3) labels.push({ name: label(constellation.id, constellation.name).toUpperCase(), x: sumX / seen, y: sumY / seen });
   }
   context.stroke();
   if (labels.length === 0) return;

@@ -15,7 +15,8 @@ export type JobState =
   | { status: "idle" }
   | { status: "running"; progress: Progress; startedAt: number }
   | { status: "done"; progress: Progress; seconds: number }
-  | { status: "error"; message: string };
+  /** `message` is the thrown error's own text (shown as is), or null for the generic "Download failed". */
+  | { status: "error"; message: string | null };
 
 /** What the left side of the panel shows: the blink viewer or one opened analysis. */
 export type PanelView = "blink" | AnalysisId;
@@ -81,7 +82,7 @@ export function AnalysesProvider({
       const signal = { cancelled: false };
       signals.current.set(id, signal);
       const startedAt = Date.now();
-      let last: Progress = { done: 0, total: 1, step: "Starting", failed: 0 };
+      let last: Progress = { done: 0, total: 1, step: "analyses.stepStarting", failed: 0 };
       set(id, { status: "running", progress: last, startedAt });
       try {
         await prefetchAnalysis(id, {
@@ -102,7 +103,7 @@ export function AnalysesProvider({
           show(id, lastAsked.current === id);
         }
       } catch (e) {
-        set(id, signal.cancelled ? { status: "idle" } : { status: "error", message: e instanceof Error ? e.message : "Download failed" });
+        set(id, signal.cancelled ? { status: "idle" } : { status: "error", message: e instanceof Error ? e.message : null });
       } finally {
         signals.current.delete(id);
       }

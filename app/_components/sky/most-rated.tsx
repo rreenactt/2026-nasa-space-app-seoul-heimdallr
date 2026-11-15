@@ -43,7 +43,7 @@ export function MostRated({ onSelect }: { onSelect: (point: EquatorialCoordinate
             <p className="text-xs text-muted-foreground">{t("mostRated.empty")}</p>
           )}
           {places.data?.map((place, i) => {
-            const summary = ratingSummary(place.state);
+            const summary = ratingSummary(place.state, t);
             return (
               <button
                 key={`${place.ra} ${place.dec}`}
