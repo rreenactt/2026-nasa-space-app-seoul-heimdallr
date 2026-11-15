@@ -1,6 +1,6 @@
 "use client";
 
-import { InfoIcon, LayersIcon, LocateFixedIcon, MaximizeIcon, MinimizeIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { InfoIcon, LayersIcon, LocateFixedIcon, MaximizeIcon, MinimizeIcon, MinusIcon, PlusIcon, ScanSearchIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -47,6 +47,9 @@ type SkyToolsProps = {
   onLayersOpenChange: (open: boolean) => void;
   /** Candidates switched off: a small dot on the layers tool (Figma "I · Explore, candidates hidden"). */
   candidatesOff: boolean;
+  /** The star guide (stars in the view that Gaia measured moving) is on. */
+  starGuide: boolean;
+  onStarGuide: () => void;
 };
 
 /** The tool column on the sky's right edge (Eyes on the Solar System style): line icons, no fill. */
@@ -59,6 +62,8 @@ export function SkyTools({
   layersOpen,
   onLayersOpenChange,
   candidatesOff,
+  starGuide,
+  onStarGuide,
 }: SkyToolsProps) {
   const view = useView();
   const [infoOpen, setInfoOpen] = useState(false);
@@ -99,6 +104,17 @@ export function SkyTools({
           {layersPanel}
         </PopoverContent>
       </Popover>
+      <ToolTip label={starGuide ? "Turn off the star guide" : "Star guide: stars that move here"}>
+        <button
+          type="button"
+          className={cn(toolClass, starGuide && "bg-paper/15 text-paper")}
+          aria-label="Star guide"
+          aria-pressed={starGuide}
+          onClick={onStarGuide}
+        >
+          <ScanSearchIcon />
+        </button>
+      </ToolTip>
       <ToolTip label="Zoom in" keyName="+">
         <button
           type="button"

@@ -54,7 +54,7 @@ export function paintCandidates(
     overlays: SkyOverlays;
     opened: PlaceVisit[];
     selected: { ra: number; dec: number } | null;
-    /** The queue row picked but not opened yet (decision #48): a ring with its name and position beside it. */
+    /** The queue row picked but not opened yet (decision #49): a ring with its name and position beside it. */
     picked: (EquatorialCoordinates & { name: string }) | null;
   },
 ) {

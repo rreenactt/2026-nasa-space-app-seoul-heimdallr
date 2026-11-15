@@ -49,7 +49,7 @@ type ReviewQueuePanelProps = {
   queue: ReviewEntry[];
   /** The entry whose analysis is open. */
   currentId: string | undefined;
-  /** The entry picked with a click, N or P; Enter and "Open blink" open it (decision #48). */
+  /** The entry picked with a click, N or P; Enter and "Open blink" open it (decision #49). */
   pickedId: string | undefined;
   filter: CandidateFilter;
   onFilterChange: (filter: CandidateFilter) => void;

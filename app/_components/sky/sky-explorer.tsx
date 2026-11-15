@@ -33,6 +33,9 @@ import { SiteHeader } from "../site/site-header";
 import { SkyFrame } from "./sky-frame";
 import { SkyHeaderActions } from "./sky-header-actions";
 import { ShowOnSky, SkyTools } from "./sky-tools";
+import { paintStarGuide } from "./star-guide/paint";
+import { StarGuideCard } from "./star-guide/star-guide-card";
+import { positionAt, SPHEREX_EPOCH, useStarGuide } from "./star-guide/use-star-guide";
 import { type SkySelection, selectionUrl, viewUrl } from "./sky-selection";
 import type { Flight, SkyPainter } from "./sky-view";
 import { FovScale } from "./fov-scale";
@@ -83,21 +86,26 @@ export function SkyExplorer({
   useEffect(() => {
     flyingRef.current = flyingTo;
   }, [flyingTo]);
-  // The queue row picked with a click, N or P (decision #48): the camera flies there and a ring with its name and
+  // The queue row picked with a click, N or P (decision #49): the camera flies there and a ring with its name and
   // position marks it, but the analysis opens only with Enter, "Open blink" or a second click on the row.
   const [picked, setPicked] = useState<ReviewEntry | null>(null);
   // True while the camera flies to the picked place, which may start off screen.
   const pickFlight = useRef(false);
+  const [starGuideOn, setStarGuideOn] = useState(false);
+  const starGuide = useStarGuide(starGuideOn);
+  const [guideHighlight, setGuideHighlight] = useState<number | null>(null);
   const painter = useMemo<SkyPainter>(
-    () => (context, frame) =>
+    () => (context, frame) => {
       paintCandidates(context, frame, {
         candidates: MOVEMENT_CANDIDATES,
         overlays,
         opened,
         selected: flyingTo ?? selection,
         picked: picked && { ...picked.point, name: picked.kind === "candidate" ? picked.candidate.id : picked.name },
-      }),
-    [overlays, opened, selection, flyingTo, picked],
+      });
+      return paintStarGuide(context, frame, starGuide.state, guideHighlight);
+    },
+    [overlays, opened, selection, flyingTo, picked, starGuide.state, guideHighlight],
   );
   const [queueOpen, setQueueOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -111,7 +119,7 @@ export function SkyExplorer({
     setSearchOpen(true);
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
   }, []);
-  // The pick lives only while the queue is open: folding the queue (Hide, Q, Esc, a drag) drops it (decision #48).
+  // The pick lives only while the queue is open: folding the queue (Hide, Q, Esc, a drag) drops it (decision #49).
   const foldQueue = useCallback(() => {
     setQueueOpen(false);
     setPicked(null);
@@ -249,7 +257,7 @@ export function SkyExplorer({
     setQueueOpen(true);
     showCandidates();
   }, [queueOpen, foldQueue, showCandidates]);
-  // Picking a row, N or P: fly there with the frame on and mark the place, without opening the panel (decision #48).
+  // Picking a row, N or P: fly there with the frame on and mark the place, without opening the panel (decision #49).
   const pick = useCallback(
     (entry: ReviewEntry) => {
       flightId.current += 1;
@@ -323,7 +331,7 @@ export function SkyExplorer({
       queue: toggleQueue,
       next: () => step(1),
       previous: () => step(-1),
-      // Enter: the picked place; with nothing picked, the view center, unless the queue is open (decision #48).
+      // Enter: the picked place; with nothing picked, the view center, unless the queue is open (decision #49).
       open: () => {
         if (picked) return openPicked();
         if (queueOpen) return;
@@ -357,9 +365,10 @@ export function SkyExplorer({
           onFlightEnd={onFlightEnd}
           onSelect={selectPoint}
           onError={setError}
+          onSettle={starGuide.onSettle}
         />
       </div>
-      {/* Where Enter analyzes: the view center while aiming, only with the frame off (decision #49). */}
+      {/* Where Enter analyzes: the view center while aiming, only with the frame off (decision #50). */}
       <ViewCenter hidden={!aiming || framed} />
       <SkyFrame on={framed} dim={selection !== null} />
       <SiteHeader
@@ -463,6 +472,8 @@ export function SkyExplorer({
         >
           <SkyTools
             candidatesOff={!overlays.candidates}
+            starGuide={starGuideOn}
+            onStarGuide={() => setStarGuideOn((on) => !on)}
             onZoom={zoomBy}
             onHome={goHome}
             fullscreen={fullscreen}
@@ -472,6 +483,19 @@ export function SkyExplorer({
             layersPanel={<ShowOnSky overlays={overlays} onChange={setOverlays} onClose={() => setLayersOpen(false)} />}
           />
         </div>
+        {!framed && (
+          <div className={cn("absolute left-6", overlays.candidates ? "bottom-[52px]" : "bottom-[92px]")}>
+            <StarGuideCard
+              state={starGuide.state}
+              onHighlight={setGuideHighlight}
+              onOpen={(star) => {
+                const [ra, dec] = positionAt(star, SPHEREX_EPOCH);
+                goTo({ ra, dec });
+              }}
+              onClose={() => setStarGuideOn(false)}
+            />
+          </div>
+        )}
         <CursorReadout hidden={framed} />
         <FovScale hidden={framed} aiming={aiming} />
         {!overlays.candidates && !framed && (
@@ -501,7 +525,7 @@ export function SkyExplorer({
       )}
       <SkyIntro enabled={!initialSelection && !initialView} />
       <ShortcutSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} />
+      <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} onGoTo={goTo} />
     </div>
   );
 }

@@ -113,7 +113,14 @@ export function SpherexTab({ search, predicted }: { search: ReturnType<typeof us
           <dt className="text-muted-foreground">Model position</dt>
           <dd className="font-mono">{atExposure && `${atExposure.ra.toFixed(5)}, ${atExposure.dec.toFixed(5)}`} <span className="text-sky-500">(blue circle)</span></dd>
           <dt className="text-muted-foreground">Signal at model position</dt>
-          <dd>{cmp ? (cmp.snr != null ? `S/N ${cmp.snr.toFixed(1)} in a 2-px aperture` : "Not measurable (pixels excluded, e.g. saturated)") : "—"}</dd>
+          <dd>
+            {cmp ? (cmp.snr != null ? `S/N ${cmp.snr.toFixed(1)} in a 2-px aperture` : "Not measurable (pixels excluded, e.g. saturated)") : "—"}
+            {cmp && cmp.snr != null && cmp.coreExcludedPixels > 0 && (
+              <span className="block text-amber-600 dark:text-amber-400">
+                {cmp.coreExcludedPixels} centre pixel(s) excluded ({cmp.coreExcludedFlags.join(", ") || "no valid data"}): the brightness is a lower limit.
+              </span>
+            )}
+          </dd>
           <dt className="text-muted-foreground">Measured centroid</dt>
           <dd>
             {cmp?.measured

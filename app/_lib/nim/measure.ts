@@ -31,6 +31,9 @@ export interface ModelVsImage {
   pixelScaleArcsec: number;
   wavelengthUm: number | null;
   usablePixels: number;
+  /** Pixels within 1 px of the model position left out of the aperture sum (see FrameMeasurement). */
+  coreExcludedPixels: number;
+  coreExcludedFlags: string[];
 }
 
 /**
@@ -72,5 +75,5 @@ export function compareModelWithImage(frame: NativeFrame, ra: number, dec: numbe
     }
   }
   const ph = m.photometry && m.photometry.apertureArea > 0 && Number.isFinite(m.photometry.snr) ? m.photometry : null;
-  return { snr: ph?.snr ?? null, measured, offsetArcsec: offset, pixelScaleArcsec: m.pixelScaleArcsec, wavelengthUm: m.wavelengthUm, usablePixels: used };
+  return { snr: ph?.snr ?? null, measured, offsetArcsec: offset, pixelScaleArcsec: m.pixelScaleArcsec, wavelengthUm: m.wavelengthUm, usablePixels: used, coreExcludedPixels: m.coreExcludedPixels, coreExcludedFlags: m.coreExcludedFlags };
 }

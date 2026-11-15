@@ -75,7 +75,8 @@ const Ctx = createContext<BlinkState | null>(null);
 
 export function BlinkProvider({ selection, children }: { selection: SkySelection; children: React.ReactNode }) {
   const { ra, dec } = selection;
-  const [detectorChoice, setDetector] = useState<string | undefined>(undefined);
+  // A test target may name its own first detector (the plan falls back to its default if that detector has no data).
+  const [detectorChoice, setDetector] = useState<string | undefined>(selection.target?.defaultDetector?.detector);
   const plan = usePlan(ra, dec, detectorChoice);
   const grid = useMemo<SkyGrid>(() => ({ ra, dec, fovArcmin: BLINK_FOV_ARCMIN, n: BLINK_GRID_N }), [ra, dec]);
 

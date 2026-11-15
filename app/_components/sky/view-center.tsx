@@ -13,7 +13,7 @@ const ARMS = [
 ] as const;
 
 /**
- * The view center while aiming with the frame off (decision #49, Figma "I · Explore, aiming (view center)"): a
+ * The view center while aiming with the frame off (decision #50, Figma "I · Explore, aiming (view center)"): a
  * crosshair with a 14px gap, so a target flown to the center stays visible, and the center's RA/Dec with the Enter key,
  * which analyzes this point. Shown from AIM_FOV in, where Enter opens the analysis instead of zooming.
  */

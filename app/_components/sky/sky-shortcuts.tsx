@@ -49,7 +49,7 @@ export type ShortcutActions = {
   queue: () => void;
   next: () => void;
   previous: () => void;
-  /** Enter: the place picked in the queue, else the view center (decision #48). */
+  /** Enter: the place picked in the queue, else the view center (decision #49). */
   open: () => void;
   candidates: () => void;
   layers: () => void;

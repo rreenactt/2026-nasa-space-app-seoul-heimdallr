@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AudioLinesIcon, HistoryIcon, ImagesIcon, MicroscopeIcon, OrbitIcon, SparklesIcon, XIcon, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
 import { Spinner } from "@/components/ui/spinner";
+import { targetPositionAt } from "../sky/test-targets";
 import { useAnalyses, type PanelView } from "./analyses-context";
 import { FixedTargetContext } from "./fixed-target";
 import type { AnalysisId } from "./prefetch";
@@ -44,11 +45,13 @@ function AnalysisBody({ id, active }: { id: AnalysisId; active: boolean }) {
   const { ra, dec, target } = selection;
   const name = target?.name ?? "Selected point";
   const note = target?.note ?? "";
+  // The epoch and source of the position the panel is open on (the pin, or the target's SPHEREx-epoch position).
+  const position = target ? targetPositionAt(target, selection) : null;
   switch (id) {
     case "sky-time-machine":
       return (
         <SkyTimeMachineView
-          initialTarget={{ name, ra, dec, fovArcmin: stmFov, source: target ? `${target.source} (epoch ${target.epoch})` : "Point chosen on the sky" }}
+          initialTarget={{ name, ra, dec, fovArcmin: stmFov, source: position ? `${position.source} (epoch ${position.epoch})` : "Point chosen on the sky" }}
         />
       );
     case "fake-planet-lab":

@@ -1,4 +1,4 @@
-import { aperturePhotometry } from "@/app/_lib/comet/photometry";
+import { APERTURE_BAD_FLAGS, aperturePhotometry, maskFor } from "@/app/_lib/comet/photometry";
 import type { FramePayload, PhotometryResult } from "@/app/_lib/comet/types";
 import { skyToPixel, wavelengthAt } from "@/app/_lib/comet/wcs";
 import { decodeBits, FLAG_CATEGORIES, MEASUREMENT_EXCLUDE, namesIn, UNKNOWN_CATEGORY, type DecodedBit } from "./flags";
@@ -11,6 +11,8 @@ import type { BrightNeighbor, CheckItem, Verdict } from "./types";
 
 export const CHECK_PARAMS = {
   apertureRadiusPx: 2,
+  /** Radius of the "core" reported by `coreExcludedPixels` (information only, no verdict uses it). */
+  coreRadiusPx: 1,
   neighbourhoodRadiusPx: 6,
   annulusPx: [6, 12] as [number, number],
   detectorEdgeWarnPx: 10,
@@ -45,6 +47,14 @@ export interface FrameMeasurement {
   neighbourhoodFlags: Record<string, number>;
   aperturePixels: number;
   unusablePixels: number;
+  /**
+   * Pixels within 1 px of the position that the aperture sum leaves out (saturated, transient, unusable…).
+   * Information only: it does not change `photometry.quality` or any verdict. The sum judges loss by area, but
+   * the centre pixels hold most of a point source's light, so one excluded core pixel can remove far more
+   * than its share of the area and the flux is then a lower limit.
+   */
+  coreExcludedPixels: number;
+  coreExcludedFlags: string[];
   distanceToCutoutEdgePx: number;
   distanceToDetectorEdgePx: number;
   shape: { fwhmArcsec: number; elongation: number } | null;
@@ -74,6 +84,10 @@ export function measureAt(frame: NativeFrame, ra: number, dec: number): FrameMea
   let aperturePixels = 0;
   let unusable = 0;
   const unusableMask = bits.filter((b) => b.category.id === "unusable").reduce((m, b) => m | b.mask, 0) >>> 0;
+  // The same exclusion the aperture sum applies (comet/photometry.ts).
+  const sumExcluded = maskFor(p.flagBits, APERTURE_BAD_FLAGS);
+  let coreExcluded = 0;
+  const coreFlags = new Set<string>();
   const R = CHECK_PARAMS.neighbourhoodRadiusPx;
   if (inside) {
     for (let j = Math.floor(y - R); j <= Math.ceil(y + R); j++) {
@@ -84,6 +98,13 @@ export function measureAt(frame: NativeFrame, ra: number, dec: number): FrameMea
         const k = j * p.width + i;
         const names = namesIn(frame.flags[k], bits);
         for (const n of names) neighbourhoodFlags[n] = (neighbourhoodFlags[n] ?? 0) + 1;
+        if (d <= CHECK_PARAMS.coreRadiusPx) {
+          const flagged = ((frame.flags[k] >>> 0) & sumExcluded) !== 0;
+          if (flagged || !Number.isFinite(frame.image[k]) || !Number.isFinite(frame.variance[k])) {
+            coreExcluded++;
+            for (const n of names) if ((APERTURE_BAD_FLAGS as readonly string[]).includes(n)) coreFlags.add(n);
+          }
+        }
         if (d <= CHECK_PARAMS.apertureRadiusPx + 0.5) {
           aperturePixels++;
           for (const n of names) apertureFlags[n] = (apertureFlags[n] ?? 0) + 1;
@@ -168,6 +189,8 @@ export function measureAt(frame: NativeFrame, ra: number, dec: number): FrameMea
     neighbourhoodFlags,
     aperturePixels,
     unusablePixels: unusable,
+    coreExcludedPixels: coreExcluded,
+    coreExcludedFlags: [...coreFlags].sort(),
     distanceToCutoutEdgePx: inside ? Math.min(x, y, p.width - 1 - x, p.height - 1 - y) : -1,
     distanceToDetectorEdgePx: inside ? Math.min(dx, dy, W - 1 - dx, H - 1 - dy) : -1,
     shape,
@@ -286,6 +309,11 @@ export function runChecks(
   // 4. Signal vs noise (VARIANCE)
   const measurable = primary.photometry && primary.photometry.apertureArea > 0 && Number.isFinite(primary.photometry.snr);
   const ph = measurable ? primary.photometry : null;
+  // Shown as text only; the status below (and so the verdict) is the same as without it.
+  const coreNote =
+    ph && primary.coreExcludedPixels > 0
+      ? `${primary.coreExcludedPixels} pixel(s) within ${P.coreRadiusPx} px of the centre are left out of the sum (${primary.coreExcludedFlags.join(", ") || "no valid data"}). The centre holds most of a point source's light, so this flux is a lower limit and is not comparable between exposures.`
+      : null;
   checks.push({
     id: "snr",
     label: "Signal vs noise",
@@ -294,9 +322,10 @@ export function runChecks(
       ? primary.inside
         ? "Cannot measure: every aperture pixel is excluded (saturated, transient or unusable). The image itself is still shown — switch layers off to look at it."
         : "Not measured."
-      : `S/N ${ph.snr.toFixed(1)} — ${ph.fluxMjy.toFixed(3)} ± ${ph.errorMjy.toFixed(3)} mJy above the local background${ph.snr < P.snrDetect ? " (not significant)" : ""}.`,
+      : `S/N ${ph.snr.toFixed(1)} — ${ph.fluxMjy.toFixed(3)} ± ${ph.errorMjy.toFixed(3)} mJy above the local background${ph.snr < P.snrDetect ? " (not significant)" : ""}.${coreNote ? " Core pixels excluded: treat the flux as a lower limit." : ""}`,
     details: ph
       ? [
+          ...(coreNote ? [coreNote] : []),
           `Background ${ph.backgroundMjySr.toFixed(4)} MJy/sr from a ${P.annulusPx[0]}–${P.annulusPx[1]} px ring (3σ clipped, N=${ph.annulusPixels}).`,
           `Error = √(Σ VARIANCE + background term) on native pixels. Excluded from the sum: ${MEASUREMENT_EXCLUDE.join(", ")}.`,
           `Usable aperture fraction ${(ph.apertureCoverage * 100).toFixed(0)}%.`,
