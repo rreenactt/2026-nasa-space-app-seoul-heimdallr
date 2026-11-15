@@ -451,7 +451,7 @@ export function SkyExplorer({
       )}
       <SkyIntro enabled={!initialSelection && !initialView} />
       <ShortcutSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} />
+      <AnalysisPanel selection={selection} onClose={closePanel} autoOpen={linkedAnalysis} onGoTo={goTo} />
     </div>
   );
 }

@@ -7,18 +7,24 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AdditionalAnalyses } from "../analyses/additional-analyses";
 import { AnalysesProvider, type AutoOpenAnalysis } from "../analyses/analyses-context";
 import { PanelViews } from "../analyses/analysis-views";
-import { BlinkProvider } from "../blink/blink-context";
+import { BLINK_FOV_ARCMIN, BlinkProvider } from "../blink/blink-context";
 import { BlinkGate, BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
 import { SKY_SURVEY } from "./constants";
-import { formatDec, formatRa } from "./sky-coordinates";
+import { formatDec, formatRa, type EquatorialCoordinates } from "./sky-coordinates";
 import { RatingBadge, RatingSection } from "./rating-section";
 import type { SkySelection } from "./sky-selection";
+import { pinToSpherexArcsec, targetPositionAt, type TestTarget } from "./test-targets";
+
+/** SPHEREx pixel size: a shift below this cannot be seen in the panel images. */
+const SPHEREX_PIXEL_ARCSEC = 6.15;
 
 type AnalysisPanelProps = {
   selection: SkySelection | null;
   onClose: () => void;
   /** Opens one additional analysis right away (older `?stm=` / `?sonata=` links). */
   autoOpen?: AutoOpenAnalysis;
+  /** Flies to another position of the same test target and opens the panel there. */
+  onGoTo?: (point: EquatorialCoordinates, target: TestTarget) => void;
 };
 
 /**
@@ -26,7 +32,7 @@ type AnalysisPanelProps = {
  * summary, rating and the analysis list on the right. A part that is not connected yet says so plainly instead of
  * showing made-up data.
  */
-export function AnalysisPanel({ selection, onClose, autoOpen }: AnalysisPanelProps) {
+export function AnalysisPanel({ selection, onClose, autoOpen, onGoTo }: AnalysisPanelProps) {
   // Focus starts on the header, not on its first button: Space then plays the blink instead of pressing "Copy link".
   const headerRef = useRef<HTMLDivElement>(null);
   return (
@@ -37,7 +43,7 @@ export function AnalysisPanel({ selection, onClose, autoOpen }: AnalysisPanelPro
       <DialogContent initialFocus={headerRef} className="dark top-[calc(50%+24px)] grid h-[calc(100dvh-72px)] w-[calc(100vw-16px)] max-w-none sm:top-[calc(50%+22px)] sm:h-[calc(100dvh-100px)] sm:w-[calc(100vw-56px)] grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:max-w-none">
         {/* Keyed by the point: "Next" swaps the place while the panel stays open, and every part starts fresh. */}
         {selection && (
-          <PanelBody key={`${selection.ra} ${selection.dec}`} selection={selection} autoOpen={autoOpen} headerRef={headerRef} />
+          <PanelBody key={`${selection.ra} ${selection.dec}`} selection={selection} autoOpen={autoOpen} headerRef={headerRef} onGoTo={onGoTo} />
         )}
       </DialogContent>
     </Dialog>
@@ -48,12 +54,20 @@ function PanelBody({
   selection,
   autoOpen,
   headerRef,
+  onGoTo,
 }: {
   selection: SkySelection;
   autoOpen?: AutoOpenAnalysis;
   headerRef: React.RefObject<HTMLDivElement | null>;
+  onGoTo?: AnalysisPanelProps["onGoTo"];
 }) {
   const { ra, dec, target } = selection;
+  const position = target ? targetPositionAt(target, selection) : null;
+  const later = target?.spherexPosition;
+  // How far the catalog proper motion has carried the object from its pin by the SPHEREx observations.
+  const movedArcsec = target ? pinToSpherexArcsec(target) : null;
+  const moved = movedArcsec == null ? "" : movedArcsec >= 60 ? `${(movedArcsec / 60).toFixed(1)}′` : `${movedArcsec.toFixed(movedArcsec < 10 ? 2 : 0)}″`;
+  const outsideField = movedArcsec != null && movedArcsec > (BLINK_FOV_ARCMIN * 60) / 2;
   return (
     <>
       <DialogHeader ref={headerRef} tabIndex={-1} className="border-b px-4 pt-4 pb-3 outline-none sm:px-6">
@@ -66,13 +80,41 @@ function PanelBody({
         </div>
         <DialogDescription className="font-mono text-xs">
           RA {formatRa(ra)} · Dec {formatDec(dec)} (ICRS) · {ra.toFixed(5)}°, {dec.toFixed(5)}°
-          {target && (
+          {target && position && (
             <span className="font-sans">
               {" "}
-              · position at epoch {target.epoch} ({target.source}); it moves, so it may sit elsewhere in other years
+              · {position.atSpherexPosition ? "predicted position" : "position"} at epoch {position.epoch} ({position.source}); it
+              moves, so it may sit elsewhere in other years
             </span>
           )}
         </DialogDescription>
+        {target && later && movedArcsec != null && position && !position.atSpherexPosition && movedArcsec >= SPHEREX_PIXEL_ARCSEC && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+            <span className="min-w-0 flex-1">
+              This pin marks where {target.name} was at {target.epoch}. Its catalog proper motion puts it about {moved} away
+              by the SPHEREx observations ({later.epoch}):{" "}
+              {outsideField
+                ? `outside the ${BLINK_FOV_ARCMIN}′ images below, so they do not contain it.`
+                : `in the ${BLINK_FOV_ARCMIN}′ images below it sits that far from the centre mark.`}
+            </span>
+            {onGoTo && (
+              <Button variant="outline" size="sm" onClick={() => onGoTo({ ra: later.ra, dec: later.dec }, target)}>
+                Open at the {later.epoch} position
+              </Button>
+            )}
+          </div>
+        )}
+        {target && later && movedArcsec != null && movedArcsec < SPHEREX_PIXEL_ARCSEC && (
+          <p className="text-xs text-muted-foreground">
+            Its catalog proper motion moves it {moved} between {target.epoch} and {later.epoch}, far below one{" "}
+            {SPHEREX_PIXEL_ARCSEC}″ SPHEREx pixel, so the images below cannot show that motion.
+          </p>
+        )}
+        {target?.defaultDetector && (
+          <p className="text-xs text-muted-foreground">
+            Opens on detector {target.defaultDetector.detector} instead of the usual default: {target.defaultDetector.reason}.
+          </p>
+        )}
       </DialogHeader>
 
       <BlinkProvider selection={selection}>
