@@ -82,3 +82,51 @@ export async function savePoint(surveyId: string, point: PointInput, candidates:
     }
   });
 }
+
+/**
+ * What the sky screen needs from the latest survey run: the candidates people review (known movers as the answer key,
+ * unidentified pairs as the open question) and counts for the rest, so nothing is hidden. Gaia static pairs are chance
+ * pairs; they are counted but not listed (decision #48).
+ */
+export async function latestReviewBatch() {
+  const survey = await db.motionSurvey.findFirst({
+    orderBy: { createdAt: "desc" },
+    select: { id: true, release: true },
+  });
+  if (!survey) return null;
+  const [points, chancePairs, candidates] = await Promise.all([
+    db.motionSurveyPoint.groupBy({ by: ["status"], where: { surveyId: survey.id }, _count: { _all: true } }),
+    db.motionCandidate.count({ where: { surveyId: survey.id, match: "GAIA_STATIC" } }),
+    db.motionCandidate.findMany({
+      where: { surveyId: survey.id, match: { in: ["KNOWN_MOVER", "UNIDENTIFIED"] } },
+      orderBy: { snr: "desc" },
+      select: {
+        id: true,
+        match: true,
+        raDeg: true,
+        decDeg: true,
+        epochMjd: true,
+        tmassDesignation: true,
+        separationArcsec: true,
+        baselineYears: true,
+        pmTotalMasYr: true,
+        snr: true,
+        detector: true,
+        wavelengthUm: true,
+        spherexVisits: true,
+        gaiaSourceId: true,
+        gaiaPmMasYr: true,
+        isSynthetic: true,
+      },
+    }),
+  ]);
+  const pointsWith = (status: string) => points.find((group) => group.status === status)?._count._all ?? 0;
+  return {
+    surveyId: survey.id,
+    release: survey.release,
+    pointsSearched: pointsWith("searched"),
+    pointsFailed: pointsWith("failed"),
+    chancePairs,
+    candidates,
+  };
+}

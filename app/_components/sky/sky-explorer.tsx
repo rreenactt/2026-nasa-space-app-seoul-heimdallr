@@ -17,7 +17,6 @@ import {
 import {
   ALL_CANDIDATES,
   type CandidateFilter,
-  MOVEMENT_CANDIDATES,
   findReviewEntry,
   type ReviewEntry,
   reviewQueue,
@@ -38,6 +37,7 @@ import { FovScale } from "./fov-scale";
 import { paintCandidates } from "./candidate-layer";
 import { clearPlaces, recordPlace, usePlaceHistory } from "./place-history";
 import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
+import { useCandidates } from "./candidates-context";
 import { MostRated } from "./most-rated";
 import { findTestTarget, TEST_TARGETS, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
@@ -69,6 +69,7 @@ export function SkyExplorer({
   const [error, setError] = useState<string | null>(null);
   // A shared link's analysis opens only for the panel it came with, not for every place opened afterwards.
   const [linkedAnalysis, setLinkedAnalysis] = useState(autoOpen);
+  const candidates = useCandidates();
   const [candidateFilter, setCandidateFilter] = useState<CandidateFilter>(ALL_CANDIDATES);
   const [overlays, setOverlays] = useStoredOverlays();
   const layers = useMemo(() => skyLayers(overlays), [overlays]);
@@ -84,12 +85,12 @@ export function SkyExplorer({
   const painter = useMemo<SkyPainter>(
     () => (context, frame) =>
       paintCandidates(context, frame, {
-        candidates: MOVEMENT_CANDIDATES,
+        candidates,
         overlays,
         opened,
         selected: flyingTo ?? selection,
       }),
-    [overlays, opened, selection, flyingTo],
+    [candidates, overlays, opened, selection, flyingTo],
   );
   const [queueOpen, setQueueOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -118,7 +119,7 @@ export function SkyExplorer({
   useEffect(() => {
     selectionRef.current = selection;
   }, [selection]);
-  const queue = useMemo(() => reviewQueue(candidateFilter), [candidateFilter]);
+  const queue = useMemo(() => reviewQueue(candidates, candidateFilter), [candidates, candidateFilter]);
 
   // Only crossing AIM_FOV changes state, so zooming does not re-render the screen.
   const onFovChange = useCallback((fov: number) => setAiming(fov <= AIM_FOV), []);
@@ -397,7 +398,7 @@ export function SkyExplorer({
             >
               <ListIcon className="size-4 stroke-[1.5]" aria-hidden />
               Review queue
-              <span className="text-xs font-normal text-ash">{MOVEMENT_CANDIDATES.length.toLocaleString("en-US")}</span>
+              <span className="text-xs font-normal text-ash">{candidates.length.toLocaleString("en-US")}</span>
               <Keycap className="ml-auto">Q</Keycap>
             </button>
             {/* Most rated places (from main, decision #35). Not in the Figma screens yet, so it sits under the button. */}
@@ -474,7 +475,8 @@ function CursorReadout({ hidden }: { hidden: boolean }) {
   );
 }
 
-const OVERLAYS_KEY = "heimdallr:show-on-sky";
+// v2: known movers turned on by default (decision #48); older saved settings had them off.
+const OVERLAYS_KEY = "heimdallr:show-on-sky:v2";
 
 /** "Show on sky" settings, remembered in this browser (decision #40). Read after mount so the server render matches. */
 function useStoredOverlays() {

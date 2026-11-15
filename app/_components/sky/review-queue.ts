@@ -5,31 +5,55 @@ import { TEST_TARGETS, type TestTarget } from "./test-targets";
 export type CandidateStatus = "noteworthy" | "needs-ratings" | "recommended" | "excluded";
 
 /**
- * One movement candidate from the detection pipeline (PLAN.md chapter 7, "candidate items"). Fields follow the batch files
- * the website will read (candidates/index.json); nothing here is computed in the browser.
+ * How the Gaia DR3 check explained a candidate pair (decision #41). A known mover is a star Gaia already tracks: the
+ * answer key to compare the blink against. An unidentified pair has no catalog explanation, so people judge it.
+ */
+export type CandidateMatch = "known" | "unidentified";
+
+/**
+ * One movement candidate from the SPHEREx DR1 × 2MASS survey (PLAN.md chapter 7, decision #41), read from the
+ * database on the server (candidate-batch.ts). Nothing here is computed in the browser.
  */
 export type MovementCandidate = EquatorialCoordinates & {
-  /** Fixed ID made from the release and the position, so re-detections merge and ratings stick to it. */
+  /** IAU-style name from the SPHEREx position, fixed for the position so ratings stick to it. */
   id: string;
-  /** Observation time of the position (absolute principle 6), ISO 8601. */
+  /** Observation time of the SPHEREx position (absolute principle 6), ISO 8601. */
   observedAt: string;
-  /** Number of epochs the source was detected in. */
+  /** SPHEREx visits the source was found in. */
   detections: number;
   detector: string;
   wavelengthUm: number;
   snr: number;
-  /** Designation of the known asteroid it matches, or null for an unidentified candidate. */
-  knownAsteroid: string | null;
+  match: CandidateMatch;
+  /** Motion implied by the 2MASS → SPHEREx pair, and the gap and time between the two positions. */
+  pmTotalMasYr: number;
+  separationArcsec: number;
+  baselineYears: number;
+  tmassDesignation: string;
+  /** The Gaia DR3 star that explains a known mover, and its catalog motion. */
+  gaiaSourceId: string | null;
+  gaiaPmMasYr: number | null;
+  /** Always labelled as synthetic when true (absolute principle 4). */
+  synthetic: boolean;
   batchId: string;
-  /** From candidates/status.json; absent until ratings are tallied, and never filled in by the website. */
+  /** From the rating tally; absent until ratings are tallied, and never filled in by the website. */
   status?: CandidateStatus;
 };
 
-/**
- * Movement candidates produced so far. Empty: the pipeline has not produced a batch yet, and the list shows that
- * instead of inventing entries (absolute principle 4). Load candidates/index.json here once batches exist.
- */
-export const MOVEMENT_CANDIDATES: MovementCandidate[] = [];
+/** The latest survey run as the sky screen sees it. */
+export type CandidateBatch =
+  | { state: "empty" }
+  | { state: "unavailable" }
+  | {
+      state: "ready";
+      batchId: string;
+      release: string;
+      pointsSearched: number;
+      pointsFailed: number;
+      /** Gaia static pairs (chance pairs): counted, not listed. */
+      chancePairs: number;
+      candidates: MovementCandidate[];
+    };
 
 /** One stop in the review order: a test target or a movement candidate. */
 export type ReviewEntry =
@@ -45,7 +69,8 @@ export const ALL_CANDIDATES: CandidateFilter = { status: "all", match: "all" };
 
 /**
  * Review priority (PLAN.md chapter 7): noteworthy candidates first, then those still short of ratings so ratings
- * spread evenly, then recommended ones. Not yet tallied counts as short of ratings.
+ * spread evenly, then recommended ones. Not yet tallied counts as short of ratings. Within a status, unidentified
+ * pairs come before known movers: only people can settle them.
  */
 const STATUS_ORDER: Record<CandidateStatus, number> = { noteworthy: 0, "needs-ratings": 1, recommended: 2, excluded: 3 };
 
@@ -58,27 +83,26 @@ export function orderCandidates(candidates: MovementCandidate[], filter: Candida
     .filter((candidate) => candidate.status !== "excluded")
     // A status filter matches tallied candidates only; an untallied one is not shown as "needs ratings".
     .filter((candidate) => filter.status === "all" || candidate.status === filter.status)
-    .filter(
-      (candidate) =>
-        filter.match === "all" || (filter.match === "known") === (candidate.knownAsteroid !== null),
-    )
+    .filter((candidate) => filter.match === "all" || filter.match === candidate.match)
     .sort(
       (a, b) =>
-        STATUS_ORDER[a.status ?? "needs-ratings"] - STATUS_ORDER[b.status ?? "needs-ratings"] || b.snr - a.snr,
+        STATUS_ORDER[a.status ?? "needs-ratings"] - STATUS_ORDER[b.status ?? "needs-ratings"] ||
+        Number(a.match === "known") - Number(b.match === "known") ||
+        b.snr - a.snr,
     );
 }
 
 /** The whole review order: the test targets first, then the candidates. */
-export function reviewQueue(filter: CandidateFilter = ALL_CANDIDATES): ReviewEntry[] {
+export function reviewQueue(candidates: MovementCandidate[], filter: CandidateFilter = ALL_CANDIDATES): ReviewEntry[] {
   return [
     ...TEST_TARGETS.map(
       (target): ReviewEntry => ({ kind: "test", id: target.id, name: target.name, point: target, target }),
     ),
-    ...orderCandidates(MOVEMENT_CANDIDATES, filter).map(
+    ...orderCandidates(candidates, filter).map(
       (candidate): ReviewEntry => ({
         kind: "candidate",
         id: candidate.id,
-        name: `Candidate ${candidate.id}`,
+        name: candidate.id,
         point: candidate,
         candidate,
       }),

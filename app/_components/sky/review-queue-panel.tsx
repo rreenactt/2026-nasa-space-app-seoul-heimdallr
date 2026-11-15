@@ -5,10 +5,11 @@ import { type ReactNode, useMemo, useState } from "react";
 import { cn } from "cn";
 import { RATING_LABELS, type RatingState } from "@/app/_lib/ratings/types";
 import { clearPlaces, type PlaceVisit, samePlace, usePlaceHistory } from "./place-history";
+import { useCandidateBatch, useCandidates } from "./candidates-context";
 import {
   type CandidateFilter,
+  type CandidateMatch,
   type CandidateStatus,
-  MOVEMENT_CANDIDATES,
   type MovementCandidate,
   type ReviewEntry,
 } from "./review-queue";
@@ -34,9 +35,22 @@ const SORTS: { id: Sort; label: string }[] = [
 ];
 
 export function markOf(candidate: MovementCandidate): MarkKind {
-  if (candidate.knownAsteroid) return "known";
+  if (candidate.match === "known") return "known";
   return candidate.status === "noteworthy" || candidate.status === "recommended" ? candidate.status : "needs-ratings";
 }
+
+/** What a row calls a candidate: the Gaia DR3 verdict, then the tallied status once there is one. */
+export const MATCH_LABELS: Record<CandidateMatch, string> = { known: "Known mover", unidentified: "Unidentified" };
+
+function candidateText(candidate: MovementCandidate) {
+  const tallied = candidate.status && candidate.status !== "needs-ratings" ? MARK_LABELS[markOf(candidate)] : undefined;
+  return [MATCH_LABELS[candidate.match], candidate.match === "unidentified" && tallied, candidate.synthetic && "synthetic"]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** SNR runs from about 20 to over 50,000, so large values are shown in thousands to fit the column. */
+const snrText = (snr: number) => (snr >= 1000 ? `${Math.round(snr / 1000)}k` : snr >= 100 ? snr.toFixed(0) : snr.toFixed(1));
 
 /** This browser's own rating, the only one shown before rating (decision #6). */
 const ratedText = (rating: RatingState | undefined) =>
@@ -81,6 +95,8 @@ export function ReviewQueuePanel({
   const ratings = useRatingSummary(queue.map((entry) => entry.point));
   const ratingOf = (entry: ReviewEntry) => ratings.data?.[queue.indexOf(entry)];
   const history = usePlaceHistory();
+  const batch = useCandidateBatch();
+  const all = useCandidates();
 
   const entries = useMemo(() => {
     const inView = (point: EquatorialCoordinates) => !view || angularDistance(view, point) <= view.fov / 2;
@@ -93,15 +109,15 @@ export function ReviewQueuePanel({
 
   const candidates = entries.filter((entry) => entry.kind === "candidate");
   const tests = entries.filter((entry) => entry.kind === "test");
-  const total = MOVEMENT_CANDIDATES.filter((candidate) => candidate.status !== "excluded").length;
+  const total = all.filter((candidate) => candidate.status !== "excluded").length;
   const summary =
     tab === "recent"
       ? `${count(history.length)} ${history.length === 1 ? "place" : "places"} opened in this browser`
-      : total === 0
-        ? "No candidates in the batch yet"
-        : tab === "view"
-          ? `${count(candidates.length)} in this view of ${count(total)} in the batch`
-          : `${count(candidates.length)} of ${count(total)} in the batch`;
+      : batch.state === "unavailable"
+        ? "Candidates could not be loaded"
+        : batch.state === "empty" || total === 0
+          ? "No candidates in the batch yet"
+          : `${count(total)} in the batch · ${count(batch.pointsSearched)} places searched`;
 
   return (
     <section
@@ -161,15 +177,19 @@ export function ReviewQueuePanel({
         <RecentPlaces history={history} onOpen={onOpenPlace} />
       ) : (
         <>
-          <StatusCounts filter={filter} onChange={onFilterChange} />
+          <MatchCounts candidates={all} filter={filter} onChange={onFilterChange} />
           <div className="grid grid-cols-[10px_minmax(0,1fr)_40px_40px] gap-x-2.5 border-t border-rule px-5 pt-2.5 pb-1 text-[11px] text-smoke">
             <span />
             <span>Candidate, RA Dec</span>
             <span className="text-right">Visits</span>
             <span className="text-right">SNR</span>
           </div>
-          <ol className="min-h-0 flex-1 overflow-y-auto">
-            {total === 0 ? (
+          <ol className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
+            {batch.state === "unavailable" ? (
+              <li className="px-5 py-3 text-xs leading-5 text-ash">
+                The candidate list could not be loaded just now. Test targets still work; try again in a few minutes.
+              </li>
+            ) : total === 0 ? (
               <li className="px-5 py-3 text-xs leading-5 text-ash">
                 No movement candidates yet. They appear here once the detection pipeline has run on a region.
               </li>
@@ -239,31 +259,79 @@ const STATUS_FILTERS: { kind: MarkKind; status: CandidateStatus }[] = [
   { kind: "recommended", status: "recommended" },
 ];
 
-/** Counts per status over every candidate; each one filters the list (press again to clear). */
-function StatusCounts({ filter, onChange }: { filter: CandidateFilter; onChange: (filter: CandidateFilter) => void }) {
-  const listed = MOVEMENT_CANDIDATES.filter((candidate) => candidate.status !== "excluded");
+/** What each kind of candidate asks of the person reviewing it (Figma "I · Review, queue open · real candidates"). */
+const MATCH_LINES: { match: CandidateMatch; kind: MarkKind; note: string }[] = [
+  { match: "unidentified", kind: "needs-ratings", note: "Your call: no catalog explains it" },
+  { match: "known", kind: "known", note: "Answer key: Gaia DR3 explains it" },
+];
+
+/**
+ * Counts per kind over every listed candidate; each one filters the list (press again to clear). Status counts join
+ * them once ratings are tallied; before that every candidate needs ratings, which the kind lines already say.
+ */
+function MatchCounts({
+  candidates,
+  filter,
+  onChange,
+}: {
+  candidates: MovementCandidate[];
+  filter: CandidateFilter;
+  onChange: (filter: CandidateFilter) => void;
+}) {
+  const listed = candidates.filter((candidate) => candidate.status !== "excluded");
+  const tallied = listed.some((candidate) => candidate.status !== undefined);
   return (
-    <div className="flex flex-wrap gap-x-3.5 gap-y-1 px-5 pt-3.5 pb-3">
-      {STATUS_FILTERS.map(({ kind, status }) => {
-        const n = listed.filter((candidate) => candidate.status === status).length;
-        const active = filter.status === status;
-        return (
-          <button
-            key={kind}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange({ ...filter, status: active ? "all" : status })}
-            className={cn(
-              "flex items-center gap-1.5 text-[11.5px] transition-colors",
-              active ? "text-paper underline underline-offset-4" : "text-ash hover:text-paper",
-            )}
-          >
-            <StatusMark kind={kind} className="size-2.5" />
-            {MARK_LABELS[kind]}
-            <span className="font-medium text-paper">{count(n)}</span>
-          </button>
-        );
-      })}
+    <div className="px-5 pt-3.5 pb-3">
+      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-1">
+        {MATCH_LINES.map(({ match, kind, note }) => {
+          const active = filter.match === match;
+          return (
+            <button
+              key={match}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange({ ...filter, match: active ? "all" : match })}
+              className={cn(
+                "col-span-3 grid grid-cols-subgrid items-center text-left text-[11.5px] transition-colors",
+                active ? "text-paper" : "text-ash hover:text-paper",
+              )}
+            >
+              <span className={cn("flex items-center gap-1.5", active && "underline underline-offset-4")}>
+                <StatusMark kind={kind} className="size-2.5" />
+                {MATCH_LABELS[match]}
+              </span>
+              <span className="pr-1.5 font-medium text-paper">
+                {count(listed.filter((candidate) => candidate.match === match).length)}
+              </span>
+              <span className="truncate text-smoke">{note}</span>
+            </button>
+          );
+        })}
+      </div>
+      {tallied && (
+        <div className="mt-2 flex flex-wrap gap-x-3.5 gap-y-1">
+          {STATUS_FILTERS.map(({ kind, status }) => {
+            const n = listed.filter((candidate) => candidate.status === status).length;
+            const active = filter.status === status;
+            return (
+              <button
+                key={kind}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onChange({ ...filter, status: active ? "all" : status })}
+                className={cn(
+                  "flex items-center gap-1.5 text-[11.5px] transition-colors",
+                  active ? "text-paper underline underline-offset-4" : "text-ash hover:text-paper",
+                )}
+              >
+                <StatusMark kind={kind} className="size-2.5" />
+                {MARK_LABELS[kind]}
+                <span className="font-medium text-paper">{count(n)}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -282,7 +350,7 @@ function EntryRow({
   onSelect: (entry: ReviewEntry) => void;
 }) {
   const candidate = entry.kind === "candidate" ? entry.candidate : null;
-  const status = [candidate ? MARK_LABELS[markOf(candidate)] : "Test target", seen && "seen", ratedText(rating)]
+  const status = [candidate ? candidateText(candidate) : "Test target", seen && "seen", ratedText(rating)]
     .filter(Boolean)
     .join(", ");
   const faded = seen && !current;
@@ -300,7 +368,7 @@ function EntryRow({
         <StatusMark kind={candidate ? markOf(candidate) : "test"} className={cn("size-2.5", faded && "opacity-55")} />
         <span className="min-w-0">
           <span className="flex items-baseline gap-2">
-            <span className={cn("truncate text-sm font-medium", faded ? "text-ash" : "text-paper")}>
+            <span className={cn("shrink-0 text-sm font-medium", faded ? "text-ash" : "text-paper")}>
               {candidate ? candidate.id : entry.name}
             </span>
             <span className="truncate text-xs text-ash">{status}</span>
@@ -311,7 +379,7 @@ function EntryRow({
         </span>
         <span className="text-right text-[13px] text-ash">{candidate ? candidate.detections : "—"}</span>
         <span className={cn("text-right text-sm font-medium", faded ? "text-ash" : "text-paper")}>
-          {candidate ? candidate.snr.toFixed(1) : "—"}
+          {candidate ? snrText(candidate.snr) : "—"}
         </span>
       </button>
     </li>
@@ -319,15 +387,15 @@ function EntryRow({
 }
 
 /** What a recent place was: a candidate, a test target or a clicked point, with this browser's rating if any. */
-function describeVisit(visit: PlaceVisit, rating: RatingState | undefined) {
-  const candidate = MOVEMENT_CANDIDATES.find((item) => samePlace(item, visit));
+function describeVisit(visit: PlaceVisit, rating: RatingState | undefined, candidates: MovementCandidate[]) {
+  const candidate = candidates.find((item) => samePlace(item, visit));
   const target = findTestTarget(visit);
   const rated = ratedText(rating);
   if (candidate) {
     return {
       mark: markOf(candidate),
       name: candidate.id,
-      note: `Candidate, ${rated ?? "not rated yet"}`,
+      note: `${candidateText(candidate)}, ${rated ?? "not rated yet"}`,
     };
   }
   if (target) return { mark: "test" as const, name: target.name, note: ["Test target", rated].filter(Boolean).join(", ") };
@@ -349,6 +417,7 @@ function clock(at: number) {
 function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (place: EquatorialCoordinates) => void }) {
   const [picked, setPicked] = useState(0);
   const ratings = useRatingSummary(history.slice(0, 50));
+  const candidates = useCandidates();
   const selected = history[Math.min(picked, history.length - 1)];
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -368,7 +437,7 @@ function RecentPlaces({ history, onOpen }: { history: PlaceVisit[]; onOpen: (pla
           <li className="px-5 py-3 text-xs text-ash">Places you open appear here, newest first.</li>
         )}
         {history.map((visit, index) => {
-          const { mark, name, note } = describeVisit(visit, ratings.data?.[index]);
+          const { mark, name, note } = describeVisit(visit, ratings.data?.[index], candidates);
           const current = visit === selected;
           return (
             <li

@@ -1,17 +1,18 @@
+import { MIN_FOV } from "./constants";
 import type { SkyOverlays, StatusKey } from "./overlays";
 import type { PlaceVisit } from "./place-history";
 import type { MovementCandidate } from "./review-queue";
 import type { SkyPaintFrame } from "./sky-view";
 import { TEST_TARGETS } from "./test-targets";
 
-/** Field of view (degrees) above which candidates are drawn as density, and below which as single marks. */
-export const DENSITY_FOV = 30;
+/** Field of view (degrees) wider than which no candidates are drawn, and narrower than which each gets its own mark. */
+export const GROUPS_FOV = 80;
 export const MARKS_FOV = 5;
-/** Noteworthy candidates still drawn on top of the density cells. */
-const TOP_NOTEWORTHY = 20;
 
-const HEX_RADIUS = 16;
+/** About how far apart, in screen pixels, count circles sit. */
 const GROUP_CELL = 72;
+/** Room beyond the screen edge so a circle half off screen is still drawn. */
+const EDGE_MARGIN = 32;
 const PAPER = "240, 240, 250";
 const SIGNAL = "#fbde7e";
 const ASH = "#b0b0a9";
@@ -24,20 +25,18 @@ function siteFont(size: number, variable: "--font-ui-face" | "--font-data-face",
 }
 
 export function statusKey(candidate: MovementCandidate): StatusKey {
-  if (candidate.knownAsteroid) return "known";
+  if (candidate.match === "known") return "known";
   return candidate.status === "noteworthy" || candidate.status === "recommended" ? candidate.status : "needs-ratings";
 }
 
-type Projected = { candidate: MovementCandidate; x: number; y: number };
-
 /**
- * Candidates on the sky by field of view (decision #39), so up to ~100k stay readable:
- * - wider than 30°: hexagon density cells plus the top 20 noteworthy candidates,
- * - 5° to 30°: group circles with counts,
+ * Candidates on the sky by field of view (decision #49, replacing the density cells of #39):
+ * - wider than 80°: none, the view is for finding your way,
+ * - 5° to 80°: count circles on a grid fixed to the sky, so they move with the stars while panning,
  * - narrower than 5°: one shape mark per candidate.
- * Places this browser opened are squares at every level, and the selected candidate is always drawn, even with the
- * candidates switched off (decision #40). Binning is in screen space on each redraw; a precomputed sky index can
- * replace it once the pipeline publishes one.
+ * Test targets, places this browser opened and the selected place are drawn at every level, the selected one even with
+ * the candidates switched off (decision #40). Circles and marks fade in and out (decision #50); returns true while a
+ * fade is still running, so the sky asks for another frame.
  */
 export function paintCandidates(
   context: CanvasRenderingContext2D,
@@ -53,32 +52,30 @@ export function paintCandidates(
     opened: PlaceVisit[];
     selected: { ra: number; dec: number } | null;
   },
-) {
+): boolean {
   const visible = (candidate: MovementCandidate) =>
     candidate.status !== "excluded" && overlays.statuses[statusKey(candidate)];
 
-  if (overlays.candidates && candidates.length > 0) {
-    const projected: Projected[] = [];
-    for (const candidate of candidates) {
-      if (!visible(candidate)) continue;
-      const pixel = frame.project(candidate.ra, candidate.dec);
-      if (pixel && inside(pixel, frame)) projected.push({ candidate, x: pixel[0], y: pixel[1] });
-    }
-    if (frame.fov > DENSITY_FOV) {
-      if (overlays.density) paintDensity(context, projected);
-      if (overlays.marks) {
-        projected
-          .filter(({ candidate }) => statusKey(candidate) === "noteworthy")
-          .sort((a, b) => b.candidate.snr - a.candidate.snr)
-          .slice(0, TOP_NOTEWORTHY)
-          .forEach((point) => paintMark(context, point.x, point.y, "noteworthy"));
-      }
-    } else if (frame.fov > MARKS_FOV) {
-      paintGroups(context, projected);
+  const present = new Map<string, Drawable>();
+  if (overlays.candidates && candidates.length > 0 && frame.fov <= GROUPS_FOV) {
+    const shown = candidates.filter(visible);
+    if (frame.fov > MARKS_FOV) {
+      const size = 2 ** Math.round(Math.log2((GROUP_CELL * frame.fov) / frame.width));
+      for (const group of groupsFor(shown, size)) present.set(`g ${size} ${group.key}`, { kind: "group", ...group });
     } else if (overlays.marks) {
-      for (const point of projected) paintMark(context, point.x, point.y, statusKey(point.candidate));
+      for (const candidate of shown) {
+        present.set(`m ${candidate.ra} ${candidate.dec}`, {
+          kind: "mark",
+          ra: candidate.ra,
+          dec: candidate.dec,
+          status: statusKey(candidate),
+          name: candidate.id,
+          label: candidate.match === "known" ? "Known mover" : "Unidentified",
+        });
+      }
     }
   }
+  const animating = paintFading(context, frame, present);
 
   // Test targets: a ring with a dot and the name beside it (Figma "I · Explore", "⊙ Barnard's Star").
   if (overlays.pins) {
@@ -126,114 +123,211 @@ export function paintCandidates(
       context.stroke();
     }
   }
+  return animating;
 }
 
 function inside([x, y]: number[], { width, height }: SkyPaintFrame) {
-  return x >= -HEX_RADIUS && y >= -HEX_RADIUS && x <= width + HEX_RADIUS && y <= height + HEX_RADIUS;
+  return x >= -EDGE_MARGIN && y >= -EDGE_MARGIN && x <= width + EDGE_MARGIN && y <= height + EDGE_MARGIN;
 }
 
-/** Pointy-top hexagon bins in screen space; cells below 22% of the busiest one are left empty (density style B). */
-function paintDensity(context: CanvasRenderingContext2D, points: Projected[]) {
-  const bins = new Map<string, { q: number; r: number; count: number }>();
-  for (const { x, y } of points) {
-    const [q, r] = hexRound(((Math.sqrt(3) / 3) * x - y / 3) / HEX_RADIUS, ((2 / 3) * y) / HEX_RADIUS);
-    const key = `${q},${r}`;
-    const bin = bins.get(key);
-    if (bin) bin.count += 1;
-    else bins.set(key, { q, r, count: 1 });
-  }
-  const max = Math.max(1, ...[...bins.values()].map((bin) => bin.count));
-  for (const { q, r, count } of bins.values()) {
-    const share = count / max;
-    if (share < 0.22) continue;
-    const cx = HEX_RADIUS * Math.sqrt(3) * (q + r / 2);
-    const cy = HEX_RADIUS * 1.5 * r;
-    context.beginPath();
-    for (let corner = 0; corner < 6; corner += 1) {
-      const angle = (Math.PI / 180) * (60 * corner - 30);
-      const px = cx + (HEX_RADIUS - 1) * Math.cos(angle);
-      const py = cy + (HEX_RADIUS - 1) * Math.sin(angle);
-      if (corner === 0) context.moveTo(px, py);
-      else context.lineTo(px, py);
-    }
-    context.closePath();
-    context.fillStyle = `rgba(${PAPER}, ${(0.06 + 0.14 * share).toFixed(3)})`;
-    context.fill();
-  }
-}
+/** A group of candidates in one sky cell: the sum of their unit vectors gives the circle its place. */
+type SkyGroup = { key: string; ra: number; dec: number; count: number; noteworthy: boolean };
+type GroupSum = { key: string; x: number; y: number; z: number; count: number; noteworthy: boolean };
 
-function hexRound(q: number, r: number): [number, number] {
-  const s = -q - r;
-  let rq = Math.round(q);
-  let rr = Math.round(r);
-  const rs = Math.round(s);
-  const dq = Math.abs(rq - q);
-  const dr = Math.abs(rr - r);
-  const ds = Math.abs(rs - s);
-  if (dq > dr && dq > ds) rq = -rr - rs;
-  else if (dr > ds) rr = -rq - rs;
-  return [rq, rr];
-}
+const RAD = Math.PI / 180;
 
-/** Square screen cells merged into one circle with a count; a circle with a noteworthy member gets a signal dot. */
-function paintGroups(context: CanvasRenderingContext2D, points: Projected[]) {
-  const groups = new Map<string, { x: number; y: number; count: number; noteworthy: boolean }>();
-  for (const { candidate, x, y } of points) {
-    const key = `${Math.floor(x / GROUP_CELL)},${Math.floor(y / GROUP_CELL)}`;
-    const group = groups.get(key) ?? { x: 0, y: 0, count: 0, noteworthy: false };
-    group.x += x;
-    group.y += y;
+/**
+ * Groups candidates into cells fixed on the sky: rows of equal declination `size` apart, each row split into equal RA
+ * steps about `size` wide on the sky and shifted half a step on odd rows. Because the cells belong to the sky, a pan
+ * moves the circles with the stars instead of candidates hopping between screen cells. `size` is a power of two in
+ * degrees, so the grid stays put while panning and changes only when a zoom crosses a step.
+ */
+function groupOnSky(candidates: MovementCandidate[], size: number): SkyGroup[] {
+  const groups = new Map<string, GroupSum>();
+  for (const candidate of candidates) {
+    const { ra, dec } = candidate;
+    const row = Math.round(dec / size);
+    const rowDec = Math.max(-89.9, Math.min(89.9, row * size));
+    const perRow = Math.max(1, Math.round((360 * Math.cos(rowDec * RAD)) / size));
+    const shift = row % 2 === 0 ? 0 : 0.5;
+    const column = ((Math.round((ra * perRow) / 360 - shift) % perRow) + perRow) % perRow;
+    const key = `${row},${column}`;
+    const group = groups.get(key) ?? { key, x: 0, y: 0, z: 0, count: 0, noteworthy: false };
+    group.x += Math.cos(dec * RAD) * Math.cos(ra * RAD);
+    group.y += Math.cos(dec * RAD) * Math.sin(ra * RAD);
+    group.z += Math.sin(dec * RAD);
     group.count += 1;
     group.noteworthy ||= statusKey(candidate) === "noteworthy";
     groups.set(key, group);
   }
+  return [...groups.values()].map(({ key, x, y, z, count, noteworthy }) => ({
+    key,
+    ra: (Math.atan2(y, x) / RAD + 360) % 360,
+    dec: Math.atan2(z, Math.hypot(x, y)) / RAD,
+    count,
+    noteworthy,
+  }));
+}
+
+// Grouping runs once per grid step and set of shown candidates, not on every frame.
+let lastGrouping: { candidates: MovementCandidate[]; size: number; groups: SkyGroup[] } | null = null;
+
+function groupsFor(candidates: MovementCandidate[], size: number) {
+  if (
+    lastGrouping &&
+    lastGrouping.size === size &&
+    lastGrouping.candidates.length === candidates.length &&
+    lastGrouping.candidates.every((candidate, index) => candidate === candidates[index])
+  ) {
+    return lastGrouping.groups;
+  }
+  const groups = groupOnSky(candidates, size);
+  lastGrouping = { candidates, size, groups };
+  return groups;
+}
+
+/** Something the fader draws: a count circle (5–80°) or one candidate's mark (under 5°). */
+type Drawable =
+  | ({ kind: "group" } & SkyGroup)
+  | { kind: "mark"; ra: number; dec: number; status: StatusKey; name: string; label: string };
+
+const FADE_MS = 250;
+const fading = new Map<string, { item: Drawable; alpha: number; target: 0 | 1 }>();
+let lastFadeAt: number | null = null;
+
+const reducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** Smoothstep: the same curve both ways, so a fade-out is as gradual as a fade-in. */
+const ease = (t: number) => t * t * (3 - 2 * t);
+
+/**
+ * Fades circles and marks in (growing from 85%) and out over 0.25 s, so crossing 80° or 5°, or a change of grouping
+ * step, does not snap. Items on their way out keep their sky position, so they still move with the view.
+ */
+function paintFading(context: CanvasRenderingContext2D, frame: SkyPaintFrame, present: Map<string, Drawable>) {
+  const now = performance.now();
+  // The first frame of a fade counts as one 60 Hz frame; later ones use the real time since the last.
+  const step = reducedMotion() ? 1 : Math.min(1, (lastFadeAt === null ? 16 : now - lastFadeAt) / FADE_MS);
+  lastFadeAt = now;
+  for (const [key, item] of present) {
+    const entry = fading.get(key);
+    if (entry) {
+      entry.item = item;
+      entry.target = 1;
+    } else fading.set(key, { item, alpha: 0, target: 1 });
+  }
+  let animating = false;
+  for (const [key, entry] of fading) {
+    if (!present.has(key)) entry.target = 0;
+    entry.alpha = entry.target === 1 ? Math.min(1, entry.alpha + step) : Math.max(0, entry.alpha - step);
+    if (entry.alpha === 0 && entry.target === 0) {
+      fading.delete(key);
+      continue;
+    }
+    if (entry.alpha !== entry.target) animating = true;
+    const { item } = entry;
+    const pixel = frame.project(item.ra, item.dec);
+    if (!pixel || !inside(pixel, frame)) continue;
+    const shown = ease(entry.alpha);
+    context.save();
+    context.globalAlpha = shown;
+    const grow = 0.85 + 0.15 * shown;
+    if (item.kind === "group") paintGroup(context, pixel[0], pixel[1], item, grow);
+    else paintMark(context, pixel[0], pixel[1], item, frame.fov, grow);
+    context.restore();
+  }
+  // Forget the clock between fades so the next one starts from its first frame.
+  if (!animating) lastFadeAt = null;
+  return animating;
+}
+
+/** A count circle; one with a noteworthy member gets a signal dot. */
+function paintGroup(context: CanvasRenderingContext2D, x: number, y: number, group: SkyGroup, grow: number) {
+  const radius = (9 + Math.min(18, Math.log2(group.count) * 3)) * grow;
+  context.beginPath();
+  context.arc(x, y, radius, 0, Math.PI * 2);
+  context.fillStyle = "rgba(1, 1, 1, 0.55)";
+  context.fill();
+  context.strokeStyle = `rgba(${PAPER}, 0.7)`;
+  context.lineWidth = 1;
+  context.stroke();
   context.font = siteFont(11, "--font-data-face");
   context.textAlign = "center";
   context.textBaseline = "middle";
-  for (const group of groups.values()) {
-    const x = group.x / group.count;
-    const y = group.y / group.count;
-    const radius = 9 + Math.min(18, Math.log2(group.count) * 3);
-    context.beginPath();
-    context.arc(x, y, radius, 0, Math.PI * 2);
-    context.fillStyle = "rgba(1, 1, 1, 0.55)";
+  context.fillStyle = `rgb(${PAPER})`;
+  context.fillText(String(group.count), x, y + 0.5);
+  if (group.noteworthy) {
+    context.fillStyle = SIGNAL;
+    diamond(context, x + radius * 0.75, y - radius * 0.75, 3.5);
     context.fill();
-    context.strokeStyle = `rgba(${PAPER}, 0.7)`;
-    context.lineWidth = 1;
-    context.stroke();
-    context.fillStyle = `rgb(${PAPER})`;
-    context.fillText(String(group.count), x, y + 0.5);
-    if (group.noteworthy) {
-      context.fillStyle = SIGNAL;
-      diamond(context, x + radius * 0.75, y - radius * 0.75, 3.5);
-      context.fill();
-    }
   }
 }
 
-/** The shape marks of decision #39, drawn on the sky (StatusMark draws the same shapes in lists). */
-function paintMark(context: CanvasRenderingContext2D, x: number, y: number, kind: StatusKey) {
-  context.lineWidth = 1.25;
-  context.setLineDash([]);
-  if (kind === "noteworthy") {
-    context.fillStyle = SIGNAL;
-    diamond(context, x, y, 6);
-    context.fill();
-  } else if (kind === "known") {
-    context.strokeStyle = ASH;
+/** Marks grow from 1° in, to 1.8× at the deepest zoom, so they stay findable when one star fills the screen. */
+function markScale(fov: number) {
+  if (fov >= 1) return 1;
+  return 1 + 0.8 * Math.min(1, Math.log(1 / fov) / Math.log(1 / MIN_FOV));
+}
+
+/** Name and kind beside each mark from this field of view in (Figma "I · Aim, deepest zoom · candidate marks"). */
+const LABELS_FOV = 0.5;
+const HALO = "rgba(1, 1, 1, 0.75)";
+
+/**
+ * The shape marks of decision #39, drawn on the sky (StatusMark draws the same shapes in lists). Each shape is stroked
+ * twice, first wide and dark as a halo, so it reads on a bright star; the known-mover plus is paper rather than ash.
+ */
+function paintMark(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  mark: { status: StatusKey; name: string; label: string },
+  fov: number,
+  grow: number,
+) {
+  const scale = markScale(fov) * grow;
+  const shape = () => {
     context.beginPath();
-    context.moveTo(x - 5, y);
-    context.lineTo(x + 5, y);
-    context.moveTo(x, y - 5);
-    context.lineTo(x, y + 5);
-    context.stroke();
+    if (mark.status === "noteworthy") diamond(context, x, y, 6 * scale);
+    else if (mark.status === "known") {
+      context.moveTo(x - 5.5 * scale, y);
+      context.lineTo(x + 5.5 * scale, y);
+      context.moveTo(x, y - 5.5 * scale);
+      context.lineTo(x, y + 5.5 * scale);
+    } else context.arc(x, y, 5.5 * scale, 0, Math.PI * 2);
+  };
+  context.setLineDash([]);
+  context.lineCap = "round";
+  context.strokeStyle = HALO;
+  context.lineWidth = 3 + 1.25 * scale;
+  shape();
+  context.stroke();
+  context.lineCap = "butt";
+  context.lineWidth = 1.25 * Math.min(scale, 1.2);
+  if (mark.status === "noteworthy") {
+    context.fillStyle = SIGNAL;
+    shape();
+    context.fill();
   } else {
     context.strokeStyle = `rgb(${PAPER})`;
-    if (kind === "needs-ratings") context.setLineDash([2.5, 2]);
-    context.beginPath();
-    context.arc(x, y, 5.5, 0, Math.PI * 2);
+    if (mark.status === "needs-ratings") context.setLineDash([2.5 * scale, 2 * scale]);
+    shape();
     context.stroke();
     context.setLineDash([]);
+  }
+  if (fov <= LABELS_FOV) {
+    const left = x + 7 * scale + 8;
+    context.shadowColor = "rgba(0, 0, 0, 0.9)";
+    context.shadowBlur = 3;
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
+    context.font = siteFont(13, "--font-ui-face", 500);
+    context.fillStyle = `rgb(${PAPER})`;
+    context.fillText(mark.name, left, y - 2);
+    context.font = siteFont(11, "--font-ui-face");
+    context.fillStyle = ASH;
+    context.fillText(mark.label, left, y + 12);
+    context.shadowBlur = 0;
   }
 }
 

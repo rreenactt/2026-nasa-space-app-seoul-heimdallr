@@ -4,12 +4,11 @@ import type { SkyLayers } from "./sky-view";
 export type StatusKey = "noteworthy" | "needs-ratings" | "recommended" | "known";
 
 /**
- * Everything "Show on sky" switches (decision #40). `candidates` is the master switch the C key toggles; density cells,
+ * Everything "Show on sky" switches (decision #40). `candidates` is the master switch the C key toggles;
  * status marks and the per-status boxes refine what it shows. The selected candidate stays visible regardless.
  */
 export type SkyOverlays = SkyLayers & {
   candidates: boolean;
-  density: boolean;
   marks: boolean;
   statuses: Record<StatusKey, boolean>;
   opened: boolean;
@@ -17,10 +16,10 @@ export type SkyOverlays = SkyLayers & {
 
 export const DEFAULT_OVERLAYS: SkyOverlays = {
   candidates: true,
-  density: true,
   marks: true,
-  // Known asteroids and the coordinate grid start off (Figma "I · Explore, layers panel open").
-  statuses: { noteworthy: true, "needs-ratings": true, recommended: true, known: false },
+  // Known movers start on: they are the answer key to compare unidentified pairs with (decision #48). The coordinate
+  // grid starts off (Figma "I · Explore, layers panel open").
+  statuses: { noteworthy: true, "needs-ratings": true, recommended: true, known: true },
   opened: true,
   pins: true,
   constellations: true,

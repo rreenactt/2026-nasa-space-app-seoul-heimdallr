@@ -22,14 +22,17 @@ export type SkyPaintFrame = {
   width: number;
   height: number;
 };
-/** Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes. */
-export type SkyPainter = (context: CanvasRenderingContext2D, frame: SkyPaintFrame) => void;
+/**
+ * Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes, or on
+ * the next frame too when it returns true (a fade still in progress).
+ */
+export type SkyPainter = (context: CanvasRenderingContext2D, frame: SkyPaintFrame) => boolean | void;
 
 type SkyViewProps = {
   initialView: SkyView;
   flight: Flight | null;
   layers: SkyLayers;
-  /** Candidate marks, density cells and opened places (candidate-layer.ts). */
+  /** Candidate marks, count circles and opened places (candidate-layer.ts). */
   painter?: SkyPainter;
   onCursorMove: (cursor: EquatorialCoordinates | null) => void;
   onFovChange: (fov: number) => void;
@@ -171,7 +174,7 @@ export default function SkyView({
             paintedFor = markKey;
             const context = prepareCanvas(marks, element.clientWidth, element.clientHeight);
             if (context && painterRef.current) {
-              painterRef.current(context, {
+              const animating = painterRef.current(context, {
                 project: (ra, dec) => {
                   const pixel = aladin.world2pix(ra, dec);
                   return pixel ? [pixel[0], pixel[1]] : null;
@@ -180,6 +183,7 @@ export default function SkyView({
                 width: element.clientWidth,
                 height: element.clientHeight,
               });
+              if (animating) paintedFor = "";
             }
           }
           // The sky under a still pointer changes while the view drags, zooms or flies, and Aladin sends mouseMove only
