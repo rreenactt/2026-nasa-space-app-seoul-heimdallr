@@ -15,6 +15,7 @@
 >   - WISE 0855는 Luhman & Esplin 2014 값을 썼다(`app/_lib/nim/catalog.ts`와 같음).
 > - IRSA DataLink와 SIA가 간헐적으로 502를 내는 중이었다. 실패한 요청은 성공할 때까지 다시 받았다.
 > - 측정 스크립트는 레포에 넣지 않았다. 필요하면 정리해서 `scripts/`에 넣는다.
+> - 2026-11-15 갱신: RW Aurigae와 R Draconis는 중심 조리개로는 포화로 잴 수 없지만, 그 뒤 들어간 Fake Planet Lab 밝기 탭(중심 바깥 고리 측정, 같은 파장끼리 방문 비교)으로 잰 결과를 더했다. 숫자 출처는 `docs/analyses/fake-planet-lab.md` 7장(검증)이다. 아래 노출별 표(중심 조리개)는 그대로 둔다.
 
 ---
 
@@ -25,8 +26,8 @@
 | Barnard's Star | Fast proper motion (10.4″/yr) | 3 visits | Moves north in the blink and lines up with Gaia's predicted positions. Sky Time Machine measures 10.39″/yr over 23.81 years (247.4″), matching Gaia DR3. |
 | Epsilon Indi B | Faint nearby brown dwarf, 4.7″/yr | D2, 1.107–1.112 µm, 6 exposures in 3 visits (Apr 2025 – Apr 2026) | Detected in every exposure (S/N 97–102) about 44–48″ from its 2016 Gaia position, within 1.1″ (0.2 pixel) of where Gaia's motion predicts. Nothing is left at the 2016 position (S/N −2.4 to 1.1). Over one year it moves 0.75 pixel, so the blink alone shows little; the match with Gaia is the evidence. |
 | WISE 0855−0714 | Coldest known brown dwarf, not in Gaia, 8.1″/yr | D6, 4.61–4.63 µm, 4 exposures in 3 visits (Oct 2025 – Apr 2026) | Too faint in the default detector (D2, 1.45 µm). At 4.6 µm a faint signal sits at the predicted position (S/N 3.6–5.4 in three exposures, 2.9 in one), centered within 1.8″. A Gaia star (G = 16.3) lies 7.3″ away, so the two blend. The light peaks closer to WISE 0855's predicted position than to the star, but at this S/N we call it consistent with WISE 0855, not a confirmed detection. |
-| RW Aurigae | Young star that varies in brightness | D1, 0.852–0.859 µm, 3 exposures in 2 visits (Sep 2025, Feb 2026) | The star's center pixel is saturated (OVERFLOW flag) in every exposure. Aperture fluxes are 42 mJy (Sep 2025) and 83 and 106 mJy (Feb 2026), but the two February exposures, a week apart, already differ by 25%. Saturation, not the star, may cause the difference, so we do not claim a brightness change. Its close companion RW Aur B is not resolved by SPHEREx's 6.2″ pixels. |
-| R Draconis | Mira variable (bright) | D3, 2.17–2.23 µm, 6 exposures in 3 visits (May 2025 – Apr 2026) | Saturated: every pixel in the aperture is flagged OVERFLOW and BLOOM in all six exposures, so no brightness can be measured. The tool lists these flags at the point instead of showing a number. |
+| RW Aurigae | Young star that varies in brightness | Core aperture: D1, 0.852–0.859 µm, 3 exposures in 2 visits. Ring: D1 and D4, 57 exposures | The center pixel is saturated (OVERFLOW) in every exposure, so a small aperture cannot be trusted (two exposures a week apart differ by 25%). Fake Planet Lab's brightness tab measures a ring outside the core instead and compares visits at the same wavelength: from September 2025 to March 2026 the 6–10 pixel ring changed by +2% (−0.024 ± 0.027 mag, 23 pairs) and the 10–15 pixel ring by −0.5%, so the result is "No change found". Its close companion RW Aur B is not resolved by SPHEREx's 6.2″ pixels. |
+| R Draconis | Mira variable (bright) | Core aperture: D3, 2.17–2.23 µm, 6 exposures in 3 visits. Ring: D1, 0.75–1.1 µm, 27 exposures | Every pixel in a small aperture is flagged OVERFLOW and BLOOM, so the core cannot be measured. The core is saturated over more than 6 pixels, so the brightness tab picks a 6–10 pixel ring: from July to October 2025 the star faded by 0.62 ± 0.10 mag (ratio 0.57, 4 pairs), and the 10–15 pixel ring agrees (0.64 ± 0.09 mag, 5 pairs). A rerun in the app, which read more exposures, gave 0.83 ± 0.14 mag (7 pairs), the same direction. A Mira variable dimming over months is expected. Comparisons with the first visit have only 1–2 pairs and are reported as "Too few pairs to say". |
 
 ## What we learned (English)
 
@@ -34,7 +35,7 @@
 - **The blink needs time.** Between SPHEREx visits these stars move less than one pixel. Gaia predictions and the 25-year Sky Time Machine make the motion clear.
 - **The detector matters.** WISE 0855 shows up only at 4.6 µm. The default detector (the one with the most exposures) does not show it.
 - **Pins need dates.** The WISE 0855 pin uses its AllWISE position (about 2010). By late 2025 the object is 126″ (2.1′) away, outside the 3′ × 3′ analysis grid around the pin.
-- **Bright variables saturate.** RW Aurigae and R Draconis are too bright for reliable SPHEREx photometry. The tool shows the saturation flags instead of a number (absolute principle 5).
+- **Bright variables saturate, but a ring can still compare them.** The cores of RW Aurigae and R Draconis are saturated, so a small aperture gives no reliable number and the tool shows the saturation flags instead. Measuring a ring outside the core, at the same wavelength in each visit, finds no change in RW Aurigae and a clear fading of R Draconis. Ring brightness follows the PSF size, so the slope across wavelengths is not the star's spectrum, and bloom left in the ring can change the value; we check that two rings agree.
 
 ## 측정 기록 (노출별)
 
@@ -89,6 +90,7 @@
 
 - 세 노출 모두 중심 픽셀이 OVERFLOW다. 같은 방문 안 두 노출이 25% 다르므로, 방문 사이 차이(42 → 83–106 mJy)를 변광으로 주장하지 않는다.
 - 다른 검출기는 확인하지 않았다. 긴 파장일수록 이 별(적외선 초과가 있는 젊은 별)이 더 밝아 포화가 심할 것으로 보이지만 확인하지 않은 추정이다.
+- **고리 측정 (Fake Planet Lab 밝기 탭, 2026-11-15, `docs/analyses/fake-planet-lab.md` 7장):** D1·D4 57장. 중심 픽셀이 빠진 노출이 있어 고리로 잼. 방문 1(2025-09) → 방문 2(2026-03): 6–10px 고리 +2%(−0.024 ± 0.027등급, 짝 23개), 10–15px 고리 −0.5% → `No change found`. 3–6px 고리는 검출기별로 값이 갈려(D1 +26%, D4 −9%) 변화로 보지 않는다.
 
 ### R Draconis: Gaia DR3 1648328016354496384
 
@@ -104,7 +106,8 @@
 | 3 | 2026.362 | 2.1751 | 측정 불가 | OVERFLOW 19, BLOOM 19 |
 | 3 | 2026.362 | 2.2254 | 측정 불가 | OVERFLOW 21, BLOOM 20, TRANSIENT 1 |
 
-- 다른 검출기는 확인하지 않았다.
+- 중심 조리개로는 다른 검출기를 확인하지 않았다.
+- **고리 측정 (Fake Planet Lab 밝기 탭, 2026-11-15, `docs/analyses/fake-planet-lab.md` 7장):** D1(0.75–1.1µm) 27장. 중심이 6px 넘게 포화되어 3–6px 고리는 못 잼 → 6–10px 고리 자동 선택. 방문 2(2025-07) → 방문 3(2025-10): 나중 ÷ 먼저 0.57, +0.62 ± 0.10등급 어두워짐(짝 4개, `Brightness changed`). 10–15px 고리도 0.55, +0.64 ± 0.09등급(짝 5개)으로 일치. 화면에서 다시 돌렸을 때(읽힌 노출이 더 많음)는 짝 7개, 0.47, +0.83 ± 0.14등급으로 같은 방향. 방문 1과의 비교는 짝이 1–2개라 `Too few pairs to say`. 보관소 502로 일부 노출은 읽지 못한 상태의 측정이다.
 
 ## 팀이 정할 것 (제안)
 
@@ -112,4 +115,4 @@
    - 핀을 SPHEREx 관측 시점의 예측 위치로 바꾼다. 절대 원칙 6에 따라 시점을 함께 표시한다.
    - 핀은 그대로 두고, 패널에 "이 천체는 지금 핀에서 2′ 서쪽에 있다"고 안내한다.
 2. **WISE 0855 기본 검출기.** 테스트 대상을 열면 D6를 기본으로 하거나, 검출기 선택을 안내한다.
-3. **포화 안내.** 밝은 변광성에서 FLAGS가 OVERFLOW이면 패널에 "포화로 밝기 비교 불가"를 눈에 띄게 보여줄지 정한다.
+3. **포화 안내.** 밝은 변광성에서 FLAGS가 OVERFLOW이면 패널에 "포화로 중심 밝기 비교 불가, Fake Planet Lab 밝기 탭의 고리 측정을 보라"를 눈에 띄게 보여줄지 정한다.
