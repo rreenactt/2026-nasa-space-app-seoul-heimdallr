@@ -1,6 +1,6 @@
 import { SKY_SURVEY } from "../constants";
 import type { SkyPaintFrame } from "../sky-view";
-import { lightYears, positionAt, SPHEREX_EPOCH, type StarGuideState, totalPm } from "./use-star-guide";
+import { GUIDE_DRAW_FOV, GUIDE_STARS, lightYears, positionAt, SPHEREX_EPOCH, type StarGuideState, totalPm } from "./use-star-guide";
 
 /** Same light blue as the constellation lines, so guide marks read as "help", not as candidates (yellow). */
 const GUIDE = "168, 200, 255";
@@ -30,10 +30,11 @@ type Rect = { x: number; y: number; w: number; h: number };
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 /**
- * For each guide star: a numbered square where it sits in the background picture (taken about SKY_SURVEY.year), a
- * line to where Gaia's motion puts it during SPHEREx (2026), and a callout (leader line and label) with how fast it
- * moves. A new answer draws itself in over APPEAR_MS; returns true while that runs so the view repaints next frame.
- * `highlighted` is the card row under the pointer (1-based).
+ * Every collected star on screen gets a square where it sits in the background picture (taken about SKY_SURVEY.year)
+ * and a line to where Gaia's motion puts it during SPHEREx (2026). The fastest five also get a number and a callout
+ * (leader line and label): the card's five once the view is still, the fastest on screen while it moves. A new set
+ * draws itself in over APPEAR_MS; returns true while that runs so the view repaints next frame. `highlighted` is the
+ * card row under the pointer (1-based).
  */
 export function paintStarGuide(
   context: CanvasRenderingContext2D,
@@ -41,18 +42,40 @@ export function paintStarGuide(
   state: StarGuideState,
   highlighted: number | null,
 ): boolean {
-  if (state.status !== "done") return false;
-  const key = state.stars.map((star) => star.sourceId).join(" ");
-  if (key !== shownKey && !state.stale) {
+  if (state.status !== "on" || frame.fov > GUIDE_DRAW_FOV || state.known.length === 0) return false;
+  const visible = state.known.filter((star) => {
+    const point = frame.project(...positionAt(star, SPHEREX_EPOCH));
+    return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= frame.width && point[1] <= frame.height;
+  });
+  const numbered = !state.moving && state.listed.length > 0 ? state.listed : visible.slice(0, GUIDE_STARS);
+  const numberedIds = new Set(numbered.map((star) => star.sourceId));
+  const key = numbered.map((star) => star.sourceId).join(" ");
+  if (key !== shownKey && !state.moving) {
     shownKey = key;
     shownAt = performance.now();
   }
   const progress = key === shownKey ? Math.min((performance.now() - shownAt) / APPEAR_MS, 1) : 1;
 
   context.save();
-  context.globalAlpha = state.stale ? 0.4 : 1;
+  // The rest of the collection on screen: small faint squares and motion lines, no labels.
+  context.strokeStyle = `rgba(${GUIDE}, 0.45)`;
+  context.lineWidth = 1;
+  for (const star of visible) {
+    if (numberedIds.has(star.sourceId)) continue;
+    const then = frame.project(...positionAt(star, SKY_SURVEY.year));
+    const now = frame.project(...positionAt(star, SPHEREX_EPOCH));
+    if (!then || !now) continue;
+    context.strokeRect(Math.round(then[0] - 7) + 0.5, Math.round(then[1] - 7) + 0.5, 14, 14);
+    if (Math.hypot(now[0] - then[0], now[1] - then[1]) > 3) {
+      context.beginPath();
+      context.moveTo(then[0], then[1]);
+      context.lineTo(now[0], now[1]);
+      context.stroke();
+    }
+  }
+
   const placed: Rect[] = [];
-  state.stars.forEach((star, index) => {
+  numbered.forEach((star, index) => {
     const rank = index + 1;
     const then = frame.project(...positionAt(star, SKY_SURVEY.year));
     const now = frame.project(...positionAt(star, SPHEREX_EPOCH));
@@ -68,7 +91,7 @@ export function paintStarGuide(
     context.lineWidth = lit ? 2 : 1.25;
     const left = Math.round(then[0] - BOX / 2) + 0.5;
     const top = Math.round(then[1] - BOX / 2) + 0.5;
-    context.globalAlpha = (state.stale ? 0.4 : 1) * Math.min(own * 2, 1);
+    context.globalAlpha = Math.min(own * 2, 1);
     context.strokeRect(left, top, BOX, BOX);
     // The motion since the picture was taken; only drawn when it is visible at this zoom.
     if (Math.hypot(now[0] - then[0], now[1] - then[1]) > 3) {
@@ -130,7 +153,7 @@ export function paintStarGuide(
 
     const labelAlpha = Math.max((own - 0.6) / 0.4, 0);
     if (labelAlpha <= 0) return;
-    context.globalAlpha = (state.stale ? 0.4 : 1) * labelAlpha;
+    context.globalAlpha = labelAlpha;
     context.fillStyle = "rgba(1, 1, 1, 0.72)";
     context.fillRect(rect.x, rect.y, rect.w, rect.h);
     context.strokeStyle = lit ? HIGHLIGHT : `rgba(${GUIDE}, 0.5)`;
