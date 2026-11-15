@@ -526,6 +526,7 @@ flowchart LR
   - 사전 저장: `scripts/precompute-analyses.ts`가 브라우저와 똑같은 요청(블링크는 `blink-context.tsx`, 추가 분석은 `prefetchAnalysis`)을 보낸다. 대상은 테스트 대상 5개(핀 위치와 SPHEREx 시점 위치), 최신 조사의 검토 후보 303개(`motion-survey.ts targets`, 미확인 먼저), 3I/ATLAS 첫 프레임. 다시 돌리면 저장된 응답은 바로 돌아오고 IRSA 장애로 실패한 것만 다시 처리한다.
   - 저장하는 것은 API가 화면에 보내는 결과(작은 컷아웃 배열, 정렬한 격자 이미지, 목록과 IRSA 링크)이고 원본 FITS 파일은 저장하지 않는다(절대 원칙 7).
   - 프로덕션에서 쓰려면 Vercel 프로젝트 환경 변수에 `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`이 있어야 한다.
+
 #### 장애 대응
 
 - IRSA가 느리거나 응답하지 않아도 사전 저장 계층은 그대로 동작한다. 데모는 사전 저장 좌표로 진행한다.
