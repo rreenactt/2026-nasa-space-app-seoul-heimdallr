@@ -51,7 +51,7 @@ export default function MethodPage() {
                   <p key={text}>{text}</p>
                 ))}
               </div>
-              <details className="group mt-6 border-t border-rule pt-4">
+              <details name="method-detail" className="group mt-6 border-t border-rule pt-4">
                 <summary className="cursor-pointer text-sm text-ash transition-colors select-none hover:text-paper">
                   <span className="group-open:hidden">Show the full explanation: formulas, reasons and references</span>
                   <span className="hidden group-open:inline">Hide the full explanation</span>

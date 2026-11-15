@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { cn } from "cn";
 
-/** "On this page" for Method, with the section being read in paper and the rest in ash (Figma "I · Method"). */
+/**
+ * "On this page" for Method, with the section being read in paper and the rest in ash (Figma "I · Method").
+ * Choosing a section also opens its full explanation; only one stays open at a time.
+ */
 export function MethodNav({ sections }: { sections: { id: string; title: string }[] }) {
   const [active, setActive] = useState(sections[0]?.id);
 
@@ -35,8 +38,14 @@ export function MethodNav({ sections }: { sections: { id: string; title: string 
           <li key={section.id}>
             <a
               href={`#${section.id}`}
+              onClick={() => {
+                // Jumping to a section opens its full explanation and closes the one that was open.
+                for (const details of document.querySelectorAll<HTMLDetailsElement>("details[name='method-detail']")) {
+                  details.open = details.closest("section")?.id === section.id;
+                }
+              }}
               aria-current={active === section.id ? "location" : undefined}
-              className={cn("transition-colors hover:text-paper", active === section.id ? "text-paper" : "text-ash")}
+              className={cn("block transition-colors hover:text-paper", active === section.id ? "text-paper" : "text-ash")}
             >
               <span className="mr-3 font-data text-xs">{String(index + 1).padStart(2, "0")}</span>
               {section.title}
