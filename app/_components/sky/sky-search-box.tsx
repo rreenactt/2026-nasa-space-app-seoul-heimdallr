@@ -1,10 +1,13 @@
 "use client";
 
 import { SearchIcon } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import type { EquatorialCoordinates } from "./sky-coordinates";
-import { parseSkySearch } from "./sky-search";
+import { apiGet } from "@/lib/ky";
+import { useCandidateUpdates } from "./candidates-context";
+import type { CandidateLookup } from "./review-queue";
+import { angularDistance, type EquatorialCoordinates } from "./sky-coordinates";
+import { parseSkySearch, type SkyName } from "./sky-search";
 import { TEST_TARGETS, type TestTarget } from "./test-targets";
 
 type SkySearchBoxProps = {
@@ -12,12 +15,58 @@ type SkySearchBoxProps = {
   onPoint: (point: EquatorialCoordinates) => void;
 };
 
-/** Jump to a test target by name or to coordinates; both open the analysis panel there. */
+/** A name the database had no candidate for, or could not be asked about: the user chooses to go to its position. */
+type NameNote = { point: EquatorialCoordinates; text: string; failed: boolean };
+
+/** A candidate name is truncated from its position, so the candidate can sit up to about 1.5″ away (as the server). */
+const NAME_RADIUS_DEG = 3 / 3600;
+
+/**
+ * Jump to a test target, a candidate or a 2MASS name, or to coordinates; each opens the analysis panel there (Figma
+ * "I · Search open · states"). Names are looked up in the database on every search, so a candidate added or removed
+ * since the page loaded is found or not, and the page's candidate list is brought in line with the answer.
+ */
 export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [looking, setLooking] = useState(false);
+  const [note, setNote] = useState<NameNote | null>(null);
+  const lookup = useRef(0);
+  const { remember, forget } = useCandidateUpdates();
   const listId = useId();
   const errorId = useId();
+
+  const lookUp = async (name: SkyName) => {
+    const id = ++lookup.current;
+    setLooking(true);
+    try {
+      const result = await apiGet<CandidateLookup>("/api/candidates/lookup", { name: name.designation });
+      if (id !== lookup.current) return;
+      if (result.candidate) {
+        remember(result.candidate);
+        onPoint({ ra: result.candidate.ra, dec: result.candidate.dec });
+        return;
+      }
+      // The database has no candidate under this name: drop any this page still shows for it.
+      forget((candidate) =>
+        name.twoMass
+          ? candidate.tmassDesignation === `2MASS ${name.designation}`
+          : angularDistance(candidate, name.point) <= NAME_RADIUS_DEG,
+      );
+      setNote({
+        point: result.point,
+        failed: false,
+        text: name.twoMass
+          ? "No candidate with this name in the latest batch. A 2MASS name gives the 1997–2001 position, so a fast-moving star may sit elsewhere now."
+          : "No candidate with this name in the latest batch.",
+      });
+    } catch {
+      if (id !== lookup.current) return;
+      setNote({ point: name.point, failed: true, text: "Could not reach the candidate list just now." });
+    } finally {
+      if (id === lookup.current) setLooking(false);
+    }
+  };
 
   return (
     <form
@@ -26,11 +75,16 @@ export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
       onSubmit={(event) => {
         event.preventDefault();
         const result = parseSkySearch(query);
+        setNote(null);
         if (result.kind === "error") {
           setError(result.message);
           return;
         }
         setError(null);
+        if (result.kind === "name") {
+          void lookUp(result.name);
+          return;
+        }
         if (result.kind === "target") onTarget(result.target);
         else onPoint(result.point);
         (document.activeElement as HTMLElement | null)?.blur();
@@ -45,13 +99,17 @@ export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
           onChange={(event) => {
             setQuery(event.target.value);
             setError(null);
+            setNote(null);
+            // A new query cancels an answer still on its way.
+            lookup.current += 1;
+            setLooking(false);
           }}
           onKeyDown={(event) => {
             if (event.key === "Escape") event.currentTarget.blur();
           }}
           list={listId}
-          placeholder="Test target or RA Dec (e.g. 17 57 48.5 +04 41 36)"
-          aria-label="Search the sky by test target name or coordinates"
+          placeholder="Candidate, 2MASS name, test target or RA Dec"
+          aria-label="Search the sky by candidate name, 2MASS name, test target name or coordinates"
           aria-invalid={error !== null}
           aria-describedby={error ? errorId : undefined}
           autoComplete="off"
@@ -67,6 +125,23 @@ export function SkySearchBox({ onTarget, onPoint }: SkySearchBoxProps) {
         <p id={errorId} role="alert" className="mt-2 rounded-md bg-black/70 px-3 py-2 text-xs text-amber-200">
           {error}
         </p>
+      )}
+      {looking && (
+        <p role="status" className="mt-2 rounded-md bg-black/70 px-3 py-2 text-xs text-ash">
+          Looking up the latest batch…
+        </p>
+      )}
+      {note && (
+        <div role="status" className="mt-2 grid gap-1.5 rounded-md bg-black/70 px-3 py-2 text-xs">
+          <p className={note.failed ? "text-amber-200" : "text-ash"}>{note.text}</p>
+          <button
+            type="button"
+            className="justify-self-start font-medium text-paper hover:underline"
+            onClick={() => onPoint(note.point)}
+          >
+            Go to that position
+          </button>
+        </div>
       )}
     </form>
   );

@@ -9,9 +9,12 @@ import { AnalysesProvider, type AutoOpenAnalysis } from "../analyses/analyses-co
 import { PanelViews } from "../analyses/analysis-views";
 import { BLINK_FOV_ARCMIN, BlinkProvider } from "../blink/blink-context";
 import { BlinkGate, BlinkSummary, BlinkViewer } from "../blink/blink-viewer";
+import { useCandidateAt } from "./candidates-context";
 import { SKY_SURVEY } from "./constants";
+import type { MovementCandidate } from "./review-queue";
 import { formatDec, formatRa, type EquatorialCoordinates } from "./sky-coordinates";
 import { RatingBadge, RatingSection } from "./rating-section";
+import { StatusMark } from "./status-mark";
 import type { SkySelection } from "./sky-selection";
 import { pinToSpherexArcsec, targetPositionAt, type TestTarget } from "./test-targets";
 
@@ -62,6 +65,7 @@ function PanelBody({
   onGoTo?: AnalysisPanelProps["onGoTo"];
 }) {
   const { ra, dec, target } = selection;
+  const candidate = useCandidateAt(target ? null : selection);
   const position = target ? targetPositionAt(target, selection) : null;
   const later = target?.spherexPosition;
   // How far the catalog proper motion has carried the object from its pin by the SPHEREx observations.
@@ -72,7 +76,7 @@ function PanelBody({
     <>
       <DialogHeader ref={headerRef} tabIndex={-1} className="border-b px-4 pt-4 pb-3 outline-none sm:px-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pr-8">
-          <DialogTitle className="text-lg">{target?.name ?? "Selected point"}</DialogTitle>
+          <DialogTitle className="text-lg">{target?.name ?? candidate?.id ?? "Selected point"}</DialogTitle>
           <RatingBadge point={selection} />
           <div className="ml-auto">
             <CopyLinkButton />
@@ -130,6 +134,7 @@ function PanelBody({
               <div className="min-h-0 lg:overflow-y-auto">
                 <div className="grid gap-6 p-4 sm:p-6">
                   {target && <p className="text-sm">{target.note}</p>}
+                  {candidate && <CandidateNote candidate={candidate} />}
 
                   <PanelSection title="Summary">
                     <BlinkSummary />
@@ -153,6 +158,49 @@ function PanelBody({
         </AnalysesProvider>
       </BlinkProvider>
     </>
+  );
+}
+
+const arcsec = (value: number) => `${value.toFixed(value < 10 ? 1 : 0)}″`;
+const masPerYear = (value: number) => `${Math.round(value).toLocaleString("en-US")} mas/yr`;
+
+/**
+ * What the survey found here and what the reviewer is asked to do. A known mover is the answer key: Gaia DR3 already
+ * explains its motion. An unidentified pair has no catalog explanation, so the rating is the reviewer's call; it stays a
+ * candidate, never a detection (absolute principle 1). SPHEREx visits are months apart, so the motion shows against
+ * 2MASS (about 25 years earlier), not between the blink frames.
+ */
+function CandidateNote({ candidate }: { candidate: MovementCandidate }) {
+  const known = candidate.match === "known";
+  const years = candidate.baselineYears.toFixed(0);
+  return (
+    <section className="grid gap-1.5 text-sm">
+      <h3 className="flex items-center gap-2 font-medium">
+        <StatusMark kind={known ? "known" : "needs-ratings"} className="size-2.5" />
+        {known ? "Known mover · answer key" : "Unidentified · your call"}
+        {candidate.synthetic && <span className="text-xs font-normal text-muted-foreground">(synthetic)</span>}
+      </h3>
+      {known ? (
+        <p>
+          Gaia DR3 {candidate.gaiaSourceId} already explains this star&apos;s motion
+          {candidate.gaiaPmMasYr != null && <> ({masPerYear(candidate.gaiaPmMasYr)})</>}: it accounts for both the 2MASS
+          position ({candidate.tmassDesignation}) and the SPHEREx one, {arcsec(candidate.separationArcsec)} apart over{" "}
+          {years} years. Use it to check what a real mover looks like before judging unidentified ones.
+        </p>
+      ) : (
+        <p>
+          A SPHEREx source with no 2MASS star in place, paired with {candidate.tmassDesignation}{" "}
+          {arcsec(candidate.separationArcsec)} away that has no SPHEREx match either. No Gaia DR3 star explains the pair.
+          If it is one object it moved about {masPerYear(candidate.pmTotalMasYr)} over {years} years; it may also be a
+          chance pair or an artifact. Your rating decides.
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        The SPHEREx visits are months apart, so the blink may show little motion. Compare with the 2MASS image in Sky
+        Time Machine below.
+        {candidate.detections === 1 && " SPHEREx found this source in one visit only: needs further analysis."}
+      </p>
+    </section>
   );
 }
 

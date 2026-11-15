@@ -1,4 +1,6 @@
 import type { AutoOpenAnalysis } from "./_components/analyses/analyses-context";
+import { getCandidateBatch } from "./_components/sky/candidate-batch";
+import { CandidatesProvider } from "./_components/sky/candidates-context";
 import { TARGET_FOV } from "./_components/sky/constants";
 import { SkyExplorer } from "./_components/sky/sky-explorer";
 import { parseSelection, parseView, type SkySelection } from "./_components/sky/sky-selection";
@@ -35,7 +37,7 @@ function parseSonata(value: string | string[] | undefined) {
  * `?sonata=` links open the panel at their point and then that analysis.
  */
 export default async function Home({ searchParams }: PageProps<"/">) {
-  const params = await searchParams;
+  const [params, batch] = await Promise.all([searchParams, getCandidateBatch()]);
   const standard = parseSelection(params);
   const stm = parseStm(params.stm);
   const sonata = parseSonata(params.sonata);
@@ -52,15 +54,17 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   return (
     <main className="relative flex flex-1 flex-col">
-      <SkyExplorer
-        initialSelection={initialSelection}
-        initialView={
-          initialSelection
-            ? { ra: initialSelection.ra, dec: initialSelection.dec, fov: initialSelection.fov }
-            : (parseView(params) ?? undefined)
-        }
-        autoOpen={autoOpen}
-      />
+      <CandidatesProvider batch={batch}>
+        <SkyExplorer
+          initialSelection={initialSelection}
+          initialView={
+            initialSelection
+              ? { ra: initialSelection.ra, dec: initialSelection.dec, fov: initialSelection.fov }
+              : (parseView(params) ?? undefined)
+          }
+          autoOpen={autoOpen}
+        />
+      </CandidatesProvider>
     </main>
   );
 }
