@@ -22,8 +22,12 @@ export type SkyPaintFrame = {
   ra: number;
   dec: number;
   fov: number;
+  /** Angular distance (degrees) from the center to the farthest screen corner, measured through the projection. */
+  radius: number;
   width: number;
   height: number;
+  /** Whether a screen point (CSS px) is hidden under the page's interface (a panel, a card, the tool bar). */
+  covered: (x: number, y: number) => boolean;
 };
 /**
  * Draws extra marks over the sky. A new function asks for a redraw; otherwise it runs only when the view changes, or on
@@ -36,6 +40,11 @@ export type SettledSky = SkyView & {
   /** Size of the view in CSS pixels. */
   width: number;
   height: number;
+  /** Angular distance (degrees) from the center to the farthest screen corner. */
+  radius: number;
+  covered: SkyPaintFrame["covered"];
+  /** Screen position (CSS px) of a sky position in the current view, or null when it is outside the projection. */
+  project: (ra: number, dec: number) => [number, number] | null;
 };
 
 /** How long the view must hold still before onSettle runs. */
@@ -175,6 +184,38 @@ export default function SkyView({
         let settleKey = "";
         let changedAt = 0;
         let settledWith: ((settled: SettledSky | null) => void) | null = null;
+        const project = (ra: number, dec: number): [number, number] | null => {
+          const pixel = aladin.world2pix(ra, dec);
+          return pixel ? [pixel[0], pixel[1]] : null;
+        };
+        // Hit-tests the page: a point is covered when what sits on top there is not part of the sky view. When even the
+        // center is covered (the intro, a dialog), nothing counts as covered, so a full-screen layer does not hide all.
+        const outside = (box: DOMRect, x: number, y: number) => {
+          const hit = document.elementFromPoint(box.left + x, box.top + y);
+          return hit !== null && !element.contains(hit);
+        };
+        const covered = (x: number, y: number) => {
+          const box = element.getBoundingClientRect();
+          return outside(box, x, y) && !outside(box, box.width / 2, box.height / 2);
+        };
+        // The view's reach, from where its corners actually land on the sky (the field of view alone is only the
+        // horizontal span, and the projection stretches toward the corners). Worked out again when the view changes.
+        let radiusFor = "";
+        let radius = 0;
+        const reach = (key: string, center: EquatorialCoordinates, fov: number, width: number, height: number) => {
+          if (key === radiusFor) return radius;
+          radiusFor = key;
+          radius = (fov / 2) * Math.hypot(1, height / Math.max(width, 1));
+          for (const [x, y] of [[0, 0], [width, 0], [0, height], [width, height]]) {
+            const world = aladin.pix2world(x, y);
+            if (world && Number.isFinite(world[0]) && Number.isFinite(world[1])) {
+              radius = Math.max(radius, angularDistance(center, { ra: world[0], dec: world[1] }));
+            } else {
+              radius = 180; // a corner beyond the projection: the whole sky
+            }
+          }
+          return radius;
+        };
         const onFrame = () => {
           frame = requestAnimationFrame(onFrame);
           const [centerRa, centerDec] = aladin.getRaDec();
@@ -200,7 +241,16 @@ export default function SkyView({
             settledWith = null;
           } else if (onSettleNow && settledWith !== onSettleNow && performance.now() - changedAt >= SETTLE_MS) {
             settledWith = onSettleNow;
-            onSettleNow({ ra: centerRa, dec: centerDec, fov: width, width: element.clientWidth, height: element.clientHeight });
+            onSettleNow({
+              ra: centerRa,
+              dec: centerDec,
+              fov: width,
+              radius: reach(key, { ra: centerRa, dec: centerDec }, width, element.clientWidth, element.clientHeight),
+              width: element.clientWidth,
+              height: element.clientHeight,
+              project,
+              covered,
+            });
           }
           const marks = markCanvas.current;
           const markKey = `${key} ${painterVersion.current}`;
@@ -209,15 +259,14 @@ export default function SkyView({
             const context = prepareCanvas(marks, element.clientWidth, element.clientHeight);
             if (context && painterRef.current) {
               const again = painterRef.current(context, {
-                project: (ra, dec) => {
-                  const pixel = aladin.world2pix(ra, dec);
-                  return pixel ? [pixel[0], pixel[1]] : null;
-                },
+                project,
                 ra: centerRa,
                 dec: centerDec,
                 fov: width,
+                radius: reach(key, { ra: centerRa, dec: centerDec }, width, element.clientWidth, element.clientHeight),
                 width: element.clientWidth,
                 height: element.clientHeight,
+                covered,
               });
               if (again) paintedFor = "";
             }

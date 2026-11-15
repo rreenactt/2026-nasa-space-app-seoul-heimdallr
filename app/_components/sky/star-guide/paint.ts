@@ -3,14 +3,13 @@ import type { SkyPaintFrame } from "../sky-view";
 import type { GaiaStar } from "@/app/_lib/sky/types";
 import {
   GUIDE_MAX_FOV,
-  GUIDE_STARS,
   lightYears,
+  pickNumbered,
   positionAt,
   SPHEREX_EPOCH,
   type StarGuideState,
-  starsNear,
+  starsOnScreen,
   totalPm,
-  viewRadius,
 } from "./use-star-guide";
 
 /** Same light blue as the constellation lines, so guide marks read as "help", not as candidates (yellow). */
@@ -30,6 +29,8 @@ const MARK_MS = 420;
 const CALLOUT_MS = 460;
 /** Callouts that start together follow one another by this share of CALLOUT_MS, fastest star first. */
 const CALLOUT_STAGGER = 0.18;
+/** Shortest motion line (CSS px) that gets its start and end years written at its ends. */
+const YEAR_MIN_PX = 36;
 /** Longest frame step the animation takes, so a pause between repaints does not skip an animation. */
 const MAX_STEP_MS = 50;
 
@@ -88,14 +89,9 @@ export function paintStarGuide(
 
   const zoomedOut = frame.fov > GUIDE_MAX_FOV;
   // Picked from the catalog around the current center on every frame (well under a millisecond), so a fast pan is
-  // followed at once; the epoch-2026 position decides whether a star is on screen.
-  const visible = zoomedOut
-    ? []
-    : starsNear(state.catalog, frame.ra, frame.dec, viewRadius(frame) + 0.05).filter((star) => {
-        const point = frame.project(...positionAt(star, SPHEREX_EPOCH));
-        return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= frame.width && point[1] <= frame.height;
-      });
-  const numbered = zoomedOut ? [] : !state.moving && state.listed.length > 0 ? state.listed : visible.slice(0, GUIDE_STARS);
+  // followed at once; the same on-screen test as the card's list.
+  const visible = zoomedOut ? [] : starsOnScreen(state.catalog, frame);
+  const numbered = zoomedOut ? [] : !state.moving && state.listed.length > 0 ? state.listed : pickNumbered(visible, frame);
   const visibleIds = new Set(visible.map((star) => star.sourceId));
   const rankOf = new Map(numbered.map((star, index) => [star.sourceId, index + 1]));
 
@@ -145,7 +141,8 @@ export function paintStarGuide(
     context.fillStyle = color;
     context.lineWidth = lit ? 2 : big ? 1.25 : 1;
     context.strokeRect(Math.round(then[0] - size / 2) + 0.5, Math.round(then[1] - size / 2) + 0.5, size, size);
-    if (Math.hypot(later[0] - then[0], later[1] - then[1]) > 3) {
+    const length = Math.hypot(later[0] - then[0], later[1] - then[1]);
+    if (length > 3) {
       context.beginPath();
       context.moveTo(then[0], then[1]);
       context.lineTo(then[0] + (later[0] - then[0]) * own, then[1] + (later[1] - then[1]) * own);
@@ -154,6 +151,21 @@ export function paintStarGuide(
         context.beginPath();
         context.arc(later[0], later[1], 3, 0, Math.PI * 2);
         context.fill();
+      }
+      // Years at both ends, once the path is long enough to read them against: the start year behind the square
+      // (opposite the motion), the end year past the dot.
+      if (big && length >= YEAR_MIN_PX) {
+        const ux = (later[0] - then[0]) / length;
+        const uy = (later[1] - then[1]) / length;
+        context.globalAlpha = clamp01((own - 0.7) / 0.3) * 0.85;
+        context.font = font("--font-data-face", 10);
+        context.textBaseline = "middle";
+        const reach = BOX / 2 + 6;
+        context.textAlign = ux > 0 ? "right" : "left";
+        context.fillText(String(SKY_SURVEY.year), then[0] - ux * reach, then[1] - uy * reach);
+        context.textAlign = ux > 0 ? "left" : "right";
+        context.fillText(SPHEREX_EPOCH.toFixed(0), later[0] + ux * 9, later[1] + uy * 9);
+        context.textAlign = "left";
       }
     }
   }
@@ -182,17 +194,29 @@ export function paintStarGuide(
     const width = Math.max(w1, w2) + LABEL_PAD * 2;
     const height = LINE_1 + LINE_2 + 6;
 
-    // Up and to the right of the square, lifted until it clears the labels already placed.
+    // Up and to the right of the square, lifted until it clears the labels already placed and the interface (a label
+    // under the tool bar or a card cannot be read); when no lift clears the interface, the lowest free spot.
     const cornerX = Math.round(then[0] - BOX / 2) + 0.5 + BOX;
     const cornerY = Math.round(then[1] - BOX / 2) + 0.5;
-    let elbowY = cornerY - LEADER_RISE;
-    let rect: Rect = { x: 0, y: 0, w: width, h: height };
-    for (let attempt = 0; attempt < 8; attempt++) {
-      rect = { x: cornerX + (cornerY - elbowY) + LEADER_RUN, y: elbowY - height / 2, w: width, h: height };
-      if (!placed.some((other) => overlaps(rect, other))) break;
-      elbowY -= height + 4;
+    const spot = (lift: number): Rect => {
+      const elbow = cornerY - LEADER_RISE - lift * (height + 4);
+      return { x: cornerX + (cornerY - elbow) + LEADER_RUN, y: elbow - height / 2, w: width, h: height };
+    };
+    const hidden = (r: Rect) =>
+      [[r.x + 2, r.y + 2], [r.x + r.w - 2, r.y + 2], [r.x + 2, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]].some(
+        ([x, y]) => x >= 0 && y >= 0 && x <= frame.width && y <= frame.height && frame.covered(x, y),
+      );
+    let rect: Rect | null = null;
+    let fallback: Rect | null = null;
+    for (let lift = 0; lift < 8 && !rect; lift++) {
+      const candidate = spot(lift);
+      if (placed.some((other) => overlaps(candidate, other))) continue;
+      fallback ??= candidate;
+      if (!hidden(candidate)) rect = candidate;
     }
+    rect ??= fallback ?? spot(0);
     placed.push(rect);
+    const elbowY = rect.y + height / 2;
     const elbowX = cornerX + (cornerY - elbowY);
 
     // The leader grows out of the square, then the label fades in (and the reverse on the way out).
