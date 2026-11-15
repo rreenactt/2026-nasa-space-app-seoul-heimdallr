@@ -8,7 +8,8 @@ export type MethodBlock =
   | { kind: "h"; text: string }
   | { kind: "p"; text: string }
   | { kind: "formula"; text: string; where?: string }
-  | { kind: "list"; items: string[] };
+  | { kind: "list"; items: string[] }
+  | { kind: "table"; head: string[]; rows: string[][]; note?: string };
 
 export interface MethodReference {
   text: string;
@@ -68,11 +69,26 @@ export const METHOD_SECTIONS: MethodSection[] = [
     simple: [
       "SPHEREx does not take one colour per photo. Its filter changes colour smoothly from one edge of the picture to the other, like a rainbow laid across the sensor. The same star is recorded in a different colour each time the telescope shifts.",
       "A star is not equally bright in every colour. So we only compare photos in which the spot you chose was seen in nearly the same colour. Otherwise a colour difference would look like the star changing.",
+      "The six detectors (bands) see different things. The short-wavelength bands show mostly starlight. The long-wavelength bands also show the fingerprints of ices: frozen water, carbon dioxide and carbon monoxide on dust grains between the stars.",
     ],
     detail: [
       { kind: "h", text: "The instrument" },
       { kind: "p", text: "SPHEREx has six detectors (D1 to D6) covering 0.75 to 5.0 µm. Each sits behind a linear variable filter (LVF): the wavelength that reaches a pixel depends on where the pixel is on the detector. One exposure is therefore not an image at one wavelength, and a full spectrum of a source is built up from many exposures as the sky drifts across the filter." },
       { kind: "formula", text: "λ = λ(x, y)        Δλ = Δλ(x, y)        R = λ / Δλ", where: "Both come from the WCS-WAVE lookup table in each file, interpolated bilinearly at the pixel of the chosen position. R, the resolving power, is roughly 40 on D1 to D4 and above 100 on D5 and D6." },
+      { kind: "h", text: "What each band can show" },
+      {
+        kind: "table",
+        head: ["Band", "Wavelength (µm)", "What the light in this range carries", "Used in this tool for"],
+        rows: [
+          ["1 (D1)", "0.75–1.11", "Starlight and the starlight of galaxies; the slope tells a star's colour and temperature. Cool stars show deep molecular bands here.", "Brightness test on R Draconis and RW Aurigae"],
+          ["2 (D2)", "1.11–1.64", "Starlight that passes through interstellar dust more easily than visible light; galaxies. Hydrogen Paschen β (1.28 µm).", "Any analysis, when you choose this band"],
+          ["3 (D3)", "1.64–2.42", "Stars and galaxies; hydrogen lines from star-forming regions (Paschen α 1.88 µm, Brackett γ 2.17 µm).", "Sky Sonata default; candidate search, because it is closest to the 2MASS Ks band (2.16 µm)"],
+          ["4 (D4)", "2.42–3.82", "Water ice (H₂O, about 3.05 µm), methanol ice (CH₃OH, about 3.53 µm), aromatic hydrocarbons (PAH, 3.3 µm).", "Comet Breath: water near 2.7 µm"],
+          ["5 (D5)", "3.82–4.42", "Carbon dioxide ice (CO₂, about 4.27 µm); hydrogen Brackett α (4.05 µm).", "Comet Breath: CO₂ gas at 4.26 µm"],
+          ["6 (D6)", "4.42–5.00", "Carbon monoxide ice (CO, about 4.67 µm) and other molecular absorption features.", "Comet Breath: CO near 4.65 µm; default for nearby brown dwarfs such as WISE 0855, which are brightest here"],
+        ],
+        note: "The ranges are the nominal band edges. The band buttons in the tool show the ranges recorded in the archive, which overlap slightly (for example 0.75–1.12 and 1.10–1.65 µm). This tool compares positions and brightness; it does not map ices. The ice features are listed because they are a reason two exposures at different wavelengths must not be compared: inside such a feature the brightness changes steeply with wavelength.",
+      },
       { kind: "h", text: "The rule" },
       { kind: "formula", text: "| λ_exposure − λ_reference | ≤ 0.5 · Δλ", where: "Only exposures of one detector that satisfy this are compared. The reference wavelength is the one that keeps the largest number of visits. Up to three exposures per visit are used, nearest in wavelength first." },
       { kind: "h", text: "Why half a bandwidth" },
@@ -83,6 +99,7 @@ export const METHOD_SECTIONS: MethodSection[] = [
     references: [
       { text: "Doré, O., et al. 2014, arXiv:1412.4872 (Cosmology with the SPHEREx All-Sky Spectral Survey)", href: "https://arxiv.org/abs/1412.4872" },
       { text: "Crill, B. P., et al. 2020, Proc. SPIE 11443, 114430I (SPHEREx: NASA's near-infrared spectrophotometric all-sky survey)" },
+      { text: "Boogert, A. C. A., Gerakines, P. A. & Whittet, D. C. B. 2015, ARA&A 53, 541 (Observations of the Icy Universe: wavelengths of the ice absorption features)" },
       SPHEREX_DOCS,
     ],
   },

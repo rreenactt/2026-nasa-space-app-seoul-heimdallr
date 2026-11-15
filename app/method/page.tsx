@@ -22,6 +22,32 @@ function Block({ block }: { block: MethodBlock }) {
           ))}
         </ul>
       );
+    case "table":
+      return (
+        <figure className="grid gap-1.5">
+          <div className="overflow-x-auto rounded-md border border-rule">
+            <table className="w-full min-w-[640px] border-collapse text-left text-[13px] leading-snug">
+              <thead>
+                <tr className="border-b border-rule text-paper">
+                  {block.head.map((cell) => (
+                    <th key={cell} scope="col" className="px-3 py-2 font-medium">{cell}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {block.rows.map((row) => (
+                  <tr key={row[0]} className="border-b border-rule align-top last:border-b-0">
+                    {row.map((cell, index) => (
+                      <td key={index} className={index < 2 ? "px-3 py-2 font-data whitespace-nowrap text-paper" : "px-3 py-2"}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {block.note && <figcaption className="text-[13px] text-ash">{block.note}</figcaption>}
+        </figure>
+      );
     case "formula":
       return (
         <figure className="grid gap-1.5">
