@@ -556,7 +556,7 @@ fpl.verdictTooFew,Too few pairs to say,쌍이 부족해 판단 불가,Fake Plane
 fpl.visitDate,Visit {n} · {date},방문 {n} · {date},"Row label before one visit's exposure buttons (Fake Planet Lab Inspect, Neighborhood in Motion SPHEREx tab); {date} is YYYY-MM-DD"
 fpl.visitFrom,Visit {n} · from {date},방문 {n} · {date}부터,Fake Planet Lab Brightness: plot legend entry per visit
 fpl.yourJudgment,Your judgment,내 판단,Fake Planet Lab: label above the judgment buttons; Records table column
-intro.purpose,Find what moves in SPHEREx images,SPHEREx 이미지에서 움직이는 것 찾기,Sky intro animation: one line of purpose under the HEIMDALLR wordmark
+intro.purpose,Find what moves in SPHEREx images,"SPHEREx가 찍은 하늘에서, 움직이는 천체를 찾습니다",Sky intro animation: one line of purpose under the HEIMDALLR wordmark
 intro.skip,Skip intro,인트로 건너뛰기,Sky intro animation: button that ends it at once
 language.en,English,English,"Language name, always in its own language"
 language.ko,한국어,한국어,"Language name, always in its own language"
