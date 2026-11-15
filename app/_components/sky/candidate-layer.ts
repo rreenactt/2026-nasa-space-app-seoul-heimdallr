@@ -30,12 +30,12 @@ export function statusKey(candidate: MovementCandidate): StatusKey {
 }
 
 /**
- * Candidates on the sky by field of view (decision #50, replacing the density cells of #39):
+ * Candidates on the sky by field of view (decision #52, replacing the density cells of #39):
  * - wider than 80°: none, the view is for finding your way,
  * - 5° to 80°: count circles on a grid fixed to the sky, so they move with the stars while panning,
  * - narrower than 5°: one shape mark per candidate.
  * Test targets, places this browser opened and the selected place are drawn at every level, the selected one even with
- * the candidates switched off (decision #40). Circles and marks fade in and out (decision #51); returns true while a
+ * the candidates switched off (decision #40). Circles and marks fade in and out (decision #53); returns true while a
  * fade is still running, so the sky asks for another frame.
  */
 export function paintCandidates(

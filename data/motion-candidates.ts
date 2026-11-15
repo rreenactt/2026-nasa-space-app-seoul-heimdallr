@@ -114,7 +114,7 @@ async function latestSurvey() {
 /**
  * What the sky screen needs from the latest survey run: the candidates people review (known movers as the answer key,
  * unidentified pairs as the open question) and counts for the rest, so nothing is hidden. Gaia static pairs are chance
- * pairs; they are counted but not listed (decision #49).
+ * pairs; they are counted but not listed (decision #51).
  */
 export async function latestReviewBatch() {
   const survey = await latestSurvey();
