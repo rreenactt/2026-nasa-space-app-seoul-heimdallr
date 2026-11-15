@@ -1065,6 +1065,38 @@ tools.starGuideOff,Turn off the star guide,별 안내 끄기,Tooltip of the star
 tools.starGuideOn,Star guide: stars that move here,별 안내: 여기서 움직이는 별,Tooltip of the star guide tool while it is off; turning it on marks moving stars in the view
 tools.zoomIn,Zoom in,확대,Sky tool column: zoom in button tooltip and label
 tools.zoomOut,Zoom out,축소,Sky tool column: zoom out button tooltip and label
+tour.analysesBody,"Five optional analyses: older sky surveys, a defect check, nearby stars in 3D, the visits as sound, and the comet 3I/ATLAS.","선택해서 볼 수 있는 추가 분석 5가지예요. 예전 하늘 관측, 결함 확인, 3D로 보는 가까운 별, 소리로 듣는 방문, 혜성 3I/ATLAS.",Tour (decision #61): step 8 body
+tour.analysesTitle,Look closer if you want,더 자세히 보고 싶다면,Tour (decision #61): step 8 title
+tour.back,Back,이전,Tour (decision #61): card button to the previous step
+tour.blinkBody,"Each frame is one SPHEREx visit, laid on a fixed sky grid. Something that moves shifts between frames; stars stay put. Barnard's Star shifts from visit to visit.","한 장이 SPHEREx 방문 한 번이고, 고정된 하늘 격자 위에 놓여요. 움직이는 천체는 장마다 자리가 바뀌고 별은 그대로예요. Barnard's Star는 방문마다 자리가 바뀌어요.",Tour (decision #61): step 5 body
+tour.blinkTitle,Watch the blink,블링크 보기,Tour (decision #61): step 5 title
+tour.close,Close,닫기,Tour (decision #61): last card's button that ends the tour
+tour.countsBody,"Your rating shows at once in the header and the tally, with other people's ratings beside it. On a candidate it also sets the status in the queue and on the sky. Five ratings give a status: agreement, not a discovery.","내 평가는 제목 옆과 집계에 바로 보이고, 다른 사람의 평가도 함께 보여요. 후보라면 검토 목록과 하늘의 상태도 바뀌어요. 평가가 5개 모이면 상태가 정해지지만, 확정된 결과가 아니라 평가자들의 합의예요.",Tour (decision #61): step 7 body after rating
+tour.countsBodyUnrated,"Once you rate, your rating shows at once in the header and the tally, with other people's ratings beside it. On a candidate it also sets the status in the queue and on the sky. You can still rate now.","평가하면 제목 옆과 집계에 바로 보이고, 다른 사람의 평가도 함께 보여요. 후보라면 검토 목록과 하늘의 상태도 바뀌어요. 지금 평가해 봐도 돼요.",Tour (decision #61): step 7 body when this browser has not rated
+tour.countsTitle,Your rating counts at once,평가는 바로 반영돼요,Tour (decision #61): step 7 title
+tour.doneBody,"Start with the review queue, or click anywhere on the sky. You can replay this tour from Menu.",검토 목록부터 시작하거나 하늘 아무 곳이나 눌러 보세요. 이 안내는 메뉴에서 다시 볼 수 있어요.,Tour (decision #61): step 10 body
+tour.doneTitle,You're ready,준비됐어요,Tour (decision #61): step 10 title
+tour.exploreBody,Drag to look around and scroll to zoom. Click any point to open the SPHEREx images taken there.,끌어서 둘러보고 스크롤로 확대해요. 아무 곳이나 누르면 그 자리에서 찍은 SPHEREx 이미지가 열려요.,Tour (decision #61): step 2 body
+tour.exploreTitle,Explore the sky,하늘 둘러보기,Tour (decision #61): step 2 title
+tour.menu,Take the tour,둘러보기 안내,Tour (decision #61): Menu entry that starts the tour from step 1
+tour.next,Next,다음,Tour (decision #61): card button to the next step
+tour.openBarnard,Open Barnard's Star,Barnard's Star 열기,Tour (decision #61): step 4 main button; opens the test target in the analysis panel
+tour.openBody,"Next picks a candidate and flies there; Open blink opens it. For practice we will open Barnard's Star, a star known to move fast.","다음을 누르면 후보를 골라 그 자리로 날아가고, 블링크 열기로 열어요. 연습으로 빠르게 움직인다고 알려진 별, Barnard's Star를 열어 볼게요.",Tour (decision #61): step 4 body
+tour.openQueue,Open review queue,검토 목록 열기,Tour (decision #61): last card's main button
+tour.openTitle,Open the images,이미지 열기,Tour (decision #61): step 4 title
+tour.queueBody,The review queue lists what the machine flagged. Unidentified pairs have no catalog explanation: your call. Known movers are stars Gaia DR3 already tracks: the answer key.,검토 목록에는 기계가 찾아낸 곳이 모여 있어요. 미확인 후보는 설명하는 목록이 없어서 직접 판단해요. 알려진 움직이는 별은 Gaia DR3가 이미 추적하는 별이라 정답지 역할을 해요.,Tour (decision #61): step 3 body
+tour.queueTitle,Candidates to check,확인할 후보,Tour (decision #61): step 3 title
+tour.rateBody,"Pick Moving, Not moving or Noise or artifact. One rating per browser, and you can change it. Try it now, or press Next.","움직인다, 안 움직인다, 잡음·결함 중에서 골라요. 브라우저마다 평가는 하나이고 바꿀 수 있어요. 지금 해 보거나 다음을 눌러요.",Tour (decision #61): step 6 body
+tour.rateTitle,Rate what you see,본 대로 평가하기,Tour (decision #61): step 6 title
+tour.skip,Skip tour,안내 건너뛰기,Tour (decision #61): card button that ends the tour
+tour.skipShort,Skip,건너뛰기,Tour (decision #61): first card's button that ends the tour
+tour.start,Start tour,안내 시작,Tour (decision #61): first card's main button
+tour.stepOf,{n} / {total},{n} / {total},Tour (decision #61): step counter on the card
+tour.toolsBody,"On the right: This view, layers, Star guide and zoom. Search finds candidates, 2MASS names and coordinates. Press ? for keyboard shortcuts.","오른쪽에는 화면 정보, 표시 설정, 별 안내, 확대·축소가 있어요. 검색으로 후보, 2MASS 이름, 좌표를 찾을 수 있어요. ?를 누르면 단축키가 보여요.",Tour (decision #61): step 9 body
+tour.toolsTitle,More tools,다른 도구,Tour (decision #61): step 9 title
+tour.waiting,The images are still downloading. The highlight moves to them once they are ready.,이미지를 아직 받는 중이에요. 준비되면 강조 표시가 그 자리로 옮겨 가요.,Tour (decision #61): note while the analysis panel downloads the SPHEREx images
+tour.welcomeBody,"HEIMDALLR uses SPHEREx images to watch stars and other objects move across the sky. Our team regularly updates a list of recommended places to check, and your ratings decide which of them stand out. The tour takes about a minute.","HEIMDALLR는 SPHEREx 이미지로 별과 천체가 하늘에서 움직이는 모습을 보는 곳이에요. 팀이 확인해 볼 만한 추천 좌표를 주기적으로 갱신하고, 여러분의 평가가 그중 어떤 곳이 눈에 띄는지를 정해요. 안내는 1분쯤 걸려요.","Tour (decision #61): step 1 body: what the site is, the team-updated recommended places, and that ratings count"
+tour.welcomeTitle,Welcome to HEIMDALLR,HEIMDALLR에 오신 걸 환영해요,Tour (decision #61): step 1 title
 viewInfo.background,Background imagery,배경 이미지,This view panel: heading above the name of the sky background survey
 viewInfo.backgroundNote,For looking around only. Analysis uses SPHEREx images from IRSA.,둘러보기용이에요. 분석에는 IRSA의 SPHEREx 이미지를 써요.,This view panel: under the background survey name
 viewInfo.candidates,Candidates in view,시야 안 후보,This view panel row: number of candidates in the current view
