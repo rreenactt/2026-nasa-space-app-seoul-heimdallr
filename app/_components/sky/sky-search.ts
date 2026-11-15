@@ -3,8 +3,46 @@ import { TEST_TARGETS, type TestTarget } from "./test-targets";
 
 export type SkySearchResult =
   | { kind: "target"; target: TestTarget }
+  | { kind: "name"; name: SkyName }
   | { kind: "point"; point: EquatorialCoordinates }
   | { kind: "error"; message: string };
+
+/**
+ * A name that spells its own position (Jhhmmss.s±ddmmss): a candidate name, or a 2MASS designation, whose digits run
+ * on without a decimal point (J08292680+5507243 is 08h29m26.80s +55°07′24.3″). The position is truncated, not
+ * rounded, so it can sit up to about 1.5″ from the source, and a 2MASS position is from 1997–2001.
+ */
+export type SkyName = {
+  /** "J…" without any catalog prefix. */
+  designation: string;
+  /** Eight RA and seven Dec digits: the 2MASS point source format. */
+  twoMass: boolean;
+  point: EquatorialCoordinates;
+};
+
+const NAME_PATTERN = /^(?:2mass|sphere?x)?j(\d{2})(\d{2})(\d{2}(?:\.\d+|\d*))([+\-−–])(\d{2})(\d{2})(\d{2}(?:\.\d+|\d*))$/i;
+
+/** Reads a J-name such as "J082927.2+550714" or "2MASS J08292680+5507243"; null for anything else. */
+export function parseSkyName(text: string): SkyName | null {
+  // Spaces are dropped first, so "2MASS J0829 2680 +5507243" reads the same as the run-together form.
+  const match = NAME_PATTERN.exec(text.replace(/\s+/g, ""));
+  if (!match) return null;
+  const [, rh, rm, rsDigits, signText, dd, dm, dsDigits] = match;
+  // Digits past the first two of the seconds are decimals when no point is written.
+  const seconds = (digits: string) => Number(digits.includes(".") ? digits : `${digits.slice(0, 2)}.${digits.slice(2) || "0"}`);
+  const rs = seconds(rsDigits);
+  const ds = seconds(dsDigits);
+  if (Number(rm) >= 60 || rs >= 60 || Number(dm) >= 60 || ds >= 60) return null;
+  const sign = signText === "+" ? 1 : -1;
+  const point = valid((Number(rh) + Number(rm) / 60 + rs / 3600) * 15, sign * (Number(dd) + Number(dm) / 60 + ds / 3600));
+  if (!point) return null;
+  const sign2 = sign > 0 ? "+" : "-";
+  return {
+    designation: `J${rh}${rm}${rsDigits}${sign2}${dd}${dm}${dsDigits}`,
+    twoMass: !rsDigits.includes(".") && !dsDigits.includes(".") && rsDigits.length === 4 && dsDigits.length === 3,
+    point,
+  };
+}
 
 /** Other spellings people type for the test targets, compared after `normalizeName`. */
 const ALIASES: Record<string, string[]> = {
@@ -25,9 +63,10 @@ const normalizeName = (text: string) =>
 const COORDINATE_CHARS = /^[+\-−–]?\d[\d\s.,:+\-−–hdms°′″'"]*$/i;
 
 /**
- * Reads what the user typed into the sky search: a test target name, decimal degrees ("269.4485 4.7394"), or
- * sexagesimal RA in hours and Dec in degrees ("17 57 48.5 +04 41 36", "17h57m48.5s +4d41m36s", "17:57:48.5 4:41:36").
- * Other object names need a name resolver (SIMBAD), which is offline during the CDS outage.
+ * Reads what the user typed into the sky search: a test target name, a J-name (a candidate or a 2MASS designation, which
+ * the database is asked about), decimal degrees ("269.4485 4.7394"), or sexagesimal RA in hours and Dec in degrees
+ * ("17 57 48.5 +04 41 36", "17h57m48.5s +4d41m36s", "17:57:48.5 4:41:36"). Other object names need a name resolver
+ * (SIMBAD), which is offline during the CDS outage.
  */
 export function parseSkySearch(query: string): SkySearchResult {
   const text = query.trim();
@@ -36,10 +75,14 @@ export function parseSkySearch(query: string): SkySearchResult {
   const target = findTargetByName(text);
   if (target) return { kind: "target", target };
 
+  const name = parseSkyName(text);
+  if (name) return { kind: "name", name };
+
   if (!COORDINATE_CHARS.test(text)) {
     return {
       kind: "error",
-      message: "Only the test targets can be found by name for now. Try coordinates, for example 269.4485 4.7394.",
+      message:
+        "Only test targets, candidates and names with coordinates (J…) can be found for now. Try coordinates, for example 269.4485 4.7394.",
     };
   }
 

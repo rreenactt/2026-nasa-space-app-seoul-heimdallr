@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
 import { SKY_SURVEY } from "./constants";
-import { MOVEMENT_CANDIDATES } from "./review-queue";
+import { useCandidates } from "./candidates-context";
 import { angularDistance, formatDec, formatRa } from "./sky-coordinates";
 import { viewUrl } from "./sky-selection";
 import { formatFov } from "./sky-tools";
@@ -54,7 +54,8 @@ export function ViewInfo({ onClose }: { onClose: () => void }) {
   // Whatever lies within half the field of view of the centre: a circle, so a little short of the screen's corners.
   const within = (point: { ra: number; dec: number }) => !!view && angularDistance(view, point) <= view.fov / 2;
   const targets = TEST_TARGETS.filter(within);
-  const candidates = MOVEMENT_CANDIDATES.filter(within).length;
+  const all = useCandidates();
+  const candidates = all.filter(within).length;
   return (
     <div>
       <div className="flex h-[46px] items-center justify-between border-b border-rule px-[18px]">
@@ -68,7 +69,7 @@ export function ViewInfo({ onClose }: { onClose: () => void }) {
         <Line term="Centre Dec">{view ? formatDec(view.dec) : "—"}</Line>
         <Line term="Field of view">{view ? formatFov(view.fov) : "—"}</Line>
         <Line term="Candidates in view">
-          {MOVEMENT_CANDIDATES.length === 0 ? "None yet" : candidates.toLocaleString("en-US")}
+          {all.length === 0 ? "None yet" : candidates.toLocaleString("en-US")}
         </Line>
         <Line term="Test targets in view">{targets.length ? targets.map((target) => target.name).join(", ") : "None"}</Line>
       </dl>
