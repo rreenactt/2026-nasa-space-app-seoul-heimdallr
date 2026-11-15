@@ -70,6 +70,8 @@ export function ListenPanel(props: Props) {
     audio().stop();
   }, [audio, clearSchedules]);
   useEffect(() => () => clearSchedules(), [clearSchedules]);
+  // "Stop all sound", or leaving the tab, also cancels a scan that is still scheduled.
+  useEffect(() => audio().onStop(clearSchedules), [audio, clearSchedules]);
 
   const needAudio = () => {
     if (!audioOn) {
