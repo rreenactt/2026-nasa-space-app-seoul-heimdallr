@@ -5,7 +5,7 @@ import { TEST_TARGETS, type TestTarget } from "./test-targets";
 export type CandidateStatus = "noteworthy" | "needs-ratings" | "recommended" | "excluded";
 
 /**
- * One movement candidate from the detection pipeline (PLAN.md chapter 7, "후보 항목"). Fields follow the batch files
+ * One movement candidate from the detection pipeline (PLAN.md chapter 7, "candidate items"). Fields follow the batch files
  * the website will read (candidates/index.json); nothing here is computed in the browser.
  */
 export type MovementCandidate = EquatorialCoordinates & {

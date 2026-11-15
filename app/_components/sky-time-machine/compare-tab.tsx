@@ -55,32 +55,32 @@ export function CompareTab() {
     <div className="grid gap-3 pt-2">
       <TimelineStrip value={null} highlight={[a?.id, b?.id].filter(Boolean) as string[]} onSelect={(e) => setB(e.id)} />
       <div className="flex flex-wrap items-end gap-3">
-        <EpochSelect label="A (기준)" value={a?.id} onChange={setA} />
-        <EpochSelect label="B (비교)" value={b?.id} onChange={setB} />
-        <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as Mode)} aria-label="비교 방식">
-          <ToggleGroupItem value="blink">번갈아 보기</ToggleGroupItem>
-          <ToggleGroupItem value="side">좌우 비교</ToggleGroupItem>
+        <EpochSelect label="A (reference)" value={a?.id} onChange={setA} />
+        <EpochSelect label="B (comparison)" value={b?.id} onChange={setB} />
+        <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as Mode)} aria-label="Comparison mode">
+          <ToggleGroupItem value="blink">Blink</ToggleGroupItem>
+          <ToggleGroupItem value="side">Side by side</ToggleGroupItem>
         </ToggleGroup>
         {mode === "blink" && (
-          <NativeSelect size="sm" value={String(blinkMs)} onChange={(e) => setBlinkMs(Number(e.target.value))} aria-label="전환 간격">
-            <NativeSelectOption value="400">0.4초</NativeSelectOption>
-            <NativeSelectOption value="800">0.8초</NativeSelectOption>
-            <NativeSelectOption value="1500">1.5초</NativeSelectOption>
+          <NativeSelect size="sm" value={String(blinkMs)} onChange={(e) => setBlinkMs(Number(e.target.value))} aria-label="Blink interval">
+            <NativeSelectOption value="400">0.4 s</NativeSelectOption>
+            <NativeSelectOption value="800">0.8 s</NativeSelectOption>
+            <NativeSelectOption value="1500">1.5 s</NativeSelectOption>
           </NativeSelect>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">타임라인 막대를 누르면 B가 바뀝니다. 두 영상은 같은 하늘 격자이므로, 움직인 천체만 자리를 바꿉니다.</p>
+      <p className="text-xs text-muted-foreground">Click a timeline bar to change B. Both images share the same sky grid, so only objects that moved change position.</p>
 
       {a && b && (
         <p className="text-xs">
-          시간 간격 <span className="font-mono">{formatElapsed(b.timeStart - a.timeStart)}</span> · A {MISSIONS[a.mission].label} {a.wavelengthLabel} · B {MISSIONS[b.mission].label} {b.wavelengthLabel}
+          Time between <span className="font-mono">{formatElapsed(b.timeStart - a.timeStart)}</span> · A {MISSIONS[a.mission].label} {a.wavelengthLabel} · B {MISSIONS[b.mission].label} {b.wavelengthLabel}
         </p>
       )}
       {differentBand && (
         <Alert>
           <AlertTriangleIcon />
           <AlertDescription>
-            관측 대역·감도·해상도가 다릅니다. 위치 비교에만 쓰고, 밝기 차이를 변광으로 해석하지 마세요. 어떤 천체가 한쪽에만 보여도 감도나 파장 차이일 수 있습니다.
+            These observations differ in band, sensitivity and resolution. Use them only to compare positions, and do not read brightness differences as variability. An object seen in only one image may reflect a difference in sensitivity or wavelength.
           </AlertDescription>
         </Alert>
       )}
@@ -103,7 +103,7 @@ export function CompareTab() {
       )}
       {hover && (
         <p className="font-mono text-xs text-muted-foreground">
-          커서 RA {hover.ra.toFixed(5)}° Dec {hover.dec.toFixed(5)}° (두 영상의 같은 위치에 분홍 십자)
+          Cursor RA {hover.ra.toFixed(5)}° Dec {hover.dec.toFixed(5)}° (pink cross at the same position in both images)
         </p>
       )}
     </div>

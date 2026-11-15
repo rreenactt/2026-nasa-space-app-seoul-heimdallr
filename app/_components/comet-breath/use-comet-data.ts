@@ -149,7 +149,7 @@ export function useFrameBatch(concurrency = 8) {
   const cancel = useCallback(() => {
     runId.current++;
     setRunning(false);
-    setItems((prev) => prev.map((it) => (it.state === "loading" || it.state === "pending" ? { entry: it.entry, state: "error", message: "취소됨" } : it)));
+    setItems((prev) => prev.map((it) => (it.state === "loading" || it.state === "pending" ? { entry: it.entry, state: "error", message: "Canceled" } : it)));
   }, []);
 
   const run = useCallback(
@@ -174,7 +174,7 @@ export function useFrameBatch(concurrency = 8) {
             });
             update(i, { entry, state: "done", frame });
           } catch (e) {
-            update(i, { entry, state: "error", message: e instanceof Error ? e.message : "실패" });
+            update(i, { entry, state: "error", message: e instanceof Error ? e.message : "Failed" });
           }
         }
       };

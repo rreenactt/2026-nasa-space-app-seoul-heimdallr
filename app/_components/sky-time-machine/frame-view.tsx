@@ -29,7 +29,7 @@ export function FrameView({
   const gaia = useGaia(grid, showGaia);
 
   if (!epoch) {
-    return <div className="flex aspect-square items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">표시할 시점이 없습니다</div>;
+    return <div className="flex aspect-square items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">No date to show</div>;
   }
   const data = frame.data ? frameData(frame.data) : null;
   const mid = frame.data ? (frame.data.timeStart + frame.data.timeEnd) / 2 : (epoch.timeStart + epoch.timeEnd) / 2;
@@ -48,7 +48,7 @@ export function FrameView({
       {frame.isPending && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 text-xs text-white">
           <Spinner />
-          {MISSIONS[epoch.mission].label} 원본에서 이 영역만 받아 공통 격자로 맞추는 중…
+          {MISSIONS[epoch.mission].label}: fetching this area from the source images and aligning it to the shared grid…
         </div>
       )}
       {frame.isError && (
@@ -56,7 +56,7 @@ export function FrameView({
           <AlertCircleIcon className="size-4" />
           {frame.error.message}
           <Button size="xs" variant="secondary" onClick={() => frame.refetch()}>
-            다시 시도
+            Retry
           </Button>
         </div>
       )}

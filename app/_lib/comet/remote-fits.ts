@@ -185,7 +185,7 @@ export async function readRemoteCutout(fetchRange: RangeFetcher, ra: number, dec
   const fullWcs = readWcs(image);
   const p = skyToPixel(fullWcs, ra, dec);
   if (!p || p.x < -size / 2 || p.y < -size / 2 || p.x > W + size / 2 || p.y > H + size / 2) {
-    throw new OutsideDetectorError("요청한 좌표가 이 노출의 검출기 영역 밖입니다");
+    throw new OutsideDetectorError("The requested coordinates are outside this exposure's detector area");
   }
   const w = Math.min(size, W);
   const h = Math.min(size, H);

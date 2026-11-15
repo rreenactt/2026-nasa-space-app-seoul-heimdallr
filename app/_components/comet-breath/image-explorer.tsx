@@ -45,7 +45,7 @@ export function ImageExplorer() {
   const [compareKey, setCompareKey] = useState<string | null>(null);
   const [sameScale, setSameScale] = useState(true);
 
-  if (!selected) return <p className="py-8 text-muted-foreground">이 조건에 해당하는 관측이 없습니다.</p>;
+  if (!selected) return <p className="py-8 text-muted-foreground">No observations match these filters.</p>;
 
   const centerFor = (e: ObservationEntry): FrameCenter =>
     mode === "sky" && skyRef ? skyRef : { ra: e.cometRa, dec: e.cometDec };
@@ -81,25 +81,25 @@ export function ImageExplorer() {
             setMode(m);
             if (m === "sky" && !skyRef) centerOnComet();
           }}
-          aria-label="정렬 모드"
+          aria-label="Alignment mode"
         >
-          <ToggleGroupItem value="comet">혜성 중심</ToggleGroupItem>
-          <ToggleGroupItem value="sky">하늘 고정</ToggleGroupItem>
+          <ToggleGroupItem value="comet">Comet-centered</ToggleGroupItem>
+          <ToggleGroupItem value="sky">Fixed sky</ToggleGroupItem>
         </ToggleGroup>
-        <NativeSelect size="sm" value={display.stretch} onChange={(e) => setDisplay({ ...display, stretch: e.target.value as Stretch })} aria-label="밝기 스트레치">
+        <NativeSelect size="sm" value={display.stretch} onChange={(e) => setDisplay({ ...display, stretch: e.target.value as Stretch })} aria-label="Brightness stretch">
           <NativeSelectOption value="asinh">asinh</NativeSelectOption>
-          <NativeSelectOption value="linear">선형</NativeSelectOption>
-          <NativeSelectOption value="log">로그</NativeSelectOption>
+          <NativeSelectOption value="linear">Linear</NativeSelectOption>
+          <NativeSelectOption value="log">Log</NativeSelectOption>
         </NativeSelect>
-        <NativeSelect size="sm" value={String(display.clipHigh)} onChange={(e) => setDisplay({ ...display, clipHigh: Number(e.target.value) })} aria-label="상한 백분위">
+        <NativeSelect size="sm" value={String(display.clipHigh)} onChange={(e) => setDisplay({ ...display, clipHigh: Number(e.target.value) })} aria-label="Upper percentile">
           <NativeSelectOption value="99">99%</NativeSelectOption>
           <NativeSelectOption value="99.5">99.5%</NativeSelectOption>
           <NativeSelectOption value="99.9">99.9%</NativeSelectOption>
         </NativeSelect>
-        <ToggleSwitch label="황도광(ZODI) 빼기" checked={display.subtractZodi} onChange={(v) => setDisplay({ ...display, subtractZodi: v })} />
-        <ToggleSwitch label="불량 픽셀 표시" checked={display.showFlags} onChange={(v) => setDisplay({ ...display, showFlags: v })} />
-        <ToggleSwitch label="측광 영역" checked={display.showAperture} onChange={(v) => setDisplay({ ...display, showAperture: v })} />
-        <ToggleSwitch label="시간 비교" checked={compare} onChange={setCompare} />
+        <ToggleSwitch label="Subtract zodiacal light (ZODI)" checked={display.subtractZodi} onChange={(v) => setDisplay({ ...display, subtractZodi: v })} />
+        <ToggleSwitch label="Show bad pixels" checked={display.showFlags} onChange={(v) => setDisplay({ ...display, showFlags: v })} />
+        <ToggleSwitch label="Photometry aperture" checked={display.showAperture} onChange={(v) => setDisplay({ ...display, showAperture: v })} />
+        <ToggleSwitch label="Compare over time" checked={compare} onChange={setCompare} />
       </div>
 
       {mode === "sky" && (
@@ -112,23 +112,23 @@ export function ImageExplorer() {
             <Label htmlFor="sky-dec" className="text-xs">Dec (deg)</Label>
             <Input id="sky-dec" className="h-8 w-32 font-mono" value={decText} onChange={(e) => setDecText(e.target.value)} inputMode="decimal" />
           </div>
-          <Button size="sm" onClick={applySky}>좌표 적용</Button>
+          <Button size="sm" onClick={applySky}>Apply coordinates</Button>
           <Button size="sm" variant="outline" onClick={centerOnComet}>
-            <CrosshairIcon /> 현재 혜성 위치
+            <CrosshairIcon /> Current comet position
           </Button>
           <p className="w-full text-xs text-muted-foreground">
-            하늘 고정: 같은 하늘 좌표를 중심에 두므로 혜성이 이동합니다. 좌표가 해당 노출의 검출기 밖이면 영상이 없습니다.
+            Fixed sky: the same sky coordinates stay at the center, so the comet moves. If the coordinates fall outside an exposure’s detector, there is no image.
           </p>
         </div>
       )}
       {mode === "comet" && (
-        <p className="text-xs text-muted-foreground">혜성 중심: 관측별 예측 혜성 좌표를 중심에 맞춰 코마 모양을 비교합니다. 배경 별은 움직입니다.</p>
+        <p className="text-xs text-muted-foreground">Comet-centered: each observation is centered on the predicted comet position to compare the coma shape. Background stars move.</p>
       )}
 
       {compare && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground">비교 대상 (같은 검출기 {selected.detector})</span>
-          <NativeSelect size="sm" value={compareEntry?.key ?? ""} onChange={(e) => setCompareKey(e.target.value)} aria-label="비교할 관측">
+          <span className="text-xs text-muted-foreground">Compare with (same detector {selected.detector})</span>
+          <NativeSelect size="sm" value={compareEntry?.key ?? ""} onChange={(e) => setCompareKey(e.target.value)} aria-label="Observation to compare">
             {(Object.keys(PERIODS) as PeriodId[]).map((p) => (
               <NativeSelectOptGroup key={p} label={PERIODS[p].label}>
                 {compareCandidates
@@ -141,7 +141,7 @@ export function ImageExplorer() {
               </NativeSelectOptGroup>
             ))}
           </NativeSelect>
-          <ToggleSwitch label="같은 밝기 범위" checked={sameScale} onChange={setSameScale} />
+          <ToggleSwitch label="Same brightness range" checked={sameScale} onChange={setSameScale} />
         </div>
       )}
 
@@ -232,7 +232,7 @@ function FramePanel({
     return (
       <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed text-xs text-muted-foreground">
         <Spinner />
-        {entry.obsId} {entry.detector} 원본 FITS에서 혜성 주변 행만 읽는 중
+        Reading only the rows around the comet from the {entry.obsId} {entry.detector} source FITS
       </div>
     );
   }
@@ -241,9 +241,9 @@ function FramePanel({
       <Alert variant="destructive">
         <AlertCircleIcon />
         <AlertDescription>
-          {tag}: {frame.error?.message ?? "영상을 읽지 못했습니다"}
+          {tag}: {frame.error?.message ?? "Could not read the image"}
           <Button size="xs" variant="outline" className="mt-1" onClick={() => frame.refetch()}>
-            다시 시도
+            Try again
           </Button>
         </AlertDescription>
       </Alert>
@@ -268,19 +268,19 @@ function FramePanel({
         label={`${tag} · ${formatUtc(entry.utcStart)} · ${entry.detector}`}
       />
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-        <dt className="text-muted-foreground">혜성 위치 파장</dt>
+        <dt className="text-muted-foreground">Wavelength at comet</dt>
         <dd className="font-mono">
-          {wave ? `${wave.wavelength.toFixed(3)} µm (대역폭 ${wave.bandwidth.toFixed(3)})` : "—"}
-          {waveMismatch && <Badge variant="outline" className="ml-2">A와 파장 다름</Badge>}
+          {wave ? `${wave.wavelength.toFixed(3)} µm (bandwidth ${wave.bandwidth.toFixed(3)})` : "—"}
+          {waveMismatch && <Badge variant="outline" className="ml-2">Wavelength differs from A</Badge>}
         </dd>
-        <dt className="text-muted-foreground">측광 (조리개 {aperture.rAp}px)</dt>
+        <dt className="text-muted-foreground">Photometry (aperture {aperture.rAp}px)</dt>
         <dd className="font-mono">
           {photometry ? `${photometry.fluxMjy.toFixed(2)} ± ${photometry.errorMjy.toFixed(2)} mJy (S/N ${photometry.snr.toFixed(1)})` : "—"}
         </dd>
-        <dt className="text-muted-foreground">품질</dt>
+        <dt className="text-muted-foreground">Quality</dt>
         <dd>
           {photometry?.quality === "ok" ? (
-            <Badge variant="secondary">양호</Badge>
+            <Badge variant="secondary">Good</Badge>
           ) : (
             photometry?.reasons.map((r) => (
               <Badge key={r} variant="outline" className="mr-1">
@@ -293,7 +293,7 @@ function FramePanel({
         <dd className="font-mono">
           {decoded.payload.header.psfFwhmArcsec?.toFixed(1) ?? "—"}″ · L2 {decoded.payload.header.l2Dqa ?? "—"}
         </dd>
-        <dt className="text-muted-foreground">밝기 범위 (표시용)</dt>
+        <dt className="text-muted-foreground">Brightness range (display only)</dt>
         <dd className="font-mono">
           {(rangeOverride ?? ownRange).lo.toFixed(3)} – {(rangeOverride ?? ownRange).hi.toFixed(3)} {decoded.payload.header.bunit}
         </dd>
@@ -303,9 +303,9 @@ function FramePanel({
 }
 
 export const REASON_LABEL: Record<string, string> = {
-  edge: "영상 가장자리",
-  masked: "불량 픽셀 포함",
+  edge: "Image edge",
+  masked: "Includes bad pixels",
   "low-snr": "S/N < 3",
-  "dqa-fail": "DQA 불합격",
-  "no-wave": "파장 정보 없음",
+  "dqa-fail": "Failed DQA",
+  "no-wave": "No wavelength info",
 };
