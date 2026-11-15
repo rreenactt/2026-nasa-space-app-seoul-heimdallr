@@ -343,7 +343,7 @@ review.sort,Sort,정렬,Review queue: label of the sort menu (read by screen rea
 review.sortPriority,Priority,검토 순서,Review queue sort option: the review order (noteworthy first)
 review.synthetic,synthetic,합성 데이터,Review queue row text: the candidate is synthetic test data
 review.tabInView,In view,시야 안,Review queue tab: candidates inside the current view
-review.tabMostRated,Most rated,평가 많은 곳,Review queue tab: sky cells with the most ratings (decision #58)
+review.tabMostRated,Most rated,Most rated,Review queue tab: sky cells with the most ratings (decision #58). Kept in English in every language
 review.tabRecent,Recent,최근,Review queue tab: places this browser opened
 review.tabWholeSky,Whole sky,전체 하늘,Review queue tab: candidates on the whole sky
 review.tabsLabel,Which places,볼 곳,Review queue: aria-label of the In view / Whole sky / Recent / Most rated tabs

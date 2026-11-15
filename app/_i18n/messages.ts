@@ -771,7 +771,7 @@ export const ko: Messages = {
   "review.sortPriority": "검토 순서",
   "review.synthetic": "합성 데이터",
   "review.tabInView": "시야 안",
-  "review.tabMostRated": "평가 많은 곳",
+  "review.tabMostRated": "Most rated",
   "review.tabRecent": "최근",
   "review.tabWholeSky": "전체 하늘",
   "review.tabsLabel": "볼 곳",
