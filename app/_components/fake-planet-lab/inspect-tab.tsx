@@ -13,8 +13,10 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CHECK_PARAMS, decodeBits, type NativeFrame } from "@/app/_lib/fpl/checks";
 import { FLAG_CATEGORIES } from "@/app/_lib/fpl/flags";
 import type { SkyGrid } from "@/app/_lib/sky/types";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { CheckPanel } from "./check-panel";
 import { mjdIso, useFpl, visitsOf } from "./fpl-state";
+import { flagExplain, flagLabel } from "./fpl-text";
 import { LayeredCanvas, type PixelProbe } from "./layered-canvas";
 import { sharedDisplayRange, toNative, useFrames } from "./use-fpl-data";
 
@@ -22,31 +24,32 @@ const GRID_FOV_ARCMIN = 4;
 const GRID_N = 160;
 
 function ObservationPicker() {
+  const t = useT();
   const { search, detector, setDetector, selected, toggleExposure } = useFpl();
   const exposures = search.data?.exposures ?? [];
   const dets = [...new Set(exposures.map((e) => e.detector))].sort();
   const visits = visitsOf(exposures.filter((e) => e.detector === detector));
-  if (search.isPending) return <p className="flex items-center gap-2 text-xs text-muted-foreground"><Spinner className="size-3" /> Searching SPHEREx DR1 observations at this position…</p>;
-  if (search.isError) return <p className="text-xs text-destructive">Search failed: {search.error.message}</p>;
-  if (!exposures.length) return <p className="text-xs text-muted-foreground">No SPHEREx DR1 observation covers this position.</p>;
+  if (search.isPending) return <p className="flex items-center gap-2 text-xs text-muted-foreground"><Spinner className="size-3" /> {t("fpl.searching")}</p>;
+  if (search.isError) return <p className="text-xs text-destructive">{t("fpl.searchFailed", { message: search.error.message })}</p>;
+  if (!exposures.length) return <p className="text-xs text-muted-foreground">{t("fpl.noObservation")}</p>;
   return (
     <div className="grid gap-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        <Label className="text-xs">Detector</Label>
+        <Label className="text-xs">{t("fpl.detector")}</Label>
         <NativeSelect size="sm" value={detector} onChange={(e) => setDetector(e.target.value)}>
           {dets.map((d) => (
             <NativeSelectOption key={d} value={d}>
-              {d} · {visitsOf(exposures.filter((e) => e.detector === d)).length} visit(s)
+              {t("fpl.detectorVisits", { detector: d, n: visitsOf(exposures.filter((e) => e.detector === d)).length })}
             </NativeSelectOption>
           ))}
         </NativeSelect>
-        <span className="text-muted-foreground">Pick up to 4 exposures. The first one (★) is measured; the others are comparisons.</span>
+        <span className="text-muted-foreground">{t("fpl.pickHint")}</span>
       </div>
       {visits.length === 1 && (
         <Alert>
           <AlertCircleIcon />
           <AlertDescription>
-            Additional analysis needed: only one SPHEREx visit covers this position, so SPHEREx visits cannot be compared with each other here. Exposures within the visit are minutes apart and at different wavelengths.
+            {t("fpl.oneVisitAlert")}
           </AlertDescription>
         </Alert>
       )}
@@ -54,7 +57,7 @@ function ObservationPicker() {
         {visits.map((v, vi) => (
           <div key={v[0].key} className="flex flex-wrap items-center gap-1">
             <span className="w-40 shrink-0 text-muted-foreground">
-              Visit {vi + 1} · {mjdIso(v[0].tStart).slice(0, 10)}
+              {t("fpl.visitDate", { n: vi + 1, date: mjdIso(v[0].tStart).slice(0, 10) })}
             </span>
             {v.map((e) => {
               const idx = selected.findIndex((s) => s.key === e.key);
@@ -63,7 +66,7 @@ function ObservationPicker() {
                   key={e.key}
                   type="button"
                   onClick={() => toggleExposure(e)}
-                  title={`${e.obsId} ${e.detector} · ${mjdIso(e.tStart)} · detector range ${e.emMinUm.toFixed(2)}–${e.emMaxUm.toFixed(2)} µm`}
+                  title={t("fpl.exposureTitle", { obsId: e.obsId, detector: e.detector, date: mjdIso(e.tStart), lo: e.emMinUm.toFixed(2), hi: e.emMaxUm.toFixed(2) })}
                   className={`rounded border px-1.5 py-0.5 font-mono ${idx === 0 ? "border-primary bg-primary text-primary-foreground" : idx > 0 ? "border-primary bg-primary/15" : "hover:bg-muted"}`}
                 >
                   {idx === 0 && "★ "}
@@ -79,6 +82,7 @@ function ObservationPicker() {
 }
 
 export function InspectTab() {
+  const t = useT();
   const { target, selected, setPrimary, candidate, setCandidate, layers, setLayer, opacity, setOpacity } = useFpl();
   const results = useFrames(selected, target.ra, target.dec);
   const [mode, setMode] = useState<"side" | "blink">("side");
@@ -93,8 +97,8 @@ export function InspectTab() {
 
   useEffect(() => {
     if (mode !== "blink" || loaded.length < 2) return;
-    const t = setInterval(() => setBlinkIdx((i) => (i + 1) % loaded.length), 900);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setBlinkIdx((i) => (i + 1) % loaded.length), 900);
+    return () => clearInterval(timer);
   }, [mode, loaded.length]);
 
   const primaryPayload = results[0]?.data;
@@ -125,15 +129,15 @@ export function InspectTab() {
     if (r.isPending) {
       return (
         <div key={e.key} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-md border border-dashed text-xs text-muted-foreground">
-          <Spinner /> Reading {e.obsId} {e.detector} (byte ranges of the original file)…
+          <Spinner /> {t("fpl.readingExposure", { obsId: e.obsId, detector: e.detector })}
         </div>
       );
     }
     if (!f) {
       return (
         <div key={e.key} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-md border border-dashed p-3 text-center text-xs text-destructive">
-          {r.error?.message ?? "Failed"}
-          <Button size="xs" variant="outline" onClick={() => r.refetch()}>Retry</Button>
+          {r.error?.message ?? t("fpl.failed")}
+          <Button size="xs" variant="outline" onClick={() => r.refetch()}>{t("fpl.retry")}</Button>
         </div>
       );
     }
@@ -153,7 +157,7 @@ export function InspectTab() {
         />
         {i > 0 && (
           <Button size="xs" variant="ghost" className="w-fit" onClick={() => setPrimary(e.key)}>
-            <StarIcon /> Make primary
+            <StarIcon /> {t("fpl.makePrimary")}
           </Button>
         )}
       </div>
@@ -167,10 +171,10 @@ export function InspectTab() {
         <div className="grid content-start gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as "side" | "blink")}>
-              <ToggleGroupItem value="side">Side by side</ToggleGroupItem>
-              <ToggleGroupItem value="blink" disabled={loaded.length < 2}>Blink</ToggleGroupItem>
+              <ToggleGroupItem value="side">{t("fpl.sideBySide")}</ToggleGroupItem>
+              <ToggleGroupItem value="blink" disabled={loaded.length < 2}>{t("blink.blink")}</ToggleGroupItem>
             </ToggleGroup>
-            <span className="text-xs text-muted-foreground">Same sky grid ({GRID_FOV_ARCMIN}′, north up) and one shared stretch on IMAGE − ZODI. Pixels are original values, not interpolated.</span>
+            <span className="text-xs text-muted-foreground">{t("fpl.gridNote", { fov: GRID_FOV_ARCMIN })}</span>
           </div>
           {mode === "side" ? (
             <div className={`grid gap-2 ${selected.length > 1 ? "sm:grid-cols-2" : "max-w-md"}`}>{selected.map((_, i) => renderFrame(i))}</div>
@@ -179,29 +183,40 @@ export function InspectTab() {
           )}
           <p className="min-h-4 font-mono text-[11px] text-muted-foreground">
             {probe
-              ? `RA ${probe.ra.toFixed(5)} Dec ${probe.dec.toFixed(5)} · pixel (${probe.x}, ${probe.y}) detector (${probe.detX}, ${probe.detY}) · ${probe.value.toFixed(3)} ± ${probe.sigma.toFixed(3)} MJy/sr · FLAGS ${probe.flagValue}${probe.flagNames.length ? ` = ${probe.flagNames.join(" + ")}` : ""}`
-              : "Hover an image to read the original pixel value, its uncertainty and its decoded flags."}
+              ? t(probe.flagNames.length ? "fpl.probeFlags" : "fpl.probe", {
+                  ra: probe.ra.toFixed(5),
+                  dec: probe.dec.toFixed(5),
+                  x: probe.x,
+                  y: probe.y,
+                  detX: probe.detX,
+                  detY: probe.detY,
+                  value: probe.value.toFixed(3),
+                  sigma: probe.sigma.toFixed(3),
+                  flags: probe.flagValue,
+                  names: probe.flagNames.join(" + "),
+                })
+              : t("fpl.probeHint")}
           </p>
 
           <div className="grid gap-2 rounded-md border p-3 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium">Quality layers (from the FLAGS header of ★)</span>
+              <span className="font-medium">{t("fpl.layersTitle")}</span>
               <div className="flex w-48 items-center gap-2">
-                <span className="text-muted-foreground">Opacity</span>
+                <span className="text-muted-foreground">{t("fpl.opacity")}</span>
                 <Slider min={0.1} max={0.9} step={0.05} value={[opacity]} onValueChange={(v) => setOpacity(Array.isArray(v) ? v[0] : v)} />
               </div>
             </div>
             <div className="grid gap-1 sm:grid-cols-2">
               {FLAG_CATEGORIES.map((c) => (
-                <Label key={c.id} className="flex items-center gap-2 font-normal" title={c.explain}>
+                <Label key={c.id} className="flex items-center gap-2 font-normal" title={flagExplain(t, c)}>
                   <Switch size="sm" checked={Boolean(layers[c.id])} onCheckedChange={(v) => setLayer(c.id, v)} />
                   <span className="size-2.5 rounded-sm" style={{ background: `rgb(${c.color})` }} />
-                  {c.label}
+                  {flagLabel(t, c)}
                   <span className="ml-auto font-mono text-muted-foreground">{layerCounts[c.id] ?? 0} px</span>
                 </Label>
               ))}
             </div>
-            <p className="text-muted-foreground">Turn layers off to see the signal underneath — nothing is masked out of the image. Only the first matching layer tints a pixel; hover for all bits.</p>
+            <p className="text-muted-foreground">{t("fpl.layersNote")}</p>
           </div>
         </div>
         <div className="lg:max-h-[70dvh] lg:overflow-y-auto">

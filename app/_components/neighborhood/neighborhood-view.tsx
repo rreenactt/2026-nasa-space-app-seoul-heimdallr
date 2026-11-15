@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { mjdToDecimalYear, modelStatus, skyAt } from "@/app/_lib/nim/motion";
 import { useSpherexSearch } from "../fake-planet-lab/use-fpl-data";
 import { DataTab } from "./data-tab";
@@ -59,28 +60,30 @@ function ObjectList() {
 }
 
 function TimeBar() {
+  const t = useT();
   const { year, setYear, mode, setMode } = useNim();
   const r = RANGES[mode];
   return (
     <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <ToggleGroup variant="outline" size="sm" spacing={0} value={[mode]} onValueChange={(v) => v[0] && setMode(v[0] as RangeMode)}>
-          <ToggleGroupItem value="near">Near the observations</ToggleGroupItem>
-          <ToggleGroupItem value="extrapolation">Extrapolation</ToggleGroupItem>
+          <ToggleGroupItem value="near">{t("nim.modeNear")}</ToggleGroupItem>
+          <ToggleGroupItem value="extrapolation">{t("nim.modeExtrapolation")}</ToggleGroupItem>
         </ToggleGroup>
         <span className="font-mono text-sm">{formatYear(year)}</span>
-        <Button size="xs" variant="ghost" onClick={() => setYear(2025.8)}>Now (2025.8)</Button>
-        <span className="text-muted-foreground">{r.label}</span>
+        <Button size="xs" variant="ghost" onClick={() => setYear(2025.8)}>{t("nim.now")}</Button>
+        <span className="text-muted-foreground">{t(r.label)}</span>
       </div>
-      <Slider min={r.min} max={r.max} step={r.step} value={[year]} onValueChange={(v) => setYear(Array.isArray(v) ? v[0] : v)} aria-label="Year" />
+      <Slider min={r.min} max={r.max} step={r.step} value={[year]} onValueChange={(v) => setYear(Array.isArray(v) ? v[0] : v)} aria-label={t("nim.year")} />
       {mode === "extrapolation" && (
-        <p className="text-amber-700 dark:text-amber-400">Educational extrapolation: straight lines over thousands of years ignore the Galaxy&apos;s gravity and companions. Treat positions as illustrative.</p>
+        <p className="text-amber-700 dark:text-amber-400">{t("nim.extrapolationWarning")}</p>
       )}
     </div>
   );
 }
 
 function Body() {
+  const t = useT();
   const { catalog, selected, models, objects, selectedId, setSelectedId, year, mode, showUncertainty, setShowUncertainty, assumedRv, focusNote } = useNim();
   const [tab, setTab] = useState("map");
   const [hover, setHover] = useState<string | null>(null);
@@ -90,27 +93,27 @@ function Body() {
   const observationYears = (search.data?.exposures ?? []).map((e) => mjdToDecimalYear((e.tStart + e.tEnd) / 2));
   const hovered = objects.find((o) => o.id === hover);
 
-  if (catalog.isPending) return <p className="flex items-center gap-2 py-8 text-muted-foreground"><Spinner /> Querying Gaia DR3 for stars within about 3.6 pc…</p>;
-  if (catalog.isError) return <p className="py-8 text-destructive">Could not load the catalog: {catalog.error.message}</p>;
+  if (catalog.isPending) return <p className="flex items-center gap-2 py-8 text-muted-foreground"><Spinner /> {t("nim.loadingCatalog")}</p>;
+  if (catalog.isError) return <p className="py-8 text-destructive">{t("nim.catalogFailed", { message: catalog.error.message })}</p>;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
-      {focusNote && <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs">{focusNote}</p>}
+      {focusNote && <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs">{t(focusNote.key, focusNote.values)}</p>}
       <TimeBar />
       <div className="grid gap-3 md:grid-cols-[14rem_minmax(0,1fr)]">
         <div className="grid content-start gap-2">
           <ObjectList />
           <div className="grid gap-1 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: STATUS_COLOR["full-3d"] }} /> All three motions measured</span>
-            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: STATUS_COLOR["assumed-rv"] }} /> Radial velocity assumed (dashed path)</span>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: STATUS_COLOR["full-3d"] }} /> {t("nim.legendFull3d")}</span>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: STATUS_COLOR["assumed-rv"] }} /> {t("nim.legendAssumedRv")}</span>
           </div>
         </div>
         <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
           <TabsList className="w-full">
-            <TabsTrigger value="map"><BoxIcon /> 3D map</TabsTrigger>
-            <TabsTrigger value="sky"><GlobeIcon /> Sky view</TabsTrigger>
+            <TabsTrigger value="map"><BoxIcon /> {t("nim.tabMap")}</TabsTrigger>
+            <TabsTrigger value="sky"><GlobeIcon /> {t("nim.tabSky")}</TabsTrigger>
             <TabsTrigger value="spherex"><TelescopeIcon /> SPHEREx</TabsTrigger>
-            <TabsTrigger value="data"><DatabaseIcon /> Data & model</TabsTrigger>
+            <TabsTrigger value="data"><DatabaseIcon /> {t("nim.tabData")}</TabsTrigger>
           </TabsList>
           <TabsContent value="map">
             <div className="relative mt-2 aspect-[16/10] w-full overflow-hidden rounded-md">
@@ -130,12 +133,12 @@ function Body() {
                 {m && !hovered && ` · ${skyAt(m, year).distancePc.toFixed(3)} pc`}
               </div>
               <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-[11px] text-white/80">
-                Sun at centre · rings 1–4 pc in the celestial equator plane · north celestial pole up · grey = past, colour = future (model)
+                {t("nim.mapLegend")}
               </div>
             </div>
             <Label className="mt-2 flex items-center gap-2 text-xs font-normal">
               <Switch size="sm" checked={showUncertainty} onCheckedChange={setShowUncertainty} />
-              Show the spread of the selected object at this year from measurement errors (pink)
+              {t("nim.showSpread")}
             </Label>
           </TabsContent>
           <TabsContent value="sky">

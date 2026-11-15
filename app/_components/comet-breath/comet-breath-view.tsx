@@ -6,6 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { CometStateProvider } from "./comet-state";
 import { EvidencePanel } from "./evidence-panel";
 import { ImageExplorer } from "./image-explorer";
@@ -16,11 +18,11 @@ import { useObservationIndex } from "./use-comet-data";
 
 export type CometTab = "images" | "spectrum" | "rates" | "evidence";
 
-const TABS: { id: CometTab; label: string; icon: React.ComponentType }[] = [
-  { id: "images", label: "Images", icon: ImageIcon },
-  { id: "spectrum", label: "Spectrum", icon: LineChartIcon },
-  { id: "rates", label: "Production rates", icon: ScaleIcon },
-  { id: "evidence", label: "Evidence", icon: ScrollTextIcon },
+const TABS: { id: CometTab; label: MessageKey; icon: React.ComponentType }[] = [
+  { id: "images", label: "comet.tabImages", icon: ImageIcon },
+  { id: "spectrum", label: "comet.tabSpectrum", icon: LineChartIcon },
+  { id: "rates", label: "comet.tabRates", icon: ScaleIcon },
+  { id: "evidence", label: "comet.tabEvidence", icon: ScrollTextIcon },
 ];
 
 /**
@@ -38,18 +40,19 @@ export function CometBreathView({ defaultTab = "images" }: { defaultTab?: CometT
 }
 
 function ViewBody({ defaultTab }: { defaultTab: CometTab }) {
+  const t = useT();
   const index = useObservationIndex();
   const [tab, setTabState] = useState<CometTab>(defaultTab);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const setTab = (t: CometTab) => {
-    setTabState(t);
+  const setTab = (next: CometTab) => {
+    setTabState(next);
     scrollRef.current?.scrollTo({ top: 0 });
   };
 
   if (index.isPending) {
     return (
       <div className="flex items-center gap-2 py-10 text-muted-foreground">
-        <Spinner /> Loading the IRSA observation list…
+        <Spinner /> {t("comet.loadingList")}
       </div>
     );
   }
@@ -57,11 +60,11 @@ function ViewBody({ defaultTab }: { defaultTab: CometTab }) {
     return (
       <Alert variant="destructive">
         <AlertCircleIcon />
-        <AlertTitle>Could not load the observation list</AlertTitle>
+        <AlertTitle>{t("comet.listError")}</AlertTitle>
         <AlertDescription>
           {index.error.message}
           <Button variant="outline" size="sm" className="mt-2" onClick={() => index.refetch()}>
-            Try again
+            {t("analyses.tryAgain")}
           </Button>
         </AlertDescription>
       </Alert>
@@ -76,7 +79,7 @@ function ViewBody({ defaultTab }: { defaultTab: CometTab }) {
           {TABS.map(({ id, label, icon: Icon }) => (
             <TabsTrigger key={id} value={id}>
               <Icon />
-              <span className="max-sm:sr-only">{label}</span>
+              <span className="max-sm:sr-only">{t(label)}</span>
             </TabsTrigger>
           ))}
         </TabsList>

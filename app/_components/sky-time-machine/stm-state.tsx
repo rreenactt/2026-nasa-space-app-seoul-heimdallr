@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, useState } from "react";
 import { EXAMPLES, MISSION_ORDER, MISSIONS } from "@/app/_lib/sky/missions";
 import { mjdToDate } from "@/app/_lib/sky/wcs";
 import type { Epoch, MissionId, SkyGrid } from "@/app/_lib/sky/types";
+import type { Translate } from "@/app/_i18n/i18n-provider";
 import { useMissionSearches } from "./use-sky-data";
 
 export const GRID_N = 256;
@@ -121,13 +122,17 @@ export function formatPeriod(start: number, end: number) {
 }
 
 /** "3 yr 2 mo" style elapsed time between two MJDs. */
-export function formatElapsed(days: number) {
+export function formatElapsed(days: number, t: Translate) {
   const d = Math.abs(days);
-  if (d < 1) return `${(d * 24).toFixed(1)} h`;
-  if (d < 60) return `${Math.round(d)} d`;
+  if (d < 1) return t("stm.elapsedHours", { n: (d * 24).toFixed(1) });
+  if (d < 60) return t("stm.elapsedDays", { n: Math.round(d) });
   const years = Math.floor(d / 365.25);
   const months = Math.round((d - years * 365.25) / 30.44);
-  return years > 0 ? `${years} yr${months ? ` ${months} mo` : ""}` : `${months} mo`;
+  return years > 0
+    ? months
+      ? t("stm.elapsedYearsMonths", { y: years, m: months })
+      : t("stm.elapsedYears", { y: years })
+    : t("stm.elapsedMonths", { m: months });
 }
 
 export const MISSION_COLOR: Record<MissionId, string> = {

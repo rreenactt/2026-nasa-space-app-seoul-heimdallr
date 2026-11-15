@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { ClockIcon, Columns2Icon, FootprintsIcon, ScrollTextIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { CompareTab } from "./compare-tab";
 import { EvidenceTab } from "./evidence-tab";
 import { MotionTab } from "./motion-tab";
@@ -12,11 +14,11 @@ import { TimelineTab } from "./timeline-tab";
 
 type StmTab = "timeline" | "compare" | "motion" | "evidence";
 
-const TABS: { id: StmTab; label: string; icon: React.ComponentType }[] = [
-  { id: "timeline", label: "Timeline", icon: ClockIcon },
-  { id: "compare", label: "Compare two dates", icon: Columns2Icon },
-  { id: "motion", label: "Motion", icon: FootprintsIcon },
-  { id: "evidence", label: "Evidence", icon: ScrollTextIcon },
+const TABS: { id: StmTab; label: MessageKey; icon: React.ComponentType }[] = [
+  { id: "timeline", label: "stm.tabTimeline", icon: ClockIcon },
+  { id: "compare", label: "stm.tabCompare", icon: Columns2Icon },
+  { id: "motion", label: "stm.tabMotion", icon: FootprintsIcon },
+  { id: "evidence", label: "stm.tabEvidence", icon: ScrollTextIcon },
 ];
 
 /**
@@ -34,10 +36,11 @@ export function SkyTimeMachineView({ initialTarget }: { initialTarget?: Target }
 }
 
 function Body() {
+  const t = useT();
   const [tab, setTabState] = useState<StmTab>("timeline");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const setTab = (t: StmTab) => {
-    setTabState(t);
+  const setTab = (next: StmTab) => {
+    setTabState(next);
     scrollRef.current?.scrollTo({ top: 0 });
   };
   return (
@@ -48,7 +51,7 @@ function Body() {
           {TABS.map(({ id, label, icon: Icon }) => (
             <TabsTrigger key={id} value={id}>
               <Icon />
-              <span className="max-sm:sr-only">{label}</span>
+              <span className="max-sm:sr-only">{t(label)}</span>
             </TabsTrigger>
           ))}
         </TabsList>

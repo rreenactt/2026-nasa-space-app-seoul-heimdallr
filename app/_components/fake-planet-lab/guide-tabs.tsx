@@ -5,15 +5,25 @@ import { CopyIcon, DownloadIcon, Trash2Icon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { CHECK_PARAMS, decodeBits } from "@/app/_lib/fpl/checks";
 import { FLAG_CATEGORIES, MEASUREMENT_EXCLUDE } from "@/app/_lib/fpl/flags";
 import { mjdIso, useFpl } from "./fpl-state";
+import { flagExplain, flagLabel, JUDGMENT_CELL, richText, storedVerdictText, targetName } from "./fpl-text";
 import { toNative, useFrames } from "./use-fpl-data";
 
-const ROLE_LABEL = { exclude: "Excluded from measurement", warning: "Contamination warning", context: "Look closer", info: "Informational", unknown: "Not interpreted" } as const;
+const ROLE_LABEL: Record<"exclude" | "warning" | "context" | "info" | "unknown", MessageKey> = {
+  exclude: "fpl.roleExclude",
+  warning: "fpl.roleWarning",
+  context: "fpl.roleContext",
+  info: "fpl.roleInfo",
+  unknown: "fpl.roleUnknown",
+};
 
 /** Bit table read from the primary file's FLAGS header (MSKNnnnn / MSKDnnnn), with counts in the cutout. */
 export function FlagGuideTab() {
+  const t = useT();
   const { selected, target } = useFpl();
   const results = useFrames(selected.slice(0, 1), target.ra, target.dec);
   const frame = results[0]?.data ? toNative(results[0].data) : null;
@@ -25,24 +35,20 @@ export function FlagGuideTab() {
       return { ...b, count: n };
     });
   }, [frame]);
-  if (!frame) return <p className="pt-2 text-sm text-muted-foreground">Load an observation in the Inspect tab first.</p>;
+  if (!frame) return <p className="pt-2 text-sm text-muted-foreground">{t("fpl.loadFirst")}</p>;
   return (
     <div className="grid gap-3 pt-2 text-xs">
-      <p>
-        FLAGS is a bit field: one pixel can carry several states at once. Bit numbers and names below come from this file&apos;s header (
-        <span className="font-mono">{frame.payload.key}</span>, {frame.payload.release}), not from a hard-coded list. A flag means the pipeline marked an
-        effect there; it is not a verdict that a dot is fake.
-      </p>
+      <p>{richText(t("fpl.flagsIntro", { release: frame.payload.release }), { file: <span className="font-mono">{frame.payload.key}</span> })}</p>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Bit</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Header description</TableHead>
-              <TableHead>Layer</TableHead>
-              <TableHead>How this tool uses it</TableHead>
-              <TableHead className="text-right">Pixels in cutout</TableHead>
+              <TableHead>{t("fpl.colBit")}</TableHead>
+              <TableHead>{t("fpl.colName")}</TableHead>
+              <TableHead>{t("fpl.colHeaderDescription")}</TableHead>
+              <TableHead>{t("fpl.colLayer")}</TableHead>
+              <TableHead>{t("fpl.colUse")}</TableHead>
+              <TableHead className="text-right">{t("fpl.colPixels")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -54,11 +60,11 @@ export function FlagGuideTab() {
                 <TableCell>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="size-2.5 rounded-sm" style={{ background: `rgb(${b.category.color})` }} />
-                    {b.category.label}
+                    {flagLabel(t, b.category)}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">{MEASUREMENT_EXCLUDE.includes(b.name) ? "Excluded from S/N" : ROLE_LABEL[b.category.role]}</Badge>
+                  <Badge variant="outline">{MEASUREMENT_EXCLUDE.includes(b.name) ? t("fpl.excludedFromSnr") : t(ROLE_LABEL[b.category.role])}</Badge>
                 </TableCell>
                 <TableCell className="text-right font-mono">{b.count}</TableCell>
               </TableRow>
@@ -69,7 +75,7 @@ export function FlagGuideTab() {
       <ul className="grid gap-1">
         {FLAG_CATEGORIES.map((c) => (
           <li key={c.id}>
-            <span className="font-medium">{c.label}</span> — {c.explain}
+            <span className="font-medium">{flagLabel(t, c)}</span> — {flagExplain(t, c)}
           </li>
         ))}
       </ul>
@@ -78,6 +84,7 @@ export function FlagGuideTab() {
 }
 
 export function RecordsTab() {
+  const t = useT();
   const { records, removeRecord } = useFpl();
   const [copied, setCopied] = useState(false);
   const json = JSON.stringify({ tool: "Fake Planet Lab", rules: CHECK_PARAMS.version, exportedAt: new Date().toISOString(), records }, null, 2);
@@ -102,26 +109,26 @@ export function RecordsTab() {
     <div className="grid gap-3 pt-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" onClick={download} disabled={!records.length}>
-          <DownloadIcon /> Download JSON
+          <DownloadIcon /> {t("fpl.downloadJson")}
         </Button>
         <Button size="sm" variant="outline" onClick={copy} disabled={!records.length}>
-          <CopyIcon /> {copied ? "Copied" : "Copy JSON"}
+          <CopyIcon /> {copied ? t("common.copied") : t("fpl.copyJson")}
         </Button>
-        <span className="text-muted-foreground">Records live only in this tab. Nothing is sent to a server. Each record holds coordinates, observation IDs, check results, your judgment and source URLs.</span>
+        <span className="text-muted-foreground">{t("fpl.recordsNote")}</span>
       </div>
       {!records.length ? (
-        <p className="text-muted-foreground">No records yet. Inspect a position and press “Save record”.</p>
+        <p className="text-muted-foreground">{t("fpl.noRecords")}</p>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Saved</TableHead>
-                <TableHead>Position</TableHead>
-                <TableHead>Observation (★)</TableHead>
-                <TableHead>Checks</TableHead>
-                <TableHead>Your judgment</TableHead>
-                <TableHead>Note</TableHead>
+                <TableHead>{t("fpl.colSaved")}</TableHead>
+                <TableHead>{t("fpl.colPosition")}</TableHead>
+                <TableHead>{t("fpl.colObservation")}</TableHead>
+                <TableHead>{t("fpl.colChecks")}</TableHead>
+                <TableHead>{t("fpl.yourJudgment")}</TableHead>
+                <TableHead>{t("fpl.colNote")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -131,11 +138,11 @@ export function RecordsTab() {
                   <TableCell className="font-mono">{r.createdAt.slice(11, 19)}</TableCell>
                   <TableCell className="font-mono">{r.candidate.ra.toFixed(5)}, {r.candidate.dec.toFixed(5)}</TableCell>
                   <TableCell className="font-mono">{r.primaryKey}</TableCell>
-                  <TableCell>{r.verdict}</TableCell>
-                  <TableCell>{r.judgment.replace(/-/g, " ")}</TableCell>
+                  <TableCell>{storedVerdictText(t, r.verdict)}</TableCell>
+                  <TableCell>{JUDGMENT_CELL[r.judgment] ? t(JUDGMENT_CELL[r.judgment]) : r.judgment.replace(/-/g, " ")}</TableCell>
                   <TableCell className="max-w-48 truncate">{r.note}</TableCell>
                   <TableCell>
-                    <Button size="icon-xs" variant="ghost" onClick={() => removeRecord(r.id)} aria-label="Delete record">
+                    <Button size="icon-xs" variant="ghost" onClick={() => removeRecord(r.id)} aria-label={t("fpl.deleteRecord")}>
                       <Trash2Icon />
                     </Button>
                   </TableCell>
@@ -149,32 +156,33 @@ export function RecordsTab() {
   );
 }
 
-const LIMITATIONS = [
-  "Flags catch many artifacts but not all. “No issue found” never means a real object or a planet.",
-  "OUTLIER is not treated as an artifact: SPHEREx marks real moving or variable objects as outliers too.",
-  "Checks use a 2-pixel aperture on native pixels (≈12″). SPHEREx pixels (≈6.2″) are close to the PSF width, so the shape check is rough.",
-  "“Other observations” looks at the same sky position. A moving object is expected to be missing there — absence alone is not proof of an artifact.",
-  "SPHEREx wavelength changes across the detector. Comparisons are flagged when detector or wavelength (within the bandwidth) differ.",
-  "The bright-star check uses Gaia DR3 (G < 10 within 2′). Other ghost sources (off-field stars, other detectors) are only known through the GHOST flags.",
-  "Images are shown on a common grid by nearest-pixel lookup; all numbers are computed on the original pixels.",
+const LIMITATIONS: MessageKey[] = [
+  "fpl.limitFlags",
+  "fpl.limitOutlier",
+  "fpl.limitAperture",
+  "fpl.limitOtherObservations",
+  "fpl.limitWavelength",
+  "fpl.limitBrightStars",
+  "fpl.limitGrid",
 ];
 
 export function ProvenanceTab() {
+  const t = useT();
   const { selected, target, search } = useFpl();
   const results = useFrames(selected, target.ra, target.dec);
   return (
     <div className="grid gap-3 pt-2 text-xs">
       <section className="grid gap-1 rounded-md border p-3">
-        <h3 className="text-sm font-medium">Search</h3>
-        <p className="font-mono">RA {target.ra.toFixed(5)} Dec {target.dec.toFixed(5)} · {target.name}</p>
+        <h3 className="text-sm font-medium">{t("fpl.provSearch")}</h3>
+        <p className="font-mono">RA {target.ra.toFixed(5)} Dec {target.dec.toFixed(5)} · {targetName(t, target.name)}</p>
         {search.data && (
           <p className="truncate font-mono text-muted-foreground">
-            <a href={search.data.queryUrl} target="_blank" rel="noreferrer" className="hover:underline">{search.data.queryUrl}</a> · {search.data.exposures.length} exposures (DR1)
+            <a href={search.data.queryUrl} target="_blank" rel="noreferrer" className="hover:underline">{search.data.queryUrl}</a> · {t("fpl.exposuresDr1", { n: search.data.exposures.length })}
           </p>
         )}
       </section>
       <section className="grid gap-2 rounded-md border p-3">
-        <h3 className="text-sm font-medium">Observations in use</h3>
+        <h3 className="text-sm font-medium">{t("fpl.provObservations")}</h3>
         {selected.map((e, i) => {
           const p = results[i]?.data;
           return (
@@ -187,28 +195,38 @@ export function ProvenanceTab() {
                   <span className="truncate font-mono text-muted-foreground">{p.pixelSource}</span>
                 </>
               ) : (
-                <span className="text-muted-foreground">not loaded</span>
+                <span className="text-muted-foreground">{t("fpl.notLoaded")}</span>
               )}
             </div>
           );
         })}
       </section>
       <section className="grid gap-1 rounded-md border p-3">
-        <h3 className="text-sm font-medium">Policy ({CHECK_PARAMS.version})</h3>
-        <p>Excluded from S/N: <span className="font-mono">{MEASUREMENT_EXCLUDE.join(", ")}</span>; the background ring also drops OUTLIER.</p>
+        <h3 className="text-sm font-medium">{t("fpl.provPolicy", { version: CHECK_PARAMS.version })}</h3>
+        <p>{richText(t("fpl.policyExcluded"), { names: <span className="font-mono">{MEASUREMENT_EXCLUDE.join(", ")}</span> })}</p>
         <p>
-          Warning layers: {FLAG_CATEGORIES.filter((c) => c.role === "warning").map((c) => `${c.label} (${c.names.join(", ")})`).join("; ")}.
+          {t("fpl.policyWarning", {
+            list: FLAG_CATEGORIES.filter((c) => c.role === "warning").map((c) => `${flagLabel(t, c)} (${c.names.join(", ")})`).join("; "),
+          })}
         </p>
-        <p>Informational: {FLAG_CATEGORIES.filter((c) => c.role === "info").flatMap((c) => c.names).join(", ")}. Unknown bits are shown raw as “Not interpreted”.</p>
+        <p>{t("fpl.policyInfo", { names: FLAG_CATEGORIES.filter((c) => c.role === "info").flatMap((c) => c.names).join(", ") })}</p>
         <p className="font-mono text-muted-foreground">
-          aperture {CHECK_PARAMS.apertureRadiusPx} px · ring {CHECK_PARAMS.annulusPx.join("–")} px · S/N detect ≥ {CHECK_PARAMS.snrDetect}, shape ≥ {CHECK_PARAMS.snrShape} · size warn × {CHECK_PARAMS.sizeRatioWarn} PSF · elongation warn {CHECK_PARAMS.elongationWarn} · detector edge {CHECK_PARAMS.detectorEdgeWarnPx} px
+          {t("fpl.policyParams", {
+            aperture: CHECK_PARAMS.apertureRadiusPx,
+            ring: CHECK_PARAMS.annulusPx.join("–"),
+            detect: CHECK_PARAMS.snrDetect,
+            shape: CHECK_PARAMS.snrShape,
+            size: CHECK_PARAMS.sizeRatioWarn,
+            elongation: CHECK_PARAMS.elongationWarn,
+            edge: CHECK_PARAMS.detectorEdgeWarnPx,
+          })}
         </p>
       </section>
       <section className="grid gap-1 rounded-md border p-3">
-        <h3 className="text-sm font-medium">Limitations</h3>
+        <h3 className="text-sm font-medium">{t("fpl.provLimitations")}</h3>
         <ul className="list-disc pl-4 text-muted-foreground">
           {LIMITATIONS.map((l) => (
-            <li key={l}>{l}</li>
+            <li key={l}>{t(l)}</li>
           ))}
         </ul>
       </section>
