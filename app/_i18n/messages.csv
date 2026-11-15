@@ -1,9 +1,155 @@
 key,en,ko,note
+common.candidates,Candidates,후보,Show on sky panel: the candidates switch; also a group heading in the keyboard shortcut sheet
+common.close,Close,닫기,"Close button in the Show on sky panel, This view panel and the keyboard shortcut sheet"
+common.copied,Copied,복사됨,Button or toast when copying coordinates (shared)
+common.copyCoordinates,Copy coordinates,좌표 복사,Button or toast when copying coordinates (shared)
+common.copyFailed,Copy failed,복사 실패,"Shown for two seconds on a copy button (Share, This view) when the clipboard refused"
+common.sourcesAndCredits,Data sources and credits,데이터 출처와 크레디트,Link to the Method page's sources section: in This view panel and the reading pages' menu
+common.testTargets,Test targets,테스트 대상,"The five challenge objects: Show on sky switch for their pins, and the reading pages' menu submenu"
+explorer.candidatesHidden,Candidates hidden,후보 숨김,"Sky screen, bottom left: pill shown while candidate marks are switched off (C key)"
+explorer.clearOpened,Clear places you opened,연 위치 기록 지우기,Sky site menu: forgets the places this browser opened (their square marks on the sky); the count sits beside it
+explorer.loadError,Sky view unavailable: {error},하늘 화면을 불러오지 못했어요: {error},"Sky screen alert when the Aladin Lite sky fails to load; {error} is the technical reason, left as is"
+explorer.showCandidates,Show,보이기,"Button inside the ""Candidates hidden"" pill: shows candidate marks again"
+fovScale.aimTick,{fov}° aim,{fov}° 조준,Field-of-view scale at the bottom: label of the tick where clicks start aiming (5°)
+fovScale.aimingHint,Wider than {fov}° a click zooms in instead. Click a pin to analyze it.,시야가 {fov}°보다 넓으면 클릭할 때 확대돼요. 핀을 클릭하면 바로 분석해요.,Bottom hint under the title while aiming (view 5° or narrower)
+fovScale.aimingTitle,Click a point to analyze it,분석할 지점을 클릭하세요,Bottom title while aiming (view 5° or narrower): a click opens the analysis
+fovScale.aimingZone,Aiming zone,조준 구간,Hover title of the bright bar on the field-of-view scale (5° and closer)
+fovScale.zoomHint,Below {fov}° you can aim at a point. Click a pin to analyze it.,{fov}°보다 좁게 확대하면 지점을 골라 분석할 수 있어요. 핀을 클릭하면 바로 분석해요.,Bottom hint under the title while exploring wider than 5°
+fovScale.zoomTitle,Click anywhere to zoom in,아무 곳이나 클릭해 확대하세요,Bottom title while exploring wider than 5°: a click zooms in there
+intro.purpose,Find what moves in SPHEREx images,SPHEREx 이미지에서 움직이는 것을 찾아요,Sky intro animation: one line of purpose under the HEIMDALLR wordmark
+intro.skip,Skip intro,인트로 건너뛰기,Sky intro animation: button that ends it at once
 language.en,English,English,"Language name, always in its own language"
 language.ko,한국어,한국어,"Language name, always in its own language"
 language.menu,Language,언어,Site menu submenu
+layers.candidatesInView,{n} in view,시야 안에 {n}개,"Show on sky panel: count of candidates in the current view, under the Candidates switch"
+layers.candidatesNone,"No candidates yet, so nothing is drawn",아직 후보가 없어 하늘에 표시할 게 없어요,Show on sky panel: under the Candidates switch when the database has no candidates
+layers.candidatesShownBelow,Shown at {fov}° and narrower,시야 {fov}° 이하에서 보여요,Show on sky panel: under the Candidates switch when the view is too wide to draw them
+layers.constellationLines,Constellation lines,별자리 선,Show on sky panel switch
+layers.constellationNames,Constellation names,별자리 이름,"Show on sky panel switch, indented under Constellation lines"
+layers.grid,Coordinate grid,좌표 격자,Show on sky panel switch: RA/Dec grid lines
+layers.gridHint,RA in hours: 1h = 15°,RA는 시 단위: 1h = 15°,Show on sky panel: note under the Coordinate grid switch explaining the RA labels
+layers.knownMovers,Known movers,알려진 움직이는 별,Show on sky panel: status filter for candidates that are known moving stars (answer key)
+layers.opened,Places you opened,열어 본 곳,Show on sky panel switch: marks for places this browser opened before
+layers.statusMarks,Status marks,상태 표시,Show on sky panel switch: shape marks that tell each candidate's status
+layers.title,Show on sky,하늘에 표시,Title of the layers panel (which overlays the sky draws) and the tooltip/label of its tool
 menu.label,Menu,메뉴,Header button that opens the site menu
-nav.about,About,소개,Header tab
+mostRated.empty,No ratings yet. Open a point and rate it to start the list.,아직 평가가 없어요. 한 곳을 열어 평가하면 목록이 시작돼요.,Most rated places: when nobody has rated yet
+mostRated.footer,"Top {limit} sky cells (about 1.7′) by number of ratings. A count is attention, not a result.",평가 수가 많은 하늘 칸 상위 {limit}곳(약 1.7′)이에요. 평가 수는 관심도일 뿐 결과가 아니에요.,Most rated places footnote under the list
+mostRated.loadFailed,Could not load the ranking: {message},순위를 불러오지 못했어요: {message},Most rated places: error; {message} is the server's error text
+mostRated.loading,Loading…,불러오는 중…,Most rated places: while the ranking loads
+mostRated.ratingsOne,{n} rating,평가 {n}개,"Most rated places row: rating count, count is 1"
+mostRated.ratingsOther,{n} ratings,평가 {n}개,"Most rated places row: rating count, count other than 1"
+mostRated.title,Most rated places,평가가 많은 곳,Sky screen: header of the collapsible ranking of places with the most ratings
+nav.about,About,About,Header tab: the page about the project. Kept in English in every language (decision by 허한결)
 nav.label,Main,주 메뉴,aria-label of the header tabs
-nav.method,Method,방법,Header tab
-nav.sky,Sky,하늘,Header tab
+nav.method,Method,Method,Header tab: the page explaining how the analyses work. Kept in English in every language
+nav.sky,Sky,Sky,"Header tab: the 3D sky explorer, the main screen. Kept in English in every language"
+page.footer,"Space Apps 2026 Seoul, challenge: Planet X and SPHEREx. Team HEIMDALLR. Not a NASA product.","Space Apps 2026 Seoul, 챌린지: Planet X and SPHEREx. 팀 HEIMDALLR. NASA 공식 제품이 아니에요.","Footer of the About and Method pages; keep the event, challenge and team names in English"
+review.answerKey,Answer key: Gaia DR3 explains it,정답지: Gaia DR3로 설명돼요,Review queue: note beside the Known mover count
+review.batchEmpty,No candidates in the batch yet,이번 조사에는 아직 후보가 없어요,Review queue summary line when the latest survey run has no candidates
+review.batchSummary,{total} in the batch · {searched} places searched,이번 조사 후보 {total}개 · 찾아본 곳 {searched}곳,Review queue summary line: candidates in the latest survey run and places it searched
+review.clear,Clear,지우기,Recent tab button: clears the place history
+review.clickedPoint,Clicked point,클릭한 곳,Recent tab row name for a place opened by clicking the sky
+review.columnCandidate,"Candidate, RA Dec","후보, RA Dec",Review queue: column header over candidate ID and coordinates
+review.goToPlace,Go to place,그곳으로 이동,Recent tab button: flies to the picked place and opens it
+review.guideMoving,A dot shifts between visits,방문마다 점의 위치가 바뀌어요,Rating guide: what Moving looks like
+review.guideNoise,"One visit only, streak or ghost",한 방문에만 보이거나 줄무늬·잔상이에요,Rating guide: what Noise or artifact looks like
+review.guideNotMoving,Stays put; brightness may change,제자리에 있어요. 밝기는 바뀔 수 있어요,Rating guide: what Not moving looks like
+review.guideTitle,What does a moving object look like?,움직이는 천체는 어떻게 보일까요?,Rating guide heading
+review.hide,Hide,접기,Review queue: button that collapses the panel
+review.howToRate,How to rate,평가 방법,Button at the top right of the sky frame that opens the rating guide; also its aria-label
+review.keptHere,Kept in this browser only.,이 브라우저에만 저장돼요.,Recent tab footnote: history is not sent anywhere
+review.listEmpty,No movement candidates yet. They appear here once the detection pipeline has run on a region.,아직 움직임 후보가 없어요. 한 영역의 후보 탐색이 끝나면 여기에 나타나요.,Review queue list when there are no candidates at all
+review.listUnavailable,The candidate list could not be loaded just now. Test targets still work; try again in a few minutes.,지금은 후보 목록을 불러오지 못했어요. 테스트 대상은 그대로 볼 수 있으니 몇 분 뒤에 다시 시도해 주세요.,Review queue list when the database cannot be reached
+review.loadFailed,Candidates could not be loaded,후보를 불러오지 못했어요,Review queue summary line when the database cannot be reached
+review.moving,Moving,움직인다,"Rating choice name, in the How to rate guide and in row text"
+review.next,Next,다음,Review queue button: next place in the review order
+review.noCandidateHere,No candidate here,후보 없는 곳,Recent tab row text for a place that is not a candidate
+review.noiseOrArtifact,Noise or artifact,잡음·결함,"Rating choice name, in the How to rate guide and in row text"
+review.noneInView,No candidates in view. Try Whole sky or zoom out.,시야 안에 후보가 없어요. 전체 하늘 탭을 보거나 축소해 보세요.,Review queue list on the In view tab when nothing is in view
+review.noneMatch,No candidates match these filters.,이 조건에 맞는 후보가 없어요.,Review queue list when the kind/status filters hide every candidate
+review.notDetections,"Candidates, not detections.",확정이 아닌 후보예요.,"Review queue footnote: these are candidates, not confirmed findings"
+review.notMoving,Not moving,안 움직인다,"Rating choice name, in the How to rate guide and in row text"
+review.notRatedYet,not rated yet,아직 평가 안 함,Recent tab row text: this browser has not rated the candidate
+review.openBlink,Open blink,블링크 열기,Review queue button: opens the analysis panel (blink) for the picked row
+review.placesOpenedOne,{n} place opened in this browser,이 브라우저에서 연 곳 {n}곳,"Review queue summary line on the Recent tab, count is 1"
+review.placesOpenedOther,{n} places opened in this browser,이 브라우저에서 연 곳 {n}곳,"Review queue summary line on the Recent tab, count other than 1"
+review.previous,Previous,이전,Review queue button: previous place in the review order
+review.rated,rated {rating},내 평가: {rating},Review queue row text: this browser's own rating; {rating} is Moving / Not moving / Noise or artifact
+review.recentEmpty,"Places you open appear here, newest first.",연 곳이 최신순으로 여기에 보여요.,Recent tab when nothing has been opened yet
+review.seen,seen,열어 봄,Review queue row text: this browser opened the place before
+review.snr,SNR,SNR,Review queue: sort option and column header for signal-to-noise ratio; abbreviation kept
+review.sort,Sort,정렬,Review queue: label of the sort menu
+review.sortPriority,Priority,검토 순서,Review queue sort option: the review order (noteworthy first)
+review.synthetic,synthetic,합성 데이터,Review queue row text: the candidate is synthetic test data
+review.tabInView,In view,시야 안,Review queue tab: candidates inside the current view
+review.tabRecent,Recent,최근,Review queue tab: places this browser opened
+review.tabWholeSky,Whole sky,전체 하늘,Review queue tab: candidates on the whole sky
+review.tabsLabel,Which places,볼 곳,Review queue: aria-label of the In view / Whole sky / Recent tabs
+review.title,Review queue,검토 목록,Review queue panel heading and its aria-label
+review.visits,Visits,방문 수,Review queue: sort option and column header for the number of SPHEREx visits
+review.yourCall,Your call: no catalog explains it,직접 판단: 설명해 주는 목록이 없어요,Review queue: note beside the Unidentified count
+search.errorCoordinates,"Could not read those coordinates. Use RA then Dec, for example 17 57 48.5 +04 41 36.","좌표를 읽지 못했어요. RA, Dec 순서로 입력하세요. 예: 17 57 48.5 +04 41 36",Sky search error: the text looked like coordinates but could not be parsed
+search.errorEmpty,Type a test target name or coordinates.,테스트 대상 이름이나 좌표를 입력하세요.,Sky search error: submitted empty
+search.errorUnknownName,"Only test targets, candidates and names with coordinates (J…) can be found for now. Try coordinates, for example 269.4485 4.7394.","지금은 테스트 대상, 후보, 좌표가 든 이름(J…)만 찾을 수 있어요. 좌표로 찾아 보세요. 예: 269.4485 4.7394",Sky search error: an object name we cannot resolve (no SIMBAD during the CDS outage)
+search.goToPosition,Go to that position,그 위치로 이동,Sky search: button under a note that a J-name has no candidate; flies to the position the name spells
+search.inputLabel,"Search the sky by candidate name, 2MASS name, test target name or coordinates","후보 이름, 2MASS 이름, 테스트 대상 이름 또는 좌표로 하늘 검색",aria-label of the sky search field
+search.label,Search,검색,Header button that opens the sky search; also the / key in the shortcut sheet
+search.looking,Looking up the latest batch…,최신 후보 목록에서 찾는 중…,Sky search: while asking the database about a J-name
+search.lookupFailed,Could not reach the candidate list just now.,지금은 후보 목록에 연결할 수 없어요.,Sky search: the candidate lookup request failed; the user can still go to the position
+search.noCandidate,No candidate with this name in the latest batch.,최신 후보 목록에 이 이름의 후보가 없어요.,Sky search: a candidate-style J-name not found in the database
+search.noCandidate2Mass,"No candidate with this name in the latest batch. A 2MASS name gives the 1997–2001 position, so a fast-moving star may sit elsewhere now.","최신 후보 목록에 이 이름의 후보가 없어요. 2MASS 이름은 1997–2001년 위치라서, 빨리 움직이는 별은 지금 다른 곳에 있을 수 있어요.",Sky search: a 2MASS name not found among candidates
+search.placeholder,"Candidate, 2MASS name, test target or RA Dec","후보, 2MASS 이름, 테스트 대상 또는 RA Dec",Placeholder of the sky search field
+share.copied,Link copied,링크 복사됨,"Header Share button, for two seconds after copying the link"
+share.label,Share,공유,Header button that copies a link to this page or view
+shortcuts.candidates,Show or hide candidates,후보 보이기/숨기기,Shortcut sheet row for key C; also the hint at the bottom of the Show on sky panel
+shortcuts.escape,Close the top panel,맨 위 패널 닫기,Shortcut sheet row for Esc
+shortcuts.groupPanels,Panels,패널,Shortcut sheet group heading
+shortcuts.groupSky,Sky,하늘,Shortcut sheet group heading: keys that move the sky view
+shortcuts.help,This list,이 목록,Shortcut sheet row for ?: opens this shortcut sheet
+shortcuts.layers,Show on sky (layers),하늘에 표시 (레이어),Shortcut sheet row for L: opens the Show on sky panel
+shortcuts.next,Next place,다음 장소,Shortcut sheet row for N: flies to the next place in the review queue
+shortcuts.open,"Open the selected place, or the view center",고른 장소 열기 (없으면 시야 중심),"Shortcut sheet row for Enter: opens the analysis for the place picked in the queue, else for the view center"
+shortcuts.or,or,또는,Shortcut sheet: between two keys that do the same thing (+ or −)
+shortcuts.pan,Look around,둘러보기,Shortcut sheet row for the arrow keys
+shortcuts.pausedWhileTyping,Shortcuts pause while you type in a field.,입력 칸에 글을 쓰는 동안에는 단축키가 멈춰요.,Footer note of the keyboard shortcut sheet
+shortcuts.previous,Previous place,이전 장소,Shortcut sheet row for P: flies to the previous place in the review queue
+shortcuts.queue,Open or fold the review queue,검토 목록 열기/접기,Shortcut sheet row for Q
+shortcuts.title,Keyboard shortcuts,키보드 단축키,Title of the keyboard shortcut sheet
+shortcuts.zoom,Zoom in or out,확대/축소,Shortcut sheet row for + and −
+sky.backgroundNotice,"Temporary background: 2MASS, not SPHEREx",임시 배경: SPHEREx가 아닌 2MASS 이미지예요,Warning under the sky and on the About page: the sky background is a stand-in (2MASS) while the SPHEREx imagery is unreachable
+status.knownMover,Known mover,알려진 움직이는 별,Review queue: a candidate Gaia DR3 already explains as a moving star (the answer key). Not an asteroid
+status.needsRatings,Needs ratings,평가 부족,Review queue: status mark name for a candidate that still needs more ratings
+status.noteworthy,Noteworthy,주목할 후보,Review queue: status mark name for a candidate many raters called moving (status filter and row text)
+status.openedBefore,Opened before,열어 본 곳,Status mark name for a place this browser opened that is not a candidate
+status.recommended,Recommended,추천 유지,Review queue: status mark name for a candidate kept in the recommendations after the rating tally
+status.testTarget,Test target,테스트 대상,Review queue: row text for one of the challenge's test targets
+status.unidentified,Unidentified,미확인 후보,"Review queue: a candidate no catalog explains, so people judge it"
+testTargets.barnardNote,"One of the fastest-moving stars on the sky, about 10.4″ per year to the north.",하늘에서 가장 빠르게 움직이는 별 중 하나예요. 1년에 약 10.4″씩 북쪽으로 움직여요.,Analysis panel: why the team tests with Barnard's Star
+testTargets.epsIndBNote,"Nearby brown dwarf pair, about 4.7″ per year. Bright in the infrared, faint in visible light.","가까운 갈색왜성 쌍으로, 1년에 약 4.7″씩 움직여요. 적외선에서는 밝고 가시광에서는 어두워요.",Analysis panel: why the team tests with Epsilon Indi B
+testTargets.rDraNote,Mira variable; tests a bright source that varies while it moves far less than a SPHEREx pixel (about 0.02″ per year).,미라형 변광성이에요. 밝기는 변하지만 움직임은 SPHEREx 한 픽셀보다 훨씬 작은(1년에 약 0.02″) 밝은 천체로 시험해요.,Analysis panel: why the team tests with R Draconis (a control: varies but barely moves)
+testTargets.rwAurNote,Young star whose brightness changes; tests a source that varies while it moves far less than a SPHEREx pixel (about 0.03″ per year).,밝기가 변하는 어린 별이에요. 밝기는 변하지만 움직임은 SPHEREx 한 픽셀보다 훨씬 작은(1년에 약 0.03″) 천체로 시험해요.,Analysis panel: why the team tests with RW Aurigae (a control: varies but barely moves)
+testTargets.wise0855DetectorReason,a Y dwarf is nearly dark below 4 µm and brightest near 4.6 µm,Y형 왜성은 4 µm보다 짧은 파장에서 거의 보이지 않고 4.6 µm 근처에서 가장 밝아요,"Analysis panel, WISE 0855: ends the sentence ""Opens on detector D6 instead of the usual default: …"" (lowercase start, no final period in English)"
+testTargets.wise0855Note,"The coldest known brown dwarf, about 8″ per year. Not in Gaia; may be too faint for SPHEREx.","알려진 갈색왜성 중 가장 차가워요. 1년에 약 8″씩 움직여요. Gaia에는 없고, SPHEREx로 보기에는 너무 어두울 수도 있어요.",Analysis panel: why the team tests with WISE 0855−0714
+tools.fullscreen,Full screen,전체 화면,aria-label of the full screen tool while not full screen
+tools.fullscreenFrameOff,"Full screen, frame off","전체 화면, 액자 끄기","Tooltip of the full screen tool, and shortcut sheet row for F (the sky frame is hidden)"
+tools.home,Back to the first view,처음 화면으로,Sky tool column: tooltip and label of the button that flies back to the first view
+tools.label,Sky tools,하늘 도구,aria-label of the tool column on the sky's right edge
+tools.layersCandidatesHidden,"Show on sky, candidates hidden","하늘에 표시, 후보 숨김",aria-label of the layers tool while candidates are switched off
+tools.leaveFullscreen,Leave full screen,전체 화면 끝내기,Full screen tool: tooltip and label while full screen
+tools.starGuide,Star guide,별 안내,aria-label of the star guide tool (toggle): marks stars in view that Gaia measured moving
+tools.starGuideOff,Turn off the star guide,별 안내 끄기,Tooltip of the star guide tool while it is on
+tools.starGuideOn,Star guide: stars that move here,별 안내: 여기서 움직이는 별,Tooltip of the star guide tool while it is off; turning it on marks moving stars in the view
+tools.zoomIn,Zoom in,확대,Sky tool column: zoom in button tooltip and label
+tools.zoomOut,Zoom out,축소,Sky tool column: zoom out button tooltip and label
+viewInfo.background,Background imagery,배경 이미지,This view panel: heading above the name of the sky background survey
+viewInfo.backgroundNote,For looking around only. Analysis uses SPHEREx images from IRSA.,둘러보기용이에요. 분석에는 IRSA의 SPHEREx 이미지를 써요.,This view panel: under the background survey name
+viewInfo.candidates,Candidates in view,시야 안 후보,This view panel row: number of candidates in the current view
+viewInfo.centreDec,Centre Dec,중심 Dec,This view panel row: declination of the view center
+viewInfo.centreRa,Centre RA,중심 RA,This view panel row: right ascension of the view center
+viewInfo.copyLink,Copy view link,화면 링크 복사,This view panel button: copies a link that opens this same view
+viewInfo.fov,Field of view,시야,This view panel row: the current field of view
+viewInfo.none,None,없음,This view panel: no test target in the current view
+viewInfo.noneYet,None yet,아직 없음,This view panel: the database has no candidates at all yet
+viewInfo.testTargets,Test targets in view,시야 안 테스트 대상,This view panel row: names of the test targets in the current view
+viewInfo.title,This view,지금 화면,Title of the panel that describes what is on screen now; also the tooltip/label of the info tool

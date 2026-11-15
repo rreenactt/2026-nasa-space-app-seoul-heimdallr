@@ -46,6 +46,7 @@ import { MostRated } from "./most-rated";
 import { ViewCenter } from "./view-center";
 import { findTestTarget, TEST_TARGETS, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
+import { useT } from "@/app/_i18n/i18n-provider";
 
 // Aladin Lite touches browser APIs as soon as it loads, so the sky renders only on the client.
 const SkyView = dynamic(() => import("./sky-view"), { ssr: false });
@@ -67,6 +68,7 @@ export function SkyExplorer({
   /** Opens one additional analysis in the panel at start (older `?stm=` / `?sonata=` links). */
   autoOpen?: AutoOpenAnalysis;
 }) {
+  const t = useT();
   const [startView] = useState<SkyViewState>(initialView ?? INITIAL_VIEW);
   const [aiming, setAiming] = useState(startView.fov <= AIM_FOV);
   const [flight, setFlight] = useState<Flight | null>(null);
@@ -97,7 +99,7 @@ export function SkyExplorer({
   const [guideHighlight, setGuideHighlight] = useState<number | null>(null);
   const painter = useMemo<SkyPainter>(
     () => (context, frame) => {
-      const fading = paintCandidates(context, frame, {
+      const fading = paintCandidates(context, frame, t, {
         candidates,
         overlays,
         opened,
@@ -108,7 +110,7 @@ export function SkyExplorer({
       const guiding = paintStarGuide(context, frame, starGuide.state, guideHighlight);
       return fading || guiding;
     },
-    [candidates, overlays, opened, selection, flyingTo, picked, starGuide.state, guideHighlight],
+    [t, candidates, overlays, opened, selection, flyingTo, picked, starGuide.state, guideHighlight],
   );
   const [queueOpen, setQueueOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -391,9 +393,9 @@ export function SkyExplorer({
             onSearchOpenChange={setSearchOpen}
             menuGroups={[
               [
-                { label: "Keyboard shortcuts", key: "?", onSelect: () => setShortcutsOpen(true) },
+                { label: t("shortcuts.title"), key: "?", onSelect: () => setShortcutsOpen(true) },
                 {
-                  label: "How to rate",
+                  label: t("review.howToRate"),
                   onSelect: () => {
                     setQueueOpen(true);
                     setGuideOpen(true);
@@ -402,14 +404,14 @@ export function SkyExplorer({
               ],
               [
                 {
-                  label: "Test targets",
+                  label: t("common.testTargets"),
                   items: TEST_TARGETS.map((target) => ({ label: target.name, onSelect: () => goToTarget(target) })),
                 },
               ],
               [
-                { label: "Data sources and credits", href: "/method#sources" },
+                { label: t("common.sourcesAndCredits"), href: "/method#sources" },
                 {
-                  label: "Clear places you opened",
+                  label: t("explorer.clearOpened"),
                   hint: opened.length ? opened.length.toLocaleString("en-US") : undefined,
                   disabled: opened.length === 0,
                   onSelect: clearPlaces,
@@ -458,7 +460,7 @@ export function SkyExplorer({
               className="flex h-8 w-[214px] items-center gap-2 rounded-[2px] bg-ink/80 pr-2 pl-2.5 text-[13px] font-medium text-paper transition-colors hover:bg-ink"
             >
               <ListIcon className="size-4 stroke-[1.5]" aria-hidden />
-              Review queue
+              {t("review.title")}
               <span className="text-xs font-normal text-ash">{candidates.length.toLocaleString("en-US")}</span>
               <Keycap className="ml-auto">Q</Keycap>
             </button>
@@ -507,14 +509,18 @@ export function SkyExplorer({
             onClick={showCandidates}
             className="pointer-events-auto absolute bottom-[52px] left-6 flex h-8 items-center gap-3 rounded-[2px] bg-ink/80 pr-2 pl-3 text-[13px] text-bone hover:text-paper"
           >
-            Candidates hidden
-            <span className="font-medium text-paper">Show</span>
+            {t("explorer.candidatesHidden")}
+            <span className="font-medium text-paper">{t("explorer.showCandidates")}</span>
             <Keycap>C</Keycap>
           </button>
         )}
         {/* The credit sits above the Aladin Lite logo, which stays visible in the bottom-right corner. */}
         <div className="absolute right-4 bottom-[29px] text-right [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]">
-          {SKY_SURVEY.notice && <p className="text-xs leading-4 text-signal">{SKY_SURVEY.notice}</p>}
+          {SKY_SURVEY.notice && (
+            <p className="text-xs leading-4 text-signal">
+              {SKY_SURVEY.noticeKey ? t(SKY_SURVEY.noticeKey) : SKY_SURVEY.notice}
+            </p>
+          )}
           <p className="mt-0.5 text-[11px] leading-[15px] text-ash">{SKY_SURVEY.credit}</p>
         </div>
       </div>
@@ -523,7 +529,7 @@ export function SkyExplorer({
           role="alert"
           className="absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded-sm bg-red-950/80 px-3 py-2 text-sm"
         >
-          Sky view unavailable: {error}
+          {t("explorer.loadError", { error })}
         </p>
       )}
       <SkyIntro enabled={!initialSelection && !initialView} />

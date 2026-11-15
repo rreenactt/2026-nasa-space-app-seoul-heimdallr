@@ -3,41 +3,47 @@
 import { useEffect, useRef } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
+import { useT } from "@/app/_i18n/i18n-provider";
+import type { MessageKey } from "@/app/_i18n/message-keys";
 import { Keycap } from "../site/keycap";
 
 /**
  * What each key does (decision #40), grouped as in Figma "I · Explore, keyboard shortcuts". Kept in one place so the
  * help sheet and the handler never disagree. F keeps a label that says what it really does here.
  */
-export const SHORTCUT_GROUPS: { title: string; column: 0 | 1; keys: { keys: string[]; or?: boolean; label: string }[] }[] = [
+export const SHORTCUT_GROUPS: {
+  title: MessageKey;
+  column: 0 | 1;
+  keys: { keys: string[]; or?: boolean; label: MessageKey }[];
+}[] = [
   {
-    title: "Sky",
+    title: "shortcuts.groupSky",
     column: 0,
     keys: [
-      { keys: ["+", "−"], or: true, label: "Zoom in or out" },
-      { keys: ["←", "↑", "→", "↓"], label: "Look around" },
-      { keys: ["F"], label: "Full screen, frame off" },
+      { keys: ["+", "−"], or: true, label: "shortcuts.zoom" },
+      { keys: ["←", "↑", "→", "↓"], label: "shortcuts.pan" },
+      { keys: ["F"], label: "tools.fullscreenFrameOff" },
     ],
   },
   {
-    title: "Candidates",
+    title: "common.candidates",
     column: 0,
     keys: [
-      { keys: ["C"], label: "Show or hide candidates" },
-      { keys: ["N"], label: "Next place" },
-      { keys: ["P"], label: "Previous place" },
-      { keys: ["Enter"], label: "Open the selected place, or the view center" },
+      { keys: ["C"], label: "shortcuts.candidates" },
+      { keys: ["N"], label: "shortcuts.next" },
+      { keys: ["P"], label: "shortcuts.previous" },
+      { keys: ["Enter"], label: "shortcuts.open" },
     ],
   },
   {
-    title: "Panels",
+    title: "shortcuts.groupPanels",
     column: 1,
     keys: [
-      { keys: ["Q"], label: "Open or fold the review queue" },
-      { keys: ["L"], label: "Show on sky (layers)" },
-      { keys: ["/"], label: "Search" },
-      { keys: ["?"], label: "This list" },
-      { keys: ["Esc"], label: "Close the top panel" },
+      { keys: ["Q"], label: "shortcuts.queue" },
+      { keys: ["L"], label: "shortcuts.layers" },
+      { keys: ["/"], label: "search.label" },
+      { keys: ["?"], label: "shortcuts.help" },
+      { keys: ["Esc"], label: "shortcuts.escape" },
     ],
   },
 ];
@@ -113,15 +119,16 @@ export function useSkyShortcuts(actions: ShortcutActions, enabled: boolean) {
  * 680px, two columns with the keys beside their meaning, over a 55% black dim without blur.
  */
 export function ShortcutSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useT();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
         <DialogOverlay className="bg-ink/55 supports-backdrop-filter:backdrop-blur-none" />
         <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(680px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-[2px] border border-rule bg-ink/94 font-ui text-bone outline-none data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0">
           <div className="flex items-center justify-between border-b border-rule px-6 py-[18px]">
-            <DialogTitle className="text-lg font-light text-paper">Keyboard shortcuts</DialogTitle>
+            <DialogTitle className="text-lg font-light text-paper">{t("shortcuts.title")}</DialogTitle>
             <DialogPrimitive.Close className="flex items-center gap-1.5 text-[13px] text-ash hover:text-paper">
-              Close
+              {t("common.close")}
               <Keycap>Esc</Keycap>
             </DialogPrimitive.Close>
           </div>
@@ -130,19 +137,19 @@ export function ShortcutSheet({ open, onOpenChange }: { open: boolean; onOpenCha
               <div key={column}>
                 {SHORTCUT_GROUPS.filter((group) => group.column === column).map((group) => (
                   <section key={group.title} className="mb-4">
-                    <h3 className="mb-2.5 text-xs text-ash">{group.title}</h3>
+                    <h3 className="mb-2.5 text-xs text-ash">{t(group.title)}</h3>
                     <dl className="grid gap-2.5">
                       {group.keys.map((item) => (
                         <div key={item.label} className="grid grid-cols-[112px_minmax(0,1fr)] items-center">
                           <dt className="flex items-center gap-1">
                             {item.keys.map((key, index) => (
                               <span key={key} className="flex items-center gap-1">
-                                {item.or && index > 0 && <span className="px-0.5 text-[11px] text-smoke">or</span>}
+                                {item.or && index > 0 && <span className="px-0.5 text-[11px] text-smoke">{t("shortcuts.or")}</span>}
                                 <Keycap>{key}</Keycap>
                               </span>
                             ))}
                           </dt>
-                          <dd className="text-[13px] text-bone">{item.label}</dd>
+                          <dd className="text-[13px] text-bone">{t(item.label)}</dd>
                         </div>
                       ))}
                     </dl>
@@ -152,7 +159,7 @@ export function ShortcutSheet({ open, onOpenChange }: { open: boolean; onOpenCha
             ))}
           </div>
           <DialogDescription className="border-t border-rule px-6 py-3.5 text-[11.5px] text-smoke">
-            Shortcuts pause while you type in a field.
+            {t("shortcuts.pausedWhileTyping")}
           </DialogDescription>
         </DialogPrimitive.Popup>
       </DialogPortal>

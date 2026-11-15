@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
+import { useT } from "@/app/_i18n/i18n-provider";
 import { SKY_SURVEY } from "./constants";
 import { useCandidates } from "./candidates-context";
 import { angularDistance, formatDec, formatRa } from "./sky-coordinates";
@@ -12,6 +13,7 @@ import { useView } from "./view-store";
 
 /** Copies text and says so for two seconds (Figma "I · This view": 28px outlined buttons). */
 function CopyButton({ label, text }: { label: string; text: () => string | null }) {
+  const t = useT();
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   useEffect(() => {
     if (state === "idle") return;
@@ -31,7 +33,7 @@ function CopyButton({ label, text }: { label: string; text: () => string | null 
         );
       }}
     >
-      <span aria-live="polite">{state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : label}</span>
+      <span aria-live="polite">{state === "copied" ? t("common.copied") : state === "failed" ? t("common.copyFailed") : label}</span>
     </button>
   );
 }
@@ -50,6 +52,7 @@ function Line({ term, children }: { term: string; children: ReactNode }) {
  * imagery the background is (the temporary 2MASS stand-in says so). The pages themselves are the header tabs.
  */
 export function ViewInfo({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const view = useView();
   // Whatever lies within half the field of view of the centre: a circle, so a little short of the screen's corners.
   const within = (point: { ra: number; dec: number }) => !!view && angularDistance(view, point) <= view.fov / 2;
@@ -59,36 +62,40 @@ export function ViewInfo({ onClose }: { onClose: () => void }) {
   return (
     <div>
       <div className="flex h-[46px] items-center justify-between border-b border-rule px-[18px]">
-        <p className="text-sm font-medium text-paper">This view</p>
+        <p className="text-sm font-medium text-paper">{t("viewInfo.title")}</p>
         <button type="button" className="text-xs text-ash hover:text-paper" onClick={onClose}>
-          Close
+          {t("common.close")}
         </button>
       </div>
       <dl className="border-b border-rule px-[18px] py-2.5">
-        <Line term="Centre RA">{view ? formatRa(view.ra) : "—"}</Line>
-        <Line term="Centre Dec">{view ? formatDec(view.dec) : "—"}</Line>
-        <Line term="Field of view">{view ? formatFov(view.fov) : "—"}</Line>
-        <Line term="Candidates in view">
-          {all.length === 0 ? "None yet" : candidates.toLocaleString("en-US")}
+        <Line term={t("viewInfo.centreRa")}>{view ? formatRa(view.ra) : "—"}</Line>
+        <Line term={t("viewInfo.centreDec")}>{view ? formatDec(view.dec) : "—"}</Line>
+        <Line term={t("viewInfo.fov")}>{view ? formatFov(view.fov) : "—"}</Line>
+        <Line term={t("viewInfo.candidates")}>
+          {all.length === 0 ? t("viewInfo.noneYet") : candidates.toLocaleString("en-US")}
         </Line>
-        <Line term="Test targets in view">{targets.length ? targets.map((target) => target.name).join(", ") : "None"}</Line>
+        <Line term={t("viewInfo.testTargets")}>
+          {targets.length ? targets.map((target) => target.name).join(", ") : t("viewInfo.none")}
+        </Line>
       </dl>
       <div className="border-b border-rule px-[18px] py-3">
-        <p className="text-[12px] text-ash">Background imagery</p>
+        <p className="text-[12px] text-ash">{t("viewInfo.background")}</p>
         <p className="mt-1 text-[12.5px] text-bone">{SKY_SURVEY.shortName}</p>
-        {SKY_SURVEY.notice && <p className="mt-1 text-[11.5px] text-signal">{SKY_SURVEY.notice}</p>}
+        {SKY_SURVEY.notice && (
+          <p className="mt-1 text-[11.5px] text-signal">{SKY_SURVEY.noticeKey ? t(SKY_SURVEY.noticeKey) : SKY_SURVEY.notice}</p>
+        )}
         <p className="mt-1 text-[11px] text-ash">{SKY_SURVEY.credit}</p>
-        <p className="mt-1.5 text-[11px] text-ash">For looking around only. Analysis uses SPHEREx images from IRSA.</p>
+        <p className="mt-1.5 text-[11px] text-ash">{t("viewInfo.backgroundNote")}</p>
         <Link href="/method#sources" className="mt-2 inline-block text-[11.5px] text-bone hover:text-paper hover:underline">
-          Data sources and credits →
+          {t("common.sourcesAndCredits")} →
         </Link>
       </div>
       <div className="flex items-center gap-2 px-[18px] py-[11px]">
         <CopyButton
-          label="Copy view link"
+          label={t("viewInfo.copyLink")}
           text={() => (view ? new URL(viewUrl(view), window.location.origin).toString() : null)}
         />
-        <CopyButton label="Copy coordinates" text={() => (view ? `${view.ra.toFixed(5)} ${view.dec.toFixed(5)}` : null)} />
+        <CopyButton label={t("common.copyCoordinates")} text={() => (view ? `${view.ra.toFixed(5)} ${view.dec.toFixed(5)}` : null)} />
       </div>
     </div>
   );
