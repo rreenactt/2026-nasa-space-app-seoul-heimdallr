@@ -552,8 +552,9 @@ function CursorReadout({ hidden }: { hidden: boolean }) {
   );
 }
 
-// v2: known movers turned on by default (decision #51); older saved settings had them off.
-const OVERLAYS_KEY = "heimdallr:show-on-sky:v2";
+// v3: the coordinate grid turned on by default (decision #55); v2 turned known movers on (decision #51). Older saved
+// settings had them off.
+const OVERLAYS_KEY = "heimdallr:show-on-sky:v3";
 
 /** "Show on sky" settings, remembered in this browser (decision #40). Read after mount so the server render matches. */
 function useStoredOverlays() {

@@ -42,7 +42,8 @@ export default function MethodPage() {
       </div>
       <div className="mt-20 grid gap-10 px-14 md:grid-cols-[300px_minmax(0,760px)] md:gap-14">
         <MethodNav sections={METHOD_SECTIONS.map(({ id, title }) => ({ id, title }))} />
-        <div className="grid gap-20 border-rule md:border-l md:pl-14">
+        {/* The space below lets the last sections scroll up to the reading position on tall screens. */}
+        <div className="grid gap-20 border-rule md:border-l md:pb-[70vh] md:pl-14">
           {METHOD_SECTIONS.map((section) => (
             <section key={section.id} id={section.id} className="scroll-mt-24">
               <h2 className="text-[26px] font-light tracking-[-0.02em]">{section.title}</h2>
@@ -51,7 +52,7 @@ export default function MethodPage() {
                   <p key={text}>{text}</p>
                 ))}
               </div>
-              <details className="group mt-6 border-t border-rule pt-4">
+              <details name="method-detail" className="group mt-6 border-t border-rule pt-4">
                 <summary className="cursor-pointer text-sm text-ash transition-colors select-none hover:text-paper">
                   <span className="group-open:hidden">Show the full explanation: formulas, reasons and references</span>
                   <span className="hidden group-open:inline">Hide the full explanation</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, LinkIcon, SquareIcon, Volume2Icon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/lib/ky";
+import type { BlinkPlan } from "@/app/_lib/blink/types";
 import { skyToPixel, wavelengthAt } from "@/app/_lib/comet/wcs";
 import type { FplExposure } from "@/app/_lib/fpl/types";
 import { DEFAULT_SETTINGS, sharedFluxRange, type SoundSettings } from "@/app/_lib/sonata/mapping";
@@ -51,9 +54,34 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
   const [aKey, setAKey] = useState<string | null>(null);
   const [bKey, setBKey] = useState<string | null>(null);
   const list = visits.flat();
-  const a: FplExposure | undefined = list.find((e) => e.key === aKey) ?? visits[0]?.[Math.floor(visits[0].length / 2)];
+  // The same plan the blink uses (same cache): which exposures of each visit see this position at the same
+  // wavelength. A and B default to those, so a difference in loudness is not just a difference in colour.
+  const planQ = useQuery({
+    queryKey: ["blink", "plan", target.ra.toFixed(5), target.dec.toFixed(5), detector ?? "auto"],
+    queryFn: () => api.get("/api/blink/plan", { searchParams: { ra: target.ra, dec: target.dec, ...(detector ? { detector } : {}) }, timeout: 65_000 }).json<BlinkPlan>(),
+    enabled: Boolean(detector),
+    staleTime: Infinity,
+    retry: 1,
+  });
+  const matched = useMemo(() => {
+    const plan = planQ.data;
+    if (!plan || plan.referenceWavelengthUm == null) return null;
+    const reference = plan.referenceWavelengthUm;
+    const perVisit = plan.visits
+      .map((v) => v.exposures.filter((e) => !e.excluded && e.estWavelengthUm != null).sort((p, q) => Math.abs(p.estWavelengthUm! - reference) - Math.abs(q.estWavelengthUm! - reference))[0])
+      .filter(Boolean);
+    if (perVisit.length < 2) return null;
+    return { a: perVisit[0].key, b: perVisit[perVisit.length - 1].key, reference };
+  }, [planQ.data]);
+  const waiting = Boolean(detector) && planQ.isPending;
   const lastVisit = visits[visits.length - 1];
-  const b: FplExposure | undefined = list.find((e) => e.key === bKey) ?? (visits.length > 1 ? lastVisit[Math.floor(lastVisit.length / 2)] : undefined);
+  const a: FplExposure | undefined = waiting
+    ? undefined
+    : (list.find((e) => e.key === aKey) ?? list.find((e) => e.key === matched?.a) ?? visits[0]?.[Math.floor(visits[0].length / 2)]);
+  const b: FplExposure | undefined = waiting
+    ? undefined
+    : (list.find((e) => e.key === bKey) ?? list.find((e) => e.key === matched?.b) ?? (visits.length > 1 ? lastVisit[Math.floor(lastVisit.length / 2)] : undefined));
+  const matchedDefaults = Boolean(matched && !aKey && !bKey && a?.key === matched.a && b?.key === matched.b);
 
   const frameQs = useFrames([a, b].filter((e): e is FplExposure => Boolean(e)), target.ra, target.dec);
   const frameA = frameQs[0]?.data ? toNative(frameQs[0].data) : null;
@@ -141,7 +169,7 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
             className="w-28"
           />
         </label>
-        <span className="text-xs text-muted-foreground">Headphones recommended. Sound starts only after you press Start sound.</span>
+        <span className="text-xs text-muted-foreground">Headphones recommended. Nothing plays until you press a play button.</span>
       </div>
 
       <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
@@ -234,6 +262,14 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
             })}
           </div>
         )}
+        {waiting && exposures.length > 0 && (
+          <span className="flex items-center gap-2 text-muted-foreground"><Spinner className="size-3" /> Choosing two observations at the same wavelength…</span>
+        )}
+        {matchedDefaults && matched && (
+          <p className="text-muted-foreground">
+            A and B are the first and last visit at the same wavelength here (about {matched.reference.toFixed(3)} µm), so a louder or quieter note is not just a different colour.
+          </p>
+        )}
         {visits.length === 1 && (
           <p>Additional analysis needed: only one SPHEREx visit here. A and B are minutes apart in the same visit, at different wavelengths.</p>
         )}
@@ -255,10 +291,13 @@ function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
         <TabsContent value="listen">
           <ListenPanel
             audio={audio}
-            audioOn={audioOn}
+            ensureAudio={async () => {
+              if (!audioOn) await startAudio();
+            }}
+            waveMismatch={waveMismatch}
             grid={grid}
             frames={{ A: frameA, B: frameB }}
-            loading={{ A: Boolean(frameQs[0]?.isPending), B: Boolean(b && frameQs[1]?.isPending) }}
+            loading={{ A: waiting || Boolean(frameQs[0]?.isPending), B: Boolean(b && frameQs[1]?.isPending) }}
             errors={{ A: frameQs[0]?.error?.message ?? null, B: frameQs[1]?.error?.message ?? null }}
             exposures={{ A: a, B: b }}
             sources={{ A: sourcesA, B: sourcesB }}

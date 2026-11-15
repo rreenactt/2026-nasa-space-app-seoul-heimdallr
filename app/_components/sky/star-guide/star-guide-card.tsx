@@ -56,6 +56,14 @@ export function StarGuideCard({ state, onHighlight, onOpen, onClose }: StarGuide
         {listed.length > 0 && (
           <div className={cn("transition-opacity", state.moving && "opacity-60")}>
             <p>Good places to watch a star move, fastest first:</p>
+            <p className="mt-1 flex items-center gap-1.5 font-data text-[10.5px] leading-4 text-bone/70">
+              <span aria-hidden className="inline-block size-2.5 border border-[rgb(168,200,255)]" />
+              {SKY_SURVEY.year}
+              <span aria-hidden className="inline-block h-px w-5 bg-[rgb(168,200,255)]" />
+              <span aria-hidden className="inline-block size-1.5 rounded-full bg-[rgb(168,200,255)]" />
+              {SPHEREX_EPOCH.toFixed(0)}
+              <span className="font-ui text-ash">every path on the sky</span>
+            </p>
             <ol className="mt-1.5 flex flex-col">
               {listed.map((star, index) => {
                 const pm = totalPm(star) / 1000;
