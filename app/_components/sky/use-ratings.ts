@@ -8,11 +8,18 @@ import type { EquatorialCoordinates } from "./sky-coordinates";
 /** Every rating query starts with this key, so a new rating refreshes the panel header and the list together. */
 const RATINGS_KEY = "ratings";
 
-/** This browser's rating of a point, and the tally once rated. Shared by the panel header and the rating section. */
-export function useRating({ ra, dec }: EquatorialCoordinates) {
+/** How often an open rating section asks again, so ratings from other browsers arrive (decision #57). */
+export const LIVE_RATINGS_MS = 10_000;
+
+/**
+ * This browser's rating of a point, and the tally once rated. Shared by the panel header and the rating section;
+ * `live` asks again every LIVE_RATINGS_MS while the window is visible (TanStack Query pauses it in the background).
+ */
+export function useRating({ ra, dec }: EquatorialCoordinates, { live = false }: { live?: boolean } = {}) {
   return useQuery({
     queryKey: [RATINGS_KEY, "point", ra, dec],
     queryFn: () => api.get("/api/ratings", { searchParams: { ra, dec } }).json<RatingState>(),
+    refetchInterval: live ? LIVE_RATINGS_MS : false,
   });
 }
 

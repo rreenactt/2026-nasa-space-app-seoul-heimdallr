@@ -70,3 +70,15 @@ export async function mostRatedCells(release: string, limit: number) {
   });
   return groups.map((g) => ({ hpxIndex: g.hpxIndex, total: g._count._all }));
 }
+
+/** The full tally of each cell that has ratings (same release), for the candidates' statuses. Cells with none are absent. */
+export async function cellTallies(release: string, hpxIndexes: number[]): Promise<Map<number, Tally>> {
+  if (hpxIndexes.length === 0) return new Map();
+  const groups = await db.rating.groupBy({
+    by: ["hpxIndex", "choice"],
+    where: { release, hpxIndex: { in: hpxIndexes } },
+    _count: { _all: true },
+  });
+  const cells = [...new Set(groups.map((g) => g.hpxIndex))];
+  return new Map(cells.map((cell) => [cell, toTally(groups.filter((g) => g.hpxIndex === cell))]));
+}
