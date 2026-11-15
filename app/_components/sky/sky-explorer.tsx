@@ -419,7 +419,7 @@ export function SkyExplorer({
 
   return (
     <div data-sky-framed={framed} className="relative h-dvh w-full overflow-hidden bg-ink text-paper">
-      <div data-sky-surface className="absolute inset-0">
+      <div data-sky-surface data-tour="sky" className="absolute inset-0">
         <SkyView
           initialView={startView}
           flight={flight}

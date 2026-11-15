@@ -1093,6 +1093,8 @@ export type MessageKey =
   | "tour.queueTitle"
   | "tour.rateBody"
   | "tour.rateTitle"
+  | "tour.shareBody"
+  | "tour.shareTitle"
   | "tour.skip"
   | "tour.skipShort"
   | "tour.start"

@@ -262,6 +262,7 @@ function CopyLinkButton() {
 
   return (
     <Button
+      data-tour="copy-link"
       variant="ghost"
       size="sm"
       onClick={() => {

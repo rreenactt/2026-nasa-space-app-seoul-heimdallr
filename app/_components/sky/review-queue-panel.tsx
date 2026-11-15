@@ -287,6 +287,7 @@ function QueueActions({
       </button>
       <button
         type="button"
+        data-tour="queue-step"
         onClick={() => onStep(-1)}
         disabled={!canStep}
         className="ml-auto px-3 text-sm text-ash hover:text-paper disabled:opacity-40"
@@ -295,6 +296,7 @@ function QueueActions({
       </button>
       <button
         type="button"
+        data-tour="queue-step"
         onClick={() => onStep(1)}
         disabled={!canStep}
         className="pl-3 text-sm font-medium text-paper hover:text-bone disabled:opacity-40"
