@@ -28,7 +28,7 @@ HEIMDALLR lets anyone look for things that move or change in NASA's SPHEREx all-
 
 ## Where the candidates come from
 
-SPHEREx visits are about six months apart and positions scatter by about 9″ between them, so even the fastest star (Barnard's Star, 10.4″ per year) is lost in the noise between two SPHEREx visits. We therefore compare SPHEREx (2025–26) with 2MASS (about 2000), a 25-year baseline.
+SPHEREx visits are about six months apart. In an early test of our own tool (not SPHEREx's official astrometric precision), the positions it measured scattered by about 9″ between visits, so even the fastest star (Barnard's Star, 10.4″ per year) was lost in that noise between two SPHEREx visits. We therefore compare SPHEREx (2025–26) with 2MASS (about 2000), a 25-year baseline.
 
 - In each field, a SPHEREx source with S/N ≥ 20 that has no 2MASS source at its position is paired with a 2MASS source (Ks ≤ 14.5) that has nothing at its position in SPHEREx now, between the field's minimum motion (at least 8″) and 90″, with brightness within a factor of 3.
 - Both ends are checked against Gaia DR3 moved to each date. If one Gaia star explains both ends, it is a known moving star. If a Gaia star sits at only one end, it is a chance pair. If no Gaia star explains it, it is unidentified: a candidate for people to check, not a detection.
@@ -39,14 +39,14 @@ SPHEREx visits are about six months apart and positions scatter by about 9″ be
 ## Additional analyses
 
 - Sky Time Machine: the same patch in 2MASS (about 2000), WISE (2010), NEOWISE (2014–2024) and SPHEREx (2025), with Gaia predicted paths; users mark positions to measure motion. Check: Barnard's Star measured at 10.39″/yr (247.4″ over 23.81 yr), matching Gaia DR3.
-- Fake Planet Lab: whether a "moving dot" is really a defect (quality flags, signal-to-noise, shape against the PSF, repeats in other exposures, nearby bright stars), plus a brightness tab that compares visits at the same wavelength and measures saturated stars in a ring outside the core. Check: flag decoding matches IRSA cutouts pixel for pixel (5,112 pixels).
-- Neighborhood in Motion: 21 stars and brown dwarfs within about 3.6 pc placed in 3D from Gaia distances and motions, moved through time, and compared with where SPHEREx saw them. Check: Barnard's Star closest approach in AD 11,736 at 1.155 pc, matching published values (about AD 11,700, 3.75 ly).
+- Fake Planet Lab: whether a "moving dot" is really a defect (quality flags, signal-to-noise, shape against the PSF, repeats in other exposures, nearby bright stars), plus a brightness tab that compares visits at the same wavelength and measures saturated stars in a ring outside the core.
+- Neighborhood in Motion: 21 stars and brown dwarfs within about 3.6 pc placed in 3D from Gaia distances and motions, moved through time, and compared with where SPHEREx saw them. Our own straight-line motion model, run on Gaia DR3 catalog values, predicts Barnard's Star's closest approach in AD 11,736 at 1.155 pc, close to published values (about AD 11,700, 3.75 ly); this is a model result, not a measurement.
 - Sky Sonata: sources in a SPHEREx image turned into sound by fixed rules (position to pan and pitch, brightness to volume), comparing two visits at the same wavelength source by source. Check: identical input gives identical sound; each property changes only its own sound parameter.
-- Comet Breath: interstellar comet 3I/ATLAS before (August 2025) and after (December 2025) perihelion, with images, spectra and gas production rates quoted from the literature. Check: the December CO (4.65 µm) and CO₂ (4.21 µm) bands rise above the continuum, the same direction as the published results.
+- Comet Breath: interstellar comet 3I/ATLAS before (August 2025) and after (December 2025) perihelion, with SPHEREx images and spectra. Gas production rates are quoted from Lisse et al. (arXiv:2512.07318v3, arXiv:2601.06759v2), not measured by the tool, and the tool's photometry does not confirm molecular emission. The CO₂ band lies at 4.23–4.27 µm and CO near 4.65 µm; CO in August is a tentative detection. The first analysis (arXiv:2508.15469v2) is marked as superseded.
 
 ## Test targets
 
-Every number below was measured with the tool's own analysis code.
+Positions, signal-to-noise ratios and brightness changes below were measured with the tool's own analysis code; proper motions and predicted positions are catalog values (Gaia DR3) or come from the literature.
 
 - Barnard's Star (fast proper motion, 10.4″/yr): 3 SPHEREx visits; in the blink the star moves north and lines up with Gaia's predicted positions. Sky Time Machine measures 10.39″/yr over 23.81 years, matching Gaia DR3.
 - Epsilon Indi B (faint nearby brown dwarf): detected in all 6 exposures over 3 visits (1.11 µm, S/N about 100), 44–48″ from its 2016 Gaia position and within 1.1″ of where Gaia's motion predicts. Nothing remains at the old position.
@@ -92,5 +92,17 @@ This publication makes use of data products from the Two Micron All Sky Survey, 
 This publication makes use of data products from the Wide-field Infrared Survey Explorer, which is a joint project of the University of California, Los Angeles, and the Jet Propulsion Laboratory/California Institute of Technology, and NEOWISE, which is a project of the Jet Propulsion Laboratory/California Institute of Technology. WISE and NEOWISE are funded by the National Aeronautics and Space Administration.
 
 This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.
+
+Further references:
+
+Gaia Collaboration, Vallenari et al. 2023, Gaia Data Release 3: Summary of the content and survey properties, A&A 674, A1. https://doi.org/10.1051/0004-6361/202243940
+
+Gaia Collaboration, Prusti et al. 2016, The Gaia mission, A&A 595, A1. https://doi.org/10.1051/0004-6361/201629272
+
+Zanella et al. 2022, Sonification and sound design for astronomy research, education and public engagement, Nature Astronomy 6, 1241 (background for Sky Sonata). https://doi.org/10.1038/s41550-022-01721-z
+
+Caselden et al. 2018, WiseView: Visualizing motion and variability of faint WISE sources, ascl:1806.004 (the model for our blink viewer). https://ascl.net/1806.004
+
+Kuchner et al. 2017, The First Brown Dwarf Discovered by the Backyard Worlds: Planet 9 Citizen Science Project, ApJL 841, L19. https://doi.org/10.3847/2041-8213/aa7200
 
 This project is not affiliated with or endorsed by NASA.
