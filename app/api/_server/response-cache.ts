@@ -6,7 +6,7 @@ import { serverEnv } from "@/config/env.server";
 import { getObject, isStorageConfigured, putObject } from "@/lib/storage";
 
 /**
- * Precomputed analysis responses (decision #55). A route's JSON answer for an input is kept in the object storage
+ * Precomputed analysis responses (decision #56). A route's JSON answer for an input is kept in the object storage
  * under a hash of the route and its input, so a place computed before (test targets, survey candidates) opens without
  * reading the archives again. Production only reads; a server started with RESPONSE_CACHE_WRITE=1 (the precompute
  * script) also stores what it computes. Only successful answers are stored. What is stored is the route's own output

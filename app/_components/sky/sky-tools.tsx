@@ -1,7 +1,7 @@
 "use client";
 
 import { InfoIcon, LayersIcon, LocateFixedIcon, MaximizeIcon, MinimizeIcon, MinusIcon, PlusIcon, ScanSearchIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useState } from "react";
+import { Fragment, type ReactElement, type ReactNode, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "cn";
@@ -195,10 +195,16 @@ export function SkySwitch({
 
 const STATUS_KEYS: StatusKey[] = ["noteworthy", "needs-ratings", "recommended", "known"];
 
-const OTHER_LAYERS: { key: "opened" | "pins" | "constellations" | "grid"; label: string }[] = [
+/** `sub` rows sit indented under the row above and dim while it is off (Figma "Constellation names"). */
+const OTHER_LAYERS: {
+  key: "opened" | "pins" | "constellations" | "constellationNames" | "grid";
+  label: string;
+  sub?: "constellations";
+}[] = [
   { key: "opened", label: "Places you opened" },
   { key: "pins", label: "Test targets" },
   { key: "constellations", label: "Constellation lines" },
+  { key: "constellationNames", label: "Constellation names", sub: "constellations" },
   { key: "grid", label: "Coordinate grid" },
 ];
 
@@ -285,11 +291,15 @@ export function ShowOnSky({
         </div>
       </div>
       <div className="px-[18px] pt-2 pb-1.5">
-        {OTHER_LAYERS.map(({ key, label }) => (
-          <Row key={key}>
-            {label}
-            <SkySwitch checked={overlays[key]} label={label} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
-          </Row>
+        {OTHER_LAYERS.map(({ key, label, sub }) => (
+          <Fragment key={key}>
+            <Row dim={sub && !overlays[sub]} className={sub && "pl-4"}>
+              {label}
+              <SkySwitch checked={overlays[key]} label={label} onChange={(checked) => onChange({ ...overlays, [key]: checked })} />
+            </Row>
+            {/* Grid RA labels are in hours, as everywhere else on the screen (Figma "Coordinate grid hint"). */}
+            {key === "grid" && <p className="-mt-1 mb-0.5 text-[11.5px] text-ash">RA in hours: 1h = 15°</p>}
+          </Fragment>
         ))}
         <p className="mt-1 flex items-center gap-2 text-[11px] text-smoke">
           Show or hide candidates

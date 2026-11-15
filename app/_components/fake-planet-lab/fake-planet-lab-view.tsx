@@ -1,20 +1,22 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookOpenIcon, ClipboardListIcon, MicroscopeIcon, ScrollTextIcon } from "lucide-react";
+import { BookOpenIcon, ClipboardListIcon, MicroscopeIcon, ScrollTextIcon, SunDimIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFixedTarget } from "../analyses/fixed-target";
+import { BrightnessTab } from "./brightness-tab";
 import { FPL_EXAMPLES, FplStateProvider, useFpl, type FplTarget } from "./fpl-state";
 import { FlagGuideTab, ProvenanceTab, RecordsTab } from "./guide-tabs";
 import { InspectTab } from "./inspect-tab";
 
-type Tab = "inspect" | "flags" | "records" | "provenance";
+type Tab = "inspect" | "brightness" | "flags" | "records" | "provenance";
 const TABS: { id: Tab; label: string; icon: React.ComponentType }[] = [
   { id: "inspect", label: "Inspect", icon: MicroscopeIcon },
+  { id: "brightness", label: "Brightness", icon: SunDimIcon },
   { id: "flags", label: "Flag guide", icon: BookOpenIcon },
   { id: "records", label: "Records", icon: ClipboardListIcon },
   { id: "provenance", label: "Provenance", icon: ScrollTextIcon },
@@ -110,6 +112,9 @@ function Body() {
         </TabsList>
         <TabsContent value="inspect">
           <InspectTab />
+        </TabsContent>
+        <TabsContent value="brightness">
+          {tab === "brightness" && <BrightnessTab />}
         </TabsContent>
         <TabsContent value="flags">
           <FlagGuideTab />
