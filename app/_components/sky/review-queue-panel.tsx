@@ -147,7 +147,7 @@ export function ReviewQueuePanel({
       </header>
 
       <div className="mt-3 flex items-center px-5">
-        <div role="tablist" aria-label="Which places" className="flex gap-3.5">
+        <div role="tablist" aria-label="Which places" className="flex shrink-0 gap-3">
           {TABS.map((item) => (
             <button
               key={item.id}
@@ -156,7 +156,7 @@ export function ReviewQueuePanel({
               aria-selected={tab === item.id}
               onClick={() => setTab(item.id)}
               className={cn(
-                "border-b pb-0.5 text-[13px] transition-colors",
+                "border-b pb-0.5 text-[13px] whitespace-nowrap transition-colors",
                 tab === item.id ? "border-paper font-medium text-paper" : "border-transparent text-ash hover:text-paper",
               )}
             >
@@ -164,9 +164,10 @@ export function ReviewQueuePanel({
             </button>
           ))}
         </div>
+        {/* Four tabs leave no room for a visible "Sort" word (Figma "I · Review, queue open · real candidates"). */}
         {(tab === "view" || tab === "sky") && (
           <label className="ml-auto flex items-center gap-2 text-[13px]">
-            <span className="text-smoke">Sort</span>
+            <span className="sr-only">Sort</span>
             <span className="relative flex items-center">
               <select
                 value={sort}
