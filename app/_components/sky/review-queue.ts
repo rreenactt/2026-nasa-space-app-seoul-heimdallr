@@ -55,10 +55,14 @@ export type CandidateBatch =
       candidates: MovementCandidate[];
     };
 
-/** One stop in the review order: a test target or a movement candidate. */
+/**
+ * One stop in the review order: a test target or a movement candidate, or (in the "Most rated" tab, decision #57) a
+ * rated sky cell with no candidate in the list.
+ */
 export type ReviewEntry =
   | { kind: "test"; id: string; name: string; point: EquatorialCoordinates; target: TestTarget }
-  | { kind: "candidate"; id: string; name: string; point: EquatorialCoordinates; candidate: MovementCandidate };
+  | { kind: "candidate"; id: string; name: string; point: EquatorialCoordinates; candidate: MovementCandidate }
+  | { kind: "place"; id: string; name: string; point: EquatorialCoordinates };
 
 export type CandidateFilter = {
   status: "all" | CandidateStatus;
