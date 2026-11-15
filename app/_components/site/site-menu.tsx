@@ -13,6 +13,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useLocale, useT } from "@/app/_i18n/i18n-provider";
+import { LOCALES } from "@/app/_i18n/locale";
 import { headerActionClass } from "./site-header";
 
 export type MenuEntry = {
@@ -62,14 +64,25 @@ function Entry({ entry }: { entry: MenuEntry }) {
  * places, sources and browser-only settings. Groups are split by a line.
  */
 export function SiteMenu({ groups }: { groups: MenuEntry[][] }) {
+  const t = useT();
+  const { locale, setLocale } = useLocale();
+  // Every page's menu ends with the language choice (decision #56); each language is named in itself.
+  const language: MenuEntry = {
+    label: t("language.menu"),
+    items: LOCALES.map((option) => ({
+      label: t(`language.${option}`),
+      hint: option === locale ? "✓" : undefined,
+      onSelect: () => setLocale(option),
+    })),
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className={headerActionClass}>
         <MenuIcon aria-hidden />
-        Menu
+        {t("menu.label")}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={contentClass}>
-        {groups.map((group, index) => (
+        {[...groups, [language]].map((group, index) => (
           <Fragment key={index}>
             {index > 0 && <DropdownMenuSeparator className="bg-rule" />}
             {group.map((entry) => (

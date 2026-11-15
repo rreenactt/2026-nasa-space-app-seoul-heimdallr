@@ -1,0 +1,9 @@
+key,en,ko,note
+language.en,English,English,"Language name, always in its own language"
+language.ko,한국어,한국어,"Language name, always in its own language"
+language.menu,Language,언어,Site menu submenu
+menu.label,Menu,메뉴,Header button that opens the site menu
+nav.about,About,소개,Header tab
+nav.label,Main,주 메뉴,aria-label of the header tabs
+nav.method,Method,방법,Header tab
+nav.sky,Sky,하늘,Header tab

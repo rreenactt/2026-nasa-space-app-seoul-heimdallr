@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { cn } from "cn";
+import { useT } from "@/app/_i18n/i18n-provider";
 
 const TABS = [
-  { href: "/", label: "Sky" },
-  { href: "/about", label: "About" },
-  { href: "/method", label: "Method" },
-];
+  { href: "/", label: "nav.sky" },
+  { href: "/about", label: "nav.about" },
+  { href: "/method", label: "nav.method" },
+] as const;
 
 /** Text button with an icon in the header's right group (Eyes on the Solar System style: no fill). */
 export const headerActionClass =
@@ -21,12 +22,13 @@ export const headerActionClass =
  */
 export function SiteHeader({ actions, className }: { actions?: ReactNode; className?: string }) {
   const pathname = usePathname();
+  const t = useT();
   return (
     <header className={cn("flex h-14 items-center px-7 text-paper", className)}>
       <Link href="/" data-wordmark className="font-display text-[15px] tracking-[0.22em] uppercase">
         Heimdallr
       </Link>
-      <nav aria-label="Main" className="absolute left-1/2 flex -translate-x-1/2">
+      <nav aria-label={t("nav.label")} className="absolute left-1/2 flex -translate-x-1/2">
         {TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
@@ -39,7 +41,7 @@ export function SiteHeader({ actions, className }: { actions?: ReactNode; classN
                 active ? "text-paper" : "text-ash hover:text-paper",
               )}
             >
-              <span className={cn("border-b pb-1", active ? "border-paper" : "border-transparent")}>{tab.label}</span>
+              <span className={cn("border-b pb-1", active ? "border-paper" : "border-transparent")}>{t(tab.label)}</span>
             </Link>
           );
         })}
