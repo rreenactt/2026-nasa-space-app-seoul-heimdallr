@@ -7,7 +7,7 @@ import { cn } from "cn";
  * "On this page" for Method, with the section being read in paper and the rest in ash (Figma "I · Method").
  * Choosing a section also opens its full explanation; only one stays open at a time.
  */
-export function MethodNav({ sections }: { sections: { id: string; title: string }[] }) {
+export function MethodNav({ label, sections }: { label: string; sections: { id: string; title: string }[] }) {
   const [active, setActive] = useState(sections[0]?.id);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function MethodNav({ sections }: { sections: { id: string; title: string 
   }, [sections]);
 
   return (
-    <nav aria-label="On this page" className="md:sticky md:top-24 md:self-start">
+    <nav aria-label={label} className="md:sticky md:top-24 md:self-start">
       <ol className="grid gap-2.5 text-sm">
         {sections.map((section, index) => (
           <li key={section.id}>
