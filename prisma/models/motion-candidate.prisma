@@ -5,7 +5,7 @@
 enum MotionMatch {
   /// A Gaia DR3 star moved by its own proper motion explains both ends (a known moving star).
   KNOWN_MOVER
-  /// A Gaia DR3 star sits on the SPHEREx position but does not reach the 2MASS one: most likely a chance pair.
+  /// A Gaia DR3 star sits at only one end (e.g. a static star SPHEREx missed on the 2MASS side): a chance pair.
   GAIA_STATIC
   /// No Gaia DR3 star explains the pair: a candidate for people to check, not a detection.
   UNIDENTIFIED

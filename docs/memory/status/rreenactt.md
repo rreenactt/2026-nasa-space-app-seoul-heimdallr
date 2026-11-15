@@ -1,35 +1,38 @@
 # 김재현 (`rreenactt`) 현재 상태
 
 > 본인 또는 본인의 AI만 고친다. 지난 작업은 쌓지 말고 최근 상태만 남긴다.
-> 최종 갱신: 2026-11-15
+> 최종 갱신: 2026-11-15 13:50
 
 ## 담당
 
-- 추가 분석 5개 모두 1차 구현: Comet Breath, Sky Time Machine, Fake Planet Lab, Neighborhood in Motion, Sky Sonata
+- 추가 분석 5개(Comet Breath, Sky Time Machine, Fake Planet Lab, Neighborhood in Motion, Sky Sonata)와 분석 패널 데이터 계층
+- 움직임 후보(기능 A): SPHEREx × 2MASS 조사 파이프라인과 후보 DB (결정 #41 제안)
 
 ## 진행 중
 
-- 움직임 후보(기능 A): SPHEREx × 2MASS 조사 파이프라인(`scripts/motion-survey.ts`), DB 모델·마이그레이션(적용 대기), GitHub Actions `Motion Survey`로 무작위 지점 조사 (결정 #41 제안)
-
-- 분석 패널: 기본 분석 자료를 다 받은 뒤 표시(진행바), 추가 분석은 "Download data"로 동시에 받고 진행바·남은 시간 표시 → "Open" (결정 #31 제안)
-- 데이터 속도: WISE·NEOWISE를 S3 바이트 범위로 읽고 NEOWISE 검색을 TIME 8분할 → Sky Time Machine 90초 → 48초
-- 분석 패널 기본 분석(블링크·차분·합산) 1차 구현, 파장 허용치 결정 #30 제안
+- 움직임 후보 조사 결과 정리 (로컬 변경, 아직 커밋 전)
+  - GitHub Actions 실행 #2(5개 작업 × 20,000곳)의 아티팩트에서 **75,756곳** 집계 (41곳 실패)
+  - Gaia 양 끝 확인(`classifyPair`, 파이프라인 `sx2mass-4`) 추가 후 재분류: 알려진 움직이는 별 262(Gaia 고유운동과 중앙값 4.3% 차), 한쪽에만 Gaia 정지 별 5,081, 미확인 **41**(23개는 |b| < 20°)
+  - 공유 DB에 마이그레이션 적용(테이블 추가만), 조사 `2026-11-15-gha-43625776099`로 75,756곳·후보 5,384개 저장
+  - 변경 파일: `scripts/motion-survey.ts`(`reclassify`, 일괄 넣기), `data/motion-candidates.ts`(`savePoints`), `docs/PLAN.md`(첫 조사 결과)
 
 ## 완료
 
-- Sky Sonata: 규칙 시험(좌우·높이·밝기, 같은 A/B → 같은 소리) 통과, 키보드·정지 동작 확인
-- Neighborhood in Motion: 21개 천체, Barnard's Star 최근접 11,736년·1.155 pc(문헌과 일치), SPHEREx D6에서 Ross 128·Barnard 중심이 모델과 1.5″·4.1″
-- 세 분석 1차 구현, 실제 데이터 검증(Barnard's Star 25년 이동 10.39″/년 = Gaia, 3I/ATLAS 12월 스펙트럼 24점)
-- DR1 컷아웃 경로 확인: AWS 공개 버킷 바이트 범위 읽기 (`PLAN.md` 14장 메모)
-- 결정 #26–28 제안 (팀 확인 필요)
+- 테스트 대상의 SPHEREx 시점(2025.9) 위치 표시: 목록 고유운동으로 위치를 옮겨 핀에서 얼마나 움직였는지 설명하고 그 자리로 다시 열기, WISE 0855는 D6로 열기. 중심 1px 안 포화 픽셀을 정보로 경고(판정은 그대로) (`4b70cc7`)
+- 움직임 후보 파이프라인·DB 모델·Actions 작업 커밋 (`ca4996a`). 대조군 12개 중 8개를 알려진 움직이는 별로 다시 찾음(고유운동 1–8% 이내), 거짓 미확인 0
+- SPHEREx 방문끼리만으로는 움직임을 볼 수 없음 확인: 방문 간 위치 잡음 약 9″ (Barnard's Star 10.4″/년도 구분 불가)
+- 분석 패널 로딩(블링크 자료 다 받은 뒤 표시, 추가 분석 "Download data" → 진행바 → "Open", 결정 #31 제안), 병렬 다운로드·IBE 동시 2개 제한, WISE·NEOWISE S3 읽기
+- 블링크 슬라이더 표시 `n / usable · Visit k` (이슈 #7 닫음)
 
 ## 막힘
 
-- 공식 unWISE 시간분해 이미지가 공개되어 있지 않음 → 자체 합성으로 대체 (#26)
-- IRSA IBE는 동시 2개 제한(2MASS는 여전히 IBE), SIA2 응답이 들쭉날쭉 → 사전 저장 계층은 팀 결정 필요
+- IRSA SIA2·DataLink가 11/15 한때 요청의 70–100%에 502 → 조사 작업이 ESA 2MASS 사본으로 우회
+- 이미지 사전 저장(대상 267개, 약 3–11 GB)은 Neon에 못 담음 → 오브젝트 저장소(R2/Vercel Blob/S3) 팀 결정 필요
+- `.env`의 `DIRECT_URL`이 `-pooler` 호스트로 잘못되어 있음 (마이그레이션은 직접 호스트로 바꿔서 적용)
 
 ## 다음 할 일
 
-- Comet Breath·Sky Time Machine 화면 문구 영어화
-- Sky Time Machine: SPHEREx 채널을 비교 미션 파장에 자동 맞춤, URL을 `/?ra=&dec=&fov=`로 통일
-- 3I/ATLAS 특별 핀과 Comet Breath 연결, 링크에 분석·컷아웃 크기 파라미터(팀이 이름 결정)
+- 조사 결과 로컬 변경 커밋·푸시 (지시 시)
+- DB 후보를 화면에 연결: 시야별 후보 표시(#39/#40), 검토 목록 `MOVEMENT_CANDIDATES`
+- 미확인 41개 확인(상위 3개는 고유운동 없는 Gaia 2변수 별일 가능성), 놓친 빠른 대조 별 원인 확인
+- 결정 #30, #31, #41 팀 확인
