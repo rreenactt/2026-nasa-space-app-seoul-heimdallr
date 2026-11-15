@@ -8,7 +8,8 @@ import { cn } from "cn";
 import { Keycap } from "../site/keycap";
 import { MAX_FOV, MIN_FOV } from "./constants";
 import type { SkyOverlays, StatusKey } from "./overlays";
-import { MOVEMENT_CANDIDATES } from "./review-queue";
+import { GROUPS_FOV } from "./candidate-layer";
+import { useCandidates } from "./candidates-context";
 import { MARK_LABELS, StatusMark } from "./status-mark";
 import { angularDistance } from "./sky-coordinates";
 import { useView } from "./view-store";
@@ -222,9 +223,10 @@ export function ShowOnSky({
   onClose: () => void;
 }) {
   const off = !overlays.candidates;
+  const candidates = useCandidates();
   const view = useView();
   const inView = view
-    ? MOVEMENT_CANDIDATES.filter((candidate) => angularDistance(view, candidate) <= view.fov / 2).length
+    ? candidates.filter((candidate) => angularDistance(view, candidate) <= view.fov / 2).length
     : 0;
   return (
     <div>
@@ -239,9 +241,11 @@ export function ShowOnSky({
           <span>
             <span className="block text-sm font-medium text-paper">Candidates</span>
             <span className="block text-[11.5px] text-ash">
-              {MOVEMENT_CANDIDATES.length === 0
+              {candidates.length === 0
                 ? "No candidates yet, so nothing is drawn"
-                : `${inView.toLocaleString("en-US")} in view`}
+                : view && view.fov > GROUPS_FOV
+                  ? `Shown at ${GROUPS_FOV}° and narrower`
+                  : `${inView.toLocaleString("en-US")} in view`}
             </span>
           </span>
           <SkySwitch
@@ -252,14 +256,6 @@ export function ShowOnSky({
           />
         </label>
         <div className="mt-2 pl-4">
-          <Row dim={off} className="h-7">
-            Density cells
-            <SkySwitch
-              checked={overlays.density}
-              label="Density cells"
-              onChange={(density) => onChange({ ...overlays, density })}
-            />
-          </Row>
           <Row dim={off} className="h-7">
             Status marks
             <SkySwitch checked={overlays.marks} label="Status marks" onChange={(marks) => onChange({ ...overlays, marks })} />
@@ -282,7 +278,7 @@ export function ShowOnSky({
                   }
                 />
                 <StatusMark kind={key} className="size-2.5" />
-                {key === "known" ? "Known asteroids" : MARK_LABELS[key]}
+                {key === "known" ? "Known movers" : MARK_LABELS[key]}
               </label>
             ))}
           </div>

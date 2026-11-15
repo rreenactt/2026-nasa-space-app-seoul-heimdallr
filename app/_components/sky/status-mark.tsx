@@ -1,13 +1,13 @@
 import { cn } from "cn";
 
-/** What a candidate mark says on the sky and in lists. Known asteroids get their own mark whatever their status. */
+/** What a candidate mark says on the sky and in lists. Known movers get their own mark whatever their status. */
 export type MarkKind = "noteworthy" | "needs-ratings" | "recommended" | "known" | "test" | "opened";
 
 export const MARK_LABELS: Record<MarkKind, string> = {
   noteworthy: "Noteworthy",
   "needs-ratings": "Needs ratings",
   recommended: "Recommended",
-  known: "Known asteroid",
+  known: "Known mover",
   test: "Test target",
   opened: "Opened before",
 };
