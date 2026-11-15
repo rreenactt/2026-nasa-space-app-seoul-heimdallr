@@ -88,7 +88,7 @@ function Tally({ tally }: { tally: NonNullable<RatingState["tally"]> }) {
 }
 
 /** "3 ratings" / "1 rating" (the same keys as the Most rated places rows). */
-const ratingCount = (n: number, t: Translate) => t(n === 1 ? "mostRated.ratingsOne" : "mostRated.ratingsOther", { n });
+const ratingCount = (n: number, t: Translate) => t(n === 1 ? "rating.countOne" : "rating.countOther", { n });
 
 /** One-line summary of a rating state: "You rated Moving · 3 ratings · 67% Moving", or null if not rated. */
 export function ratingSummary(state: RatingState | undefined, t: Translate): string | null {

@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import type { MotionMatch, Prisma } from "@/prisma/client";
 
@@ -68,6 +69,20 @@ export interface CandidateInput {
 /** Creates the survey row (a rerun with the same id keeps the first row's settings). */
 export async function createSurvey(survey: SurveyInput) {
   await db.motionSurvey.upsert({ where: { id: survey.id }, create: survey, update: {}, select: { id: true } });
+}
+
+/**
+ * Stores many points with their candidates, a chunk per transaction (one round trip per table per chunk), so a point
+ * is never written without its candidates. Used for imports of whole runs.
+ */
+export async function savePoints(surveyId: string, rows: { point: PointInput; candidates: CandidateInput[] }[], chunk = 1000) {
+  for (let i = 0; i < rows.length; i += chunk) {
+    const part = rows.slice(i, i + chunk).map((r) => ({ ...r, id: randomUUID() }));
+    await db.$transaction([
+      db.motionSurveyPoint.createMany({ data: part.map((r) => ({ ...r.point, id: r.id, surveyId, candidateCount: r.candidates.length })) }),
+      db.motionCandidate.createMany({ data: part.flatMap((r) => r.candidates.map((c) => ({ ...c, surveyId, pointId: r.id }))) }),
+    ]);
+  }
 }
 
 /** Stores one searched point and its candidates together, so a point is never half written. */
@@ -186,4 +201,20 @@ export async function findReviewCandidate(
     .filter(({ arcsec }) => arcsec <= radiusArcsec)
     .sort((a, b) => a.arcsec - b.arcsec)[0];
   return nearest ? { surveyId: survey.id, row: nearest.row } : null;
+}
+
+/**
+ * The reviewed candidates (latest survey run) sitting in the given HEALPix order-11 cells, the same fixed cells the
+ * ratings use, with the run's release so the caller can check it matches the ratings' release.
+ */
+export async function reviewCandidatesInCells(hpxIndexes: number[]) {
+  if (hpxIndexes.length === 0) return null;
+  const survey = await latestSurvey();
+  if (!survey) return null;
+  const rows = await db.motionCandidate.findMany({
+    where: { surveyId: survey.id, match: { in: REVIEWED_MATCHES }, hpxIndex: { in: hpxIndexes } },
+    orderBy: { snr: "desc" },
+    select: { ...REVIEW_CANDIDATE_FIELDS, hpxIndex: true },
+  });
+  return { surveyId: survey.id, release: survey.release, rows };
 }

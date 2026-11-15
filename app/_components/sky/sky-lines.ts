@@ -79,7 +79,7 @@ const LABEL_BOTTOM_CLEAR = 140;
  * our own canvas, not as an Aladin Lite overlay: in 3.8.2 a polyline with a point outside the TAN projection throws
  * inside Aladin's draw loop, and its own grid could not be styled or labelled to match.
  */
-/** IAU abbreviation (e.g. "Ori") and English name → the label to draw (decision #56: Korean adds its name in brackets). */
+/** IAU abbreviation (e.g. "Ori") and English name → the label to draw (decision #59: Korean adds its name in brackets). */
 export type ConstellationLabel = (id: string, name: string) => string;
 
 export function drawSkyLines(

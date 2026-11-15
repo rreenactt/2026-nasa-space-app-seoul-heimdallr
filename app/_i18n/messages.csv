@@ -257,13 +257,6 @@ layers.opened,Places you opened,열어 본 곳,Show on sky panel switch: marks f
 layers.statusMarks,Status marks,상태 표시,Show on sky panel switch: shape marks that tell each candidate's status
 layers.title,Show on sky,표시 설정,Title of the layers panel (which overlays the sky draws) and the tooltip/label of its tool
 menu.label,Menu,메뉴,Header button that opens the site menu
-mostRated.empty,No ratings yet. Open a point and rate it to start the list.,아직 평가가 없어요. 한 곳을 열어 평가하면 목록이 시작돼요.,Most rated places: when nobody has rated yet
-mostRated.footer,"Top {limit} sky cells (about 1.7′) by number of ratings. A count is attention, not a result.",평가 수가 많은 하늘 칸 상위 {limit}곳(약 1.7′)이에요. 평가 수는 관심도일 뿐 결과가 아니에요.,Most rated places footnote under the list
-mostRated.loadFailed,Could not load the ranking: {message},순위를 불러오지 못했어요: {message},Most rated places: error; {message} is the server's error text
-mostRated.loading,Loading…,불러오는 중…,Most rated places: while the ranking loads
-mostRated.ratingsOne,{n} rating,평가 {n}개,"Most rated places row: rating count, count is 1"
-mostRated.ratingsOther,{n} ratings,평가 {n}개,"Most rated places row: rating count, count other than 1"
-mostRated.title,Most rated places,Most rated places,"Sky screen: header of the collapsible ranking of places with the most ratings. Title, kept in English"
 nav.about,About,About,Header tab: the page about the project. Kept in English in every language (decision by 허한결)
 nav.label,Main,주 메뉴,aria-label of the header tabs
 nav.method,Method,Method,Header tab: the page explaining how the analyses work. Kept in English in every language
@@ -290,6 +283,8 @@ panel.unidentifiedPair,"A SPHEREx source with no 2MASS star in place, paired wit
 panel.visitsApart,"The SPHEREx visits are months apart, so the blink may show little motion. Compare with the 2MASS image in Sky Time Machine below.",SPHEREx 방문은 몇 달 간격이라 블링크에서는 움직임이 작게 보일 수 있어요. 아래 Sky Time Machine의 2MASS 이미지와 비교해 보세요.,"Analysis panel footnote under a candidate's note; Sky Time Machine is an analysis name, kept in English"
 panel.yourAssessment,Your assessment,Your assessment,"Analysis panel section heading above the rating buttons. Title, kept in English"
 rating.agreementNote,"This shows agreement among raters, not a confirmed discovery.",확인된 결과가 아닌 평가자 합의도,"Analysis panel, under the rating shares: agreement is not a scientific confirmation"
+rating.countOne,{n} rating,평가 {n}개,"Rating count, count is 1 (rating summary, Most rated tab)"
+rating.countOther,{n} ratings,평가 {n}개,"Rating count, count other than 1"
 rating.failed,Rating failed.,평가 실패,"Analysis panel, Your assessment section: error when saving the rating failed and the server gave no message"
 rating.hiddenUntilRated,"Others' ratings appear after you rate, so they do not sway you.",다른 사람의 평가는 내가 평가한 뒤에 공개 (판단에 영향을 주지 않도록),"Analysis panel, Your assessment section: shown before this browser has rated (decision #6)"
 rating.movingShare,{pct}% Moving,움직인다 {pct}%,Panel header badge and Most rated places row: share of Moving ratings (the agreement)
@@ -332,16 +327,26 @@ review.placesOpenedOne,{n} place opened in this browser,이 브라우저에서 �
 review.placesOpenedOther,{n} places opened in this browser,이 브라우저에서 연 곳 {n}곳,"Review queue summary line on the Recent tab, count other than 1"
 review.previous,Previous,이전,Review queue button: previous place in the review order
 review.rated,rated {rating},내 평가: {rating},Review queue row text: this browser's own rating; {rating} is Moving / Not moving / Noise or artifact
+review.ratedColumnPlace,"Place, RA Dec","위치, RA Dec",Most rated tab: column header for the place name and coordinates
+review.ratedColumnRatings,Ratings,평가 수,Most rated tab: column header for the number of ratings
+review.ratedCountNote,"A count is attention, not a result.","평가 수는 관심도, 결과가 아님",Most rated tab: first note above the list
+review.ratedEmpty,"No ratings yet. Open a place, play the blink and rate it; it shows up here.",아직 평가가 없어요. 한 곳을 열어 블링크를 보고 평가하면 여기에 나타나요.,Most rated tab: when nobody has rated yet
+review.ratedFooter,"Top {n} sky cells, about 1.7′ each.","하늘 칸 상위 {n}곳, 칸마다 약 1.7′",Most rated tab footnote under the list
+review.ratedHiddenNote,How people rated shows only where you rated too.,다른 사람의 평가는 내가 평가한 곳에서만 공개,Most rated tab: second note above the list (decision #6)
+review.ratedLoadFailed,Could not load the ratings just now. Switch tabs or reopen the queue to try again.,평가를 불러오지 못했어요. 탭을 바꾸거나 검토 목록을 다시 열어 보세요.,Most rated tab: error when the ranking fails to load
+review.ratedSubtitle,"Places people rated most, top {n}",평가가 많은 곳 상위 {n},Review queue subtitle on the Most rated tab
 review.recentEmpty,"Places you open appear here, newest first.",연 곳이 최신순으로 표시됨,Recent tab when nothing has been opened yet
 review.seen,seen,열어 봄,Review queue row text: this browser opened the place before
+review.skyCell,Sky cell,하늘 칸,Most rated tab: name of a rated cell that holds no listed candidate
 review.snr,SNR,SNR,Review queue: sort option and column header for signal-to-noise ratio; abbreviation kept
-review.sort,Sort,정렬,Review queue: label of the sort menu
+review.sort,Sort,정렬,Review queue: label of the sort menu (read by screen readers only)
 review.sortPriority,Priority,검토 순서,Review queue sort option: the review order (noteworthy first)
 review.synthetic,synthetic,합성 데이터,Review queue row text: the candidate is synthetic test data
 review.tabInView,In view,시야 안,Review queue tab: candidates inside the current view
+review.tabMostRated,Most rated,평가 많은 곳,Review queue tab: sky cells with the most ratings (decision #58)
 review.tabRecent,Recent,최근,Review queue tab: places this browser opened
 review.tabWholeSky,Whole sky,전체 하늘,Review queue tab: candidates on the whole sky
-review.tabsLabel,Which places,볼 곳,Review queue: aria-label of the In view / Whole sky / Recent tabs
+review.tabsLabel,Which places,볼 곳,Review queue: aria-label of the In view / Whole sky / Recent / Most rated tabs
 review.title,Review queue,검토 목록,Review queue panel heading and its aria-label
 review.visits,Visits,방문 수,Review queue: sort option and column header for the number of SPHEREx visits
 review.yourCall,Your call: no catalog explains it,직접 판단: 설명하는 목록 없음,Review queue: note beside the Unidentified count

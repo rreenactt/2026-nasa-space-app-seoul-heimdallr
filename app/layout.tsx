@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // The language comes from a cookie (decision #56), so every page renders on request.
+  // The language comes from a cookie (decision #59), so every page renders on request.
   const locale = await getLocale();
   return (
     <html

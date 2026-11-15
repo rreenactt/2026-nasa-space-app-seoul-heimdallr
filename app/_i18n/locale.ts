@@ -1,4 +1,4 @@
-/** Languages the interface is offered in (decision #56). English is the default; Korean is chosen in the menu. */
+/** Languages the interface is offered in (decision #59). English is the default; Korean is chosen in the menu. */
 export const LOCALES = ["en", "ko"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";

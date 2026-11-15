@@ -42,7 +42,6 @@ import { paintCandidates } from "./candidate-layer";
 import { clearPlaces, recordPlace, samePlace, usePlaceHistory } from "./place-history";
 import { RatingGuide, ReviewQueuePanel } from "./review-queue-panel";
 import { useCandidates } from "./candidates-context";
-import { MostRated } from "./most-rated";
 import { ViewCenter } from "./view-center";
 import { findTestTarget, TEST_TARGETS, type TestTarget } from "./test-targets";
 import { getView, subscribeView } from "./view-store";
@@ -285,14 +284,17 @@ export function SkyExplorer({
     (entry: ReviewEntry) => (picked?.id === entry.id ? goToEntry(entry) : pick(entry)),
     [picked, goToEntry, pick],
   );
+  // The queue's "Most rated" tab hands over its own list, so Previous, Next, N and P walk what is on screen (#58).
+  const [stepList, setStepList] = useState<ReviewEntry[] | null>(null);
   const step = useCallback(
     (direction: 1 | -1) => {
-      if (queue.length === 0) return;
+      const list = stepList ?? queue;
+      if (list.length === 0) return;
       const from = picked ?? currentEntry;
-      const index = from ? queue.findIndex((entry) => entry.id === from.id) : -1;
-      pick(queue[(index + direction + queue.length) % queue.length] ?? queue[0]);
+      const index = from ? list.findIndex((entry) => entry.id === from.id) : -1;
+      pick(list[(index + direction + list.length) % list.length] ?? list[0]);
     },
-    [queue, picked, currentEntry, pick],
+    [stepList, queue, picked, currentEntry, pick],
   );
   // The pick ends once its place leaves the screen, so Enter never opens a place the user cannot see.
   useEffect(() => {
@@ -443,6 +445,7 @@ export function SkyExplorer({
                 onOpenPlace={goTo}
                 onOpenPicked={openPicked}
                 onStep={step}
+                onStepListChange={setStepList}
                 onClose={foldQueue}
               />
             </div>
@@ -464,8 +467,6 @@ export function SkyExplorer({
               <span className="text-xs font-normal text-ash">{candidates.length.toLocaleString("en-US")}</span>
               <Keycap className="ml-auto">Q</Keycap>
             </button>
-            {/* Most rated places (from main, decision #35). Not in the Figma screens yet, so it sits under the button. */}
-            <MostRated onSelect={goTo} />
           </div>
         )}
         {/* Centred on the screen rather than on this box (Figma: icons 20px from the edge, 34px apart). */}

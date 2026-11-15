@@ -66,7 +66,7 @@ function Entry({ entry }: { entry: MenuEntry }) {
 export function SiteMenu({ groups }: { groups: MenuEntry[][] }) {
   const t = useT();
   const { locale, setLocale } = useLocale();
-  // Every page's menu ends with the language choice (decision #56); each language is named in itself.
+  // Every page's menu ends with the language choice (decision #59); each language is named in itself.
   const language: MenuEntry = {
     label: t("language.menu"),
     items: LOCALES.map((option) => ({

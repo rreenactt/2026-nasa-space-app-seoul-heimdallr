@@ -1,6 +1,6 @@
 /**
  * Translation table → code. `app/_i18n/messages.csv` is the only place interface text is written; this script checks
- * it and generates the two files the app imports. Run it after editing the CSV (decision #56).
+ * it and generates the two files the app imports. Run it after editing the CSV (decision #59).
  *
  *   node scripts/i18n.mts           check, sort and normalize the CSV, regenerate the code
  *   node scripts/i18n.mts --check   check only; fails when the CSV is unsorted or the generated code is stale (CI)
