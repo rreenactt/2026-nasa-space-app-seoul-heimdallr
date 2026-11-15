@@ -1,6 +1,17 @@
 import { SKY_SURVEY } from "../constants";
 import type { SkyPaintFrame } from "../sky-view";
-import { GUIDE_MAX_FOV, GUIDE_STARS, lightYears, positionAt, SPHEREX_EPOCH, type StarGuideState, totalPm } from "./use-star-guide";
+import type { GaiaStar } from "@/app/_lib/sky/types";
+import {
+  GUIDE_MAX_FOV,
+  GUIDE_STARS,
+  lightYears,
+  positionAt,
+  SPHEREX_EPOCH,
+  type StarGuideState,
+  starsNear,
+  totalPm,
+  viewRadius,
+} from "./use-star-guide";
 
 /** Same light blue as the constellation lines, so guide marks read as "help", not as candidates (yellow). */
 const GUIDE = "168, 200, 255";
@@ -22,8 +33,14 @@ const CALLOUT_STAGGER = 0.18;
 /** Longest frame step the animation takes, so a pause between repaints does not skip an animation. */
 const MAX_STEP_MS = 50;
 
+/** Site font families, read once: canvas cannot use CSS variables, and reading styles every frame is slow. */
+const families = new Map<string, string>();
 function font(variable: "--font-ui-face" | "--font-data-face", size: number, weight = 400) {
-  const family = getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || "sans-serif";
+  let family = families.get(variable);
+  if (!family) {
+    family = getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || "sans-serif";
+    families.set(variable, family);
+  }
   return `${weight} ${size}px ${family}`;
 }
 
@@ -37,7 +54,7 @@ const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);
  * pans into view or when the view zooms back in, and draw out (the entrance backwards) when it pans away, loses its
  * number or the view zooms out. A callout value below 0 is a stagger delay. One sky screen at a time.
  */
-type Presence = { mark: number; callout: number; rank: number; numbered: boolean };
+type Presence = { star: GaiaStar; mark: number; callout: number; rank: number; numbered: boolean };
 const presence = new Map<string, Presence>();
 let lastPaint = 0;
 
@@ -64,15 +81,17 @@ export function paintStarGuide(
   const now = performance.now();
   const dt = Math.min(now - lastPaint, MAX_STEP_MS);
   lastPaint = now;
-  if (state.status !== "on" || state.nearby.length === 0) {
+  if (state.status !== "on" || !state.catalog) {
     presence.clear(); // switched off: gone at once, and the next showing draws everything in
     return false;
   }
 
   const zoomedOut = frame.fov > GUIDE_MAX_FOV;
+  // Picked from the catalog around the current center on every frame (well under a millisecond), so a fast pan is
+  // followed at once; the epoch-2026 position decides whether a star is on screen.
   const visible = zoomedOut
     ? []
-    : state.nearby.filter((star) => {
+    : starsNear(state.catalog, frame.ra, frame.dec, viewRadius(frame) + 0.05).filter((star) => {
         const point = frame.project(...positionAt(star, SPHEREX_EPOCH));
         return point !== null && point[0] >= 0 && point[1] >= 0 && point[0] <= frame.width && point[1] <= frame.height;
       });
@@ -83,14 +102,16 @@ export function paintStarGuide(
   // Move every value toward its target.
   let delay = 0;
   let animating = false;
-  for (const star of state.nearby) {
-    const id = star.sourceId;
+  // Stars on screen now, plus stars still fading out after leaving it.
+  const candidates = new Map([...visible, ...numbered].map((star) => [star.sourceId, star]));
+  for (const [id, p] of presence) if (!candidates.has(id)) candidates.set(id, p.star);
+  for (const [id, star] of candidates) {
     const rank = rankOf.get(id);
     const markTarget = visibleIds.has(id) || rank !== undefined ? 1 : 0;
     let p = presence.get(id);
     if (!p) {
       if (markTarget === 0) continue;
-      p = { mark: 0, callout: 0, rank: rank ?? 0, numbered: false };
+      p = { star, mark: 0, callout: 0, rank: rank ?? 0, numbered: false };
       presence.set(id, p);
     }
     const calloutTarget = rank !== undefined ? 1 : 0;
@@ -104,7 +125,7 @@ export function paintStarGuide(
     if (p.mark === 0 && p.callout <= 0 && markTarget === 0) presence.delete(id);
   }
 
-  const drawn = state.nearby.filter((star) => presence.has(star.sourceId));
+  const drawn = [...presence.values()].map((p) => p.star);
   context.save();
 
   // Squares and motion lines. Numbered stars get the larger square, the dot at 2026 and their own color.

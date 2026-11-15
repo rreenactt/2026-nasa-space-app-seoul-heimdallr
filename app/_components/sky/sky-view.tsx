@@ -18,6 +18,9 @@ export type SkyLayers = { pins: boolean; constellations: boolean; grid: boolean 
 /** What a painter gets on each redraw: a sky-to-screen projection (null beyond the view) and the view size. */
 export type SkyPaintFrame = {
   project: (ra: number, dec: number) => [number, number] | null;
+  /** View center (ICRS degrees). */
+  ra: number;
+  dec: number;
   fov: number;
   width: number;
   height: number;
@@ -210,6 +213,8 @@ export default function SkyView({
                   const pixel = aladin.world2pix(ra, dec);
                   return pixel ? [pixel[0], pixel[1]] : null;
                 },
+                ra: centerRa,
+                dec: centerDec,
                 fov: width,
                 width: element.clientWidth,
                 height: element.clientHeight,

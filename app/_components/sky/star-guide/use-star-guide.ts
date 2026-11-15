@@ -38,7 +38,7 @@ const CELL = 2;
 /** [ra, dec, pmra, pmdec, parallax], fastest first (see scripts/fast-stars-catalog.ts). */
 type CatalogRow = [number, number, number, number, number | null];
 
-type Catalog = { stars: GaiaStar[]; cells: Map<string, GaiaStar[]> };
+export type Catalog = { stars: GaiaStar[]; cells: Map<string, GaiaStar[]> };
 
 const cellKey = (ra: number, dec: number) => `${Math.floor(normalizeRa(ra) / CELL)} ${Math.floor((dec + 90) / CELL)}`;
 
@@ -64,7 +64,7 @@ export function buildCatalog(rows: CatalogRow[]): Catalog {
 }
 
 /** Radius (degrees) of the circle around the view's center that contains the whole view. */
-function viewRadius(view: SettledSky) {
+export function viewRadius(view: { fov: number; width: number; height: number }) {
   return (view.fov / 2) * Math.hypot(1, view.height / Math.max(view.width, 1));
 }
 
@@ -128,8 +128,8 @@ export type StarGuideState =
   | {
       status: "on";
       phase: GuidePhase;
-      /** Catalog stars around the last settled view (wider than it, so a pan keeps stars to draw), fastest first. */
-      nearby: GaiaStar[];
+      /** The loaded catalog; the painter picks the stars around the current view from it on every frame. */
+      catalog: Catalog | null;
       /** The fastest stars on the last settled screen, as numbered in the card. */
       listed: GaiaStar[];
       /** The view is moving: callouts follow whatever is fastest on screen. */
@@ -153,17 +153,14 @@ export function useStarGuide(enabled: boolean) {
     gcTime: Infinity,
   });
 
-  // Three view radii around the center (at least 6°), so stars just off screen are ready when the view pans.
-  const nearby = useMemo(
+  const listed = useMemo(
     () =>
       catalog.data && view && view.fov <= GUIDE_MAX_FOV
-        ? starsNear(catalog.data, view.ra, view.dec, Math.max(3 * viewRadius(view), 6))
+        ? starsNear(catalog.data, view.ra, view.dec, viewRadius(view) + 0.05)
+            .filter((star) => onScreen(star, view))
+            .slice(0, GUIDE_STARS)
         : [],
     [catalog.data, view],
-  );
-  const listed = useMemo(
-    () => (view ? nearby.filter((star) => onScreen(star, view)).slice(0, GUIDE_STARS) : []),
-    [nearby, view],
   );
   const phase: GuidePhase = catalog.isError
     ? "error"
@@ -173,8 +170,8 @@ export function useStarGuide(enabled: boolean) {
         ? "too-wide"
         : "ready";
   const state = useMemo<StarGuideState>(
-    () => (enabled ? { status: "on", phase, nearby, listed, moving } : { status: "off" }),
-    [enabled, phase, nearby, listed, moving],
+    () => (enabled ? { status: "on", phase, catalog: catalog.data ?? null, listed, moving } : { status: "off" }),
+    [enabled, phase, catalog.data, listed, moving],
   );
   return { state, onSettle: enabled ? onSettle : undefined, total: catalog.data?.stars.length ?? null };
 }
