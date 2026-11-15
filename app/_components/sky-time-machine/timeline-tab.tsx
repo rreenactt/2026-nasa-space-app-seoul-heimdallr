@@ -19,7 +19,7 @@ export function TimelineStrip({ value, onSelect, highlight }: { value?: string |
   const { epochs, grid } = useStm();
   const loadedFrames = useLoadedFrames(epochs, grid);
   const lanes = MISSION_ORDER.filter((m) => epochs.some((e) => e.mission === m));
-  if (!epochs.length) return <p className="text-xs text-muted-foreground">검색이 끝나면 실제 관측이 있는 시점만 표시됩니다.</p>;
+  if (!epochs.length) return <p className="text-xs text-muted-foreground">When the search finishes, only dates with actual observations are shown.</p>;
   const y0 = Math.floor(mjdToYear(epochs[0].timeStart)) - 0.5;
   const y1 = Math.ceil(mjdToYear(epochs[epochs.length - 1].timeEnd)) + 0.5;
   const W = 1000;
@@ -32,7 +32,7 @@ export function TimelineStrip({ value, onSelect, highlight }: { value?: string |
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="group" aria-label="관측 타임라인">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="group" aria-label="Observation timeline">
         {ticks.map((t) => {
           const tx = left + ((t - y0) / (y1 - y0)) * (W - left - 8);
           return (
@@ -68,14 +68,14 @@ export function TimelineStrip({ value, onSelect, highlight }: { value?: string |
                     className="cursor-pointer"
                     onClick={() => onSelect(e)}
                   >
-                    <title>{`${MISSIONS[m].label} ${e.band} · ${formatPeriod(e.timeStart, e.timeEnd)} · 노출 ${e.totalExposures}장`}</title>
+                    <title>{`${MISSIONS[m].label} ${e.band} · ${formatPeriod(e.timeStart, e.timeEnd)} · ${e.totalExposures} exposures`}</title>
                   </rect>
                 );
               })}
           </g>
         ))}
       </svg>
-      <p className="text-[11px] text-muted-foreground">막대 = 실제 관측 기간(관측이 없는 해는 비어 있음) · 진한 막대 = 영상 받음 · 연한 막대 = 아직 받지 않음</p>
+      <p className="text-[11px] text-muted-foreground">Bar = actual observation period (years without observations are empty) · Solid bar = image loaded · Faint bar = not loaded yet</p>
     </div>
   );
 }
@@ -112,25 +112,25 @@ export function TimelineTab() {
     <div className="grid gap-3 pt-2">
       <TimelineStrip value={current?.id} onSelect={(e) => setCurrentId(e.id)} />
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="icon-sm" variant="outline" disabled={idx <= 0} onClick={() => prev && setCurrentId(prev.id)} aria-label="이전 시점">
+        <Button size="icon-sm" variant="outline" disabled={idx <= 0} onClick={() => prev && setCurrentId(prev.id)} aria-label="Previous date">
           <ChevronLeftIcon />
         </Button>
         <Button size="sm" onClick={() => setPlaying(!playing)} disabled={epochs.length < 2}>
-          {playing ? <PauseIcon /> : <PlayIcon />} {playing ? "정지" : "시간순 재생"}
+          {playing ? <PauseIcon /> : <PlayIcon />} {playing ? "Stop" : "Play in time order"}
         </Button>
-        <Button size="icon-sm" variant="outline" disabled={idx >= epochs.length - 1} onClick={() => setCurrentId(epochs[idx + 1].id)} aria-label="다음 시점">
+        <Button size="icon-sm" variant="outline" disabled={idx >= epochs.length - 1} onClick={() => setCurrentId(epochs[idx + 1].id)} aria-label="Next date">
           <ChevronRightIcon />
         </Button>
-        <NativeSelect size="sm" value={String(interval)} onChange={(e) => setIntervalMs(Number(e.target.value))} aria-label="재생 간격">
-          <NativeSelectOption value="700">빠르게 (0.7초)</NativeSelectOption>
-          <NativeSelectOption value="1500">보통 (1.5초)</NativeSelectOption>
-          <NativeSelectOption value="3000">느리게 (3초)</NativeSelectOption>
+        <NativeSelect size="sm" value={String(interval)} onChange={(e) => setIntervalMs(Number(e.target.value))} aria-label="Playback interval">
+          <NativeSelectOption value="700">Fast (0.7 s)</NativeSelectOption>
+          <NativeSelectOption value="1500">Normal (1.5 s)</NativeSelectOption>
+          <NativeSelectOption value="3000">Slow (3 s)</NativeSelectOption>
         </NativeSelect>
         {prefetch.running ? (
-          <Button size="sm" variant="outline" onClick={prefetch.stop}>미리 받기 중지</Button>
+          <Button size="sm" variant="outline" onClick={prefetch.stop}>Stop preloading</Button>
         ) : (
           <Button size="sm" variant="outline" onClick={() => prefetch.start(epochs)} disabled={!epochs.length}>
-            <DownloadCloudIcon /> 모든 시점 미리 받기
+            <DownloadCloudIcon /> Preload all dates
           </Button>
         )}
         <span className="text-xs text-muted-foreground">
@@ -140,7 +140,7 @@ export function TimelineTab() {
       {prefetch.total > 0 && (
         <div className="grid gap-1">
           <Progress value={(prefetch.done / prefetch.total) * 100} />
-          <span className="text-xs text-muted-foreground">영상 준비 {prefetch.done}/{prefetch.total} (시점당 수 초 — IRSA에서 매번 새로 받습니다)</span>
+          <span className="text-xs text-muted-foreground">Images ready {prefetch.done}/{prefetch.total} (a few seconds per date, fetched fresh from IRSA each time)</span>
         </div>
       )}
 
@@ -148,36 +148,36 @@ export function TimelineTab() {
         <FrameView epoch={current} />
         {current && (
           <dl className="grid content-start gap-x-3 gap-y-1 text-xs [grid-template-columns:auto_1fr]">
-            <dt className="text-muted-foreground">망원경</dt>
+            <dt className="text-muted-foreground">Telescope</dt>
             <dd>{MISSIONS[current.mission].label}</dd>
-            <dt className="text-muted-foreground">대역</dt>
+            <dt className="text-muted-foreground">Band</dt>
             <dd>
               {current.wavelengthLabel}
-              {frame.data?.wavelengthUm != null && <span className="font-mono"> · 이 위치 {frame.data.wavelengthUm.toFixed(3)} µm</span>}
+              {frame.data?.wavelengthUm != null && <span className="font-mono"> · At this position {frame.data.wavelengthUm.toFixed(3)} µm</span>}
             </dd>
-            <dt className="text-muted-foreground">관측 기간</dt>
+            <dt className="text-muted-foreground">Observation period</dt>
             <dd className="font-mono">{formatPeriod(frame.data?.timeStart ?? current.timeStart, frame.data?.timeEnd ?? current.timeEnd)}</dd>
-            <dt className="text-muted-foreground">이전 시점부터</dt>
+            <dt className="text-muted-foreground">Since previous date</dt>
             <dd>{elapsed != null ? formatElapsed(elapsed) : "—"}</dd>
-            <dt className="text-muted-foreground">영상</dt>
-            <dd>{frame.data?.combine ?? `${current.exposures.length}장 사용 예정 (통과 내 ${current.totalExposures}장)`}</dd>
-            <dt className="text-muted-foreground">원본 픽셀</dt>
-            <dd>{frame.data ? `${frame.data.sourcePixelArcsec.toFixed(2)}″ (표시 격자 ${((grid.fovArcmin * 60) / grid.n).toFixed(2)}″)` : "—"}</dd>
-            <dt className="text-muted-foreground">유효 영역</dt>
+            <dt className="text-muted-foreground">Image</dt>
+            <dd>{frame.data?.combine ?? `${current.exposures.length} to be used (of ${current.totalExposures} in the visit)`}</dd>
+            <dt className="text-muted-foreground">Source pixel</dt>
+            <dd>{frame.data ? `${frame.data.sourcePixelArcsec.toFixed(2)}″ (display grid ${((grid.fovArcmin * 60) / grid.n).toFixed(2)}″)` : "—"}</dd>
+            <dt className="text-muted-foreground">Valid coverage</dt>
             <dd>{frame.data ? `${(frame.data.coverage * 100).toFixed(0)}%` : "—"}</dd>
             {frame.data && frame.data.failed.length > 0 && (
               <>
-                <dt className="text-muted-foreground">받지 못한 노출</dt>
-                <dd>{frame.data.failed.length}장 ({frame.data.failed[0].reason})</dd>
+                <dt className="text-muted-foreground">Exposures not loaded</dt>
+                <dd>{frame.data.failed.length} ({frame.data.failed[0].reason})</dd>
               </>
             )}
           </dl>
         )}
       </div>
       <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-        <Badge variant="outline">밝기는 프레임마다 따로 맞춤 — 미션 간 밝기 비교 불가</Badge>
-        <Badge variant="outline">모든 프레임이 같은 하늘 좌표 · 북쪽 위 · 동쪽 왼쪽</Badge>
-        <Badge variant="outline">빗금 = 자료 없음</Badge>
+        <Badge variant="outline">Brightness scaled per frame; no brightness comparison across missions</Badge>
+        <Badge variant="outline">All frames share the same sky coordinates · North up · East left</Badge>
+        <Badge variant="outline">Hatched = no data</Badge>
       </div>
     </div>
   );

@@ -11,10 +11,10 @@ import { PAPERS, PAPER_STATEMENTS, PUBLISHED_RATES } from "@/app/_lib/comet/publ
 import type { PublishedRate } from "@/app/_lib/comet/types";
 import { useCometState } from "./comet-state";
 
-const SPECIES_ORDER = ["H₂O", "CO₂", "CO", "¹³CO₂", "C-H 유기물"];
+const SPECIES_ORDER = ["H₂O", "CO₂", "CO", "¹³CO₂", "C-H organics"];
 const LOG_MIN = 24.8;
 const LOG_MAX = 28.4;
-const STATUS_LABEL = { detection: "검출", tentative: "잠정 검출", "upper-limit": "상한값" } as const;
+const STATUS_LABEL = { detection: "Reported detection", tentative: "Reported tentative", "upper-limit": "Reported upper limit" } as const;
 
 export function formatRate(q: number) {
   const exp = Math.floor(Math.log10(q));
@@ -33,7 +33,7 @@ function seriesOf(r: PublishedRate): "aug" | "dec" | "prelim" {
 const SERIES = {
   aug: { label: "2025-08-01 ~ 08-15 (Lisse+2025b)", color: "var(--series-1)", dy: -7 },
   dec: { label: "2025-12-08 ~ 12-15 (Lisse+2026)", color: "var(--series-2)", dy: 7 },
-  prelim: { label: "8월 초기 분석 (같은 관측, 대체됨)", color: "var(--muted-foreground)", dy: 0 },
+  prelim: { label: "August initial analysis (same observations, superseded)", color: "var(--muted-foreground)", dy: 0 },
 } as const;
 
 export function RatesPanel() {
@@ -59,23 +59,23 @@ export function RatesPanel() {
     <div className="flex flex-col gap-4 pt-2">
       <Alert>
         <InfoIcon />
-        <AlertTitle>선택한 관측 {date ?? "—"}</AlertTitle>
+        <AlertTitle>Selected observation {date ?? "—"}</AlertTitle>
         <AlertDescription>
           {coveringPapers.length > 0
-            ? `${coveringPapers.map(paperName).join(", ")}의 분석 기간에 포함됩니다. 아래 값은 그 기간 전체에 대한 추정이며, 이 노출 하나의 값이 아닙니다.`
-            : "이 날짜를 포함하는 논문 분석 기간이 없습니다. 방출률을 표시하지 않습니다."}
+            ? `Falls within the analysis period of ${coveringPapers.map(paperName).join(", ")}. The values below are estimates for that whole period, not for this single exposure.`
+            : "No paper's analysis period covers this date. No production rates are shown."}
         </AlertDescription>
       </Alert>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">논문 인용 기체 방출률 (분자/초, 로그 축)</h3>
+        <h3 className="text-sm font-medium">Gas production rates cited from papers (molecules/s, log axis)</h3>
         <Label className="flex items-center gap-2 text-xs font-normal">
-          <Switch size="sm" checked={showPrelim} onCheckedChange={setShowPrelim} /> 초기 분석 표시 (대체된 값)
+          <Switch size="sm" checked={showPrelim} onCheckedChange={setShowPrelim} /> Show initial analysis (superseded values)
         </Label>
       </div>
 
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px]" role="img" aria-label="종별 방출률 비교">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px]" role="img" aria-label="Production rates by species">
           {[25, 26, 27, 28].map((e) => (
             <g key={e}>
               <line x1={x(10 ** e)} x2={x(10 ** e)} y1={top} y2={H - 28} className="stroke-border" />
@@ -143,26 +143,26 @@ export function RatesPanel() {
             <span className="size-2.5 rounded-full" style={{ background: SERIES[k].color }} /> {SERIES[k].label}
           </span>
         ))}
-        <span>● 검출 · ○ 잠정 검출 · ◁ 상한값(화살표) · 가로선 ±1σ</span>
+        <span>As reported by each paper: ● detection · ○ tentative · ◁ upper limit (arrow) · horizontal bar ±1σ</span>
       </div>
 
       <p className="min-h-5 text-xs" aria-live="polite">
         {hover
-          ? `${hover.species} · ${paperName(hover.sourceId)} · ${STATUS_LABEL[hover.status]} ${hover.status === "upper-limit" ? "≤ " : ""}${formatRate(hover.productionRate)} 분자/s (${hover.uncertaintyNote}) · ${hover.location}`
-          : "점에 마우스를 올리면 출처와 오차 정의가 표시됩니다."}
+          ? `${hover.species} · ${paperName(hover.sourceId)} · ${STATUS_LABEL[hover.status]} ${hover.status === "upper-limit" ? "≤ " : ""}${formatRate(hover.productionRate)} molecules/s (${hover.uncertaintyNote}) · ${hover.location}`
+          : "Hover over a point to see its source and how the uncertainty is defined."}
       </p>
 
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>종</TableHead>
-              <TableHead>분석 기간</TableHead>
-              <TableHead className="text-right">Q (분자/s)</TableHead>
-              <TableHead>오차</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>방법·측정 범위</TableHead>
-              <TableHead>출처</TableHead>
+              <TableHead>Species</TableHead>
+              <TableHead>Analysis period</TableHead>
+              <TableHead className="text-right">Q (molecules/s)</TableHead>
+              <TableHead>Uncertainty</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Method · aperture</TableHead>
+              <TableHead>Source</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -179,13 +179,13 @@ export function RatesPanel() {
                 <TableCell className="text-xs">{r.uncertaintyNote}</TableCell>
                 <TableCell>
                   <Badge variant={r.status === "detection" ? "secondary" : "outline"}>{STATUS_LABEL[r.status]}</Badge>
-                  {r.superseded && <Badge variant="outline" className="ml-1">대체됨</Badge>}
+                  {r.superseded && <Badge variant="outline" className="ml-1">Superseded</Badge>}
                 </TableCell>
                 <TableCell className="max-w-64 text-xs whitespace-normal">
                   {r.method} · {r.aperture}
                 </TableCell>
                 <TableCell className="text-xs whitespace-normal">
-                  {paperName(r.sourceId)} {r.location} · 논문 인용
+                  {paperName(r.sourceId)} {r.location} · cited from paper
                 </TableCell>
               </TableRow>
             ))}
@@ -194,7 +194,7 @@ export function RatesPanel() {
       </div>
 
       <div className="grid gap-1.5 rounded-md border p-3">
-        <h4 className="text-xs font-medium">논문 표현 그대로 옮긴 변화 (방출률 배수로 바꾸지 않음)</h4>
+        <h4 className="text-xs font-medium">Changes in the paper’s own words (not converted to production-rate ratios)</h4>
         <ul className="list-disc pl-4 text-xs text-muted-foreground">
           {PAPER_STATEMENTS.map((s) => (
             <li key={s.text}>

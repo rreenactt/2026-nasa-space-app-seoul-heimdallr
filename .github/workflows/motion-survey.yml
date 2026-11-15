@@ -1,0 +1,112 @@
+name: Motion Survey
+
+# Feature A pipeline (PLAN.md chapter 7, decision #41): SPHEREx × 2MASS movement survey over random sky points.
+# Run by hand from the Actions tab. Each shard surveys `points` random points and uploads its results (JSON Lines,
+# metadata only) as an artifact; the import job then writes every shard into the database.
+# The import needs the repository secret DATABASE_URL (Neon pooled connection) and the motion tables migrated
+# (prisma/migrations/20261115120000_add_motion_candidates). Without them the artifacts are still kept.
+# Minutes: the repository is private, so every shard counts against the account's Actions minutes, as do
+# deployments. Keep shards × timeout within what is left.
+on:
+  workflow_dispatch:
+    inputs:
+      shards:
+        description: Parallel jobs (1–10)
+        default: "1"
+      points:
+        description: Random points per job
+        default: "300"
+      par:
+        description: Points in flight per job (IRSA and the ESA archive are shared services; keep it modest)
+        default: "8"
+      timeout:
+        description: Minutes each job may run before it stops (results so far are kept)
+        default: "30"
+      import:
+        description: Import the results into the database
+        type: boolean
+        default: true
+
+concurrency:
+  group: motion-survey
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      shards: ${{ steps.shards.outputs.list }}
+    steps:
+      - id: shards
+        env:
+          SHARDS: ${{ inputs.shards }}
+        run: |
+          n=$(( SHARDS < 1 ? 1 : (SHARDS > 10 ? 10 : SHARDS) ))
+          echo "list=$(seq 0 $((n - 1)) | jq -cs .)" >> "$GITHUB_OUTPUT"
+
+  survey:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The script stops at the input timeout so the results so far are uploaded instead of lost.
+      - name: Survey
+        env:
+          PAR: ${{ inputs.par }}
+          POINTS: ${{ inputs.points }}
+          MINUTES: ${{ inputs.timeout }}
+          NODE_PATH: node_modules/next/dist/compiled
+        run: |
+          timeout --signal=INT "$(( MINUTES * 60 ))" \
+            npx --yes tsx@4.19.2 --conditions=react-server --env-file-if-exists=.env \
+            scripts/motion-survey.ts survey random "$POINTS" "survey-${{ matrix.shard }}.jsonl" || true
+          echo "points done: $(grep -c '"point"' "survey-${{ matrix.shard }}.jsonl" || echo 0)"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: survey-${{ matrix.shard }}
+          path: survey-${{ matrix.shard }}.jsonl
+          retention-days: 30
+
+  import:
+    needs: survey
+    if: ${{ always() && inputs.import }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: survey-*
+          merge-multiple: true
+      - name: Import into the database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_PATH: node_modules/next/dist/compiled
+        run: |
+          if [ -z "$DATABASE_URL" ]; then echo "::warning::DATABASE_URL secret is not set; results stay in the artifacts."; exit 0; fi
+          cat survey-*.jsonl > all.jsonl
+          npx --yes tsx@4.19.2 --conditions=react-server \
+            scripts/motion-survey.ts import all.jsonl "$(date -u +%Y-%m-%d)-gha-${{ github.run_id }}"

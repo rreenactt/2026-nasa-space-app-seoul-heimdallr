@@ -38,8 +38,8 @@ interface Point extends PhotometryResult {
 }
 
 const chartConfig = {
-  ok: { label: "측정점", color: "var(--series-1)" },
-  flagged: { label: "품질 플래그", color: "var(--muted-foreground)" },
+  ok: { label: "Measurement", color: "var(--series-1)" },
+  flagged: { label: "Quality flag", color: "var(--muted-foreground)" },
 } satisfies ChartConfig;
 
 export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
@@ -79,21 +79,21 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
     <div className="flex flex-col gap-4 pt-2">
       <div className="flex flex-wrap items-end gap-4">
         <div className="grid gap-1">
-          <Label className="text-xs">측정할 관측 수 ({PERIODS[period].label})</Label>
+          <Label className="text-xs">Observations to measure ({PERIODS[period].label})</Label>
           <NativeSelect size="sm" value={String(sampleSize)} onChange={(e) => setSampleSize(Number(e.target.value))}>
-            <NativeSelectOption value="12">대표 12개</NativeSelectOption>
-            <NativeSelectOption value="24">대표 24개</NativeSelectOption>
-            <NativeSelectOption value="48">대표 48개</NativeSelectOption>
-            <NativeSelectOption value="9999">전체 {periodEntries.length}개 (오래 걸림)</NativeSelectOption>
+            <NativeSelectOption value="12">12 representative</NativeSelectOption>
+            <NativeSelectOption value="24">24 representative</NativeSelectOption>
+            <NativeSelectOption value="48">48 representative</NativeSelectOption>
+            <NativeSelectOption value="9999">All {periodEntries.length} (slow)</NativeSelectOption>
           </NativeSelect>
         </div>
         {batch.running ? (
           <Button size="sm" variant="outline" onClick={batch.cancel}>
-            <SquareIcon /> 중지
+            <SquareIcon /> Stop
           </Button>
         ) : (
           <Button size="sm" onClick={() => batch.run(representativeSample(periodEntries, sampleSize))} disabled={periodEntries.length === 0}>
-            <PlayIcon /> 측정 시작
+            <PlayIcon /> Start measuring
           </Button>
         )}
         <ApertureControls />
@@ -103,28 +103,28 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
         <div className="grid gap-1">
           <Progress value={(done / batch.items.length) * 100} />
           <span className="text-xs text-muted-foreground">
-            영상 읽기 {done}/{batch.items.length} · 실패 {failures.length}
-            {failures.length > 0 && ` (예: ${failures[0].entry.obsId} ${failures[0].entry.detector} — ${failures[0].message})`}
-            {measuredPeriod && measuredPeriod !== period && " · 다른 기간의 측정 결과입니다. 다시 측정하세요."}
+            Images read {done}/{batch.items.length} · failed {failures.length}
+            {failures.length > 0 && ` (e.g. ${failures[0].entry.obsId} ${failures[0].entry.detector} — ${failures[0].message})`}
+            {measuredPeriod && measuredPeriod !== period && " · These results are from a different period. Measure again."}
           </span>
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-medium">기간 합성 스펙트럼</h3>
+          <h3 className="text-sm font-medium">Composite spectrum for the period</h3>
           <p className="text-xs text-muted-foreground">
             {dates.length > 0
-              ? `${dates[0]} ~ ${dates.at(-1)} 사이 ${new Set(shown.map((p) => p.entry.obsId)).size}회 노출에서 측정한 ${shown.length}개 점을 모은 것입니다. 한 시점의 스펙트럼이 아닙니다.`
-              : "측정 시작을 누르면 관측마다 혜성 주변 영상을 읽어 혜성 위치의 플럭스를 해당 파장에 배치합니다."}
+              ? `${shown.length} points measured from ${new Set(shown.map((p) => p.entry.obsId)).size} exposures between ${dates[0]} and ${dates.at(-1)}. This is not a spectrum of a single moment.`
+              : "Press Start measuring to read the image around the comet in each observation and plot the flux at the comet position against its wavelength."}
           </p>
         </div>
         <div className="flex gap-4">
           <Label className="flex items-center gap-2 text-xs font-normal">
-            <Switch size="sm" checked={includeFlagged} onCheckedChange={setIncludeFlagged} /> 품질 플래그 포함
+            <Switch size="sm" checked={includeFlagged} onCheckedChange={setIncludeFlagged} /> Include quality-flagged points
           </Label>
           <Label className="flex items-center gap-2 text-xs font-normal">
-            <Switch size="sm" checked={showTable} onCheckedChange={setShowTable} /> 표로 보기
+            <Switch size="sm" checked={showTable} onCheckedChange={setShowTable} /> Show as table
           </Label>
         </div>
       </div>
@@ -149,7 +149,7 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
             domain={[0.7, 5.1]}
             ticks={[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]}
             tickLine={false}
-            label={{ value: "파장 (µm)", position: "insideBottom", offset: -12, fontSize: 11 }}
+            label={{ value: "Wavelength (µm)", position: "insideBottom", offset: -12, fontSize: 11 }}
           />
           <YAxis type="number" dataKey="fluxMjy" tickLine={false} axisLine={false} width={48} label={{ value: "mJy", angle: -90, position: "insideLeft", fontSize: 11 }} />
           <ChartTooltip cursor={false} content={<PointTooltip />} />
@@ -169,9 +169,9 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
         </ScatterChart>
       </ChartContainer>
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[var(--series-1)]" /> 측정점 (±1σ)</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-muted-foreground" /> 품질 플래그</span>
-        <span>음영: 논문에 언급된 분자 특징 구간 · 측정이 없는 파장은 비워 둡니다 (보간 없음) · 점을 누르면 해당 영상으로 이동</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[var(--series-1)]" /> Measurement (±1σ)</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-muted-foreground" /> Quality flag</span>
+        <span>Shaded: molecular feature ranges named in the papers · wavelengths without measurements are left empty (no interpolation) · click a point to open its image</span>
       </div>
 
       {showTable && (
@@ -180,12 +180,12 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
             <TableHeader>
               <TableRow>
                 <TableHead>UTC</TableHead>
-                <TableHead>관측 / 검출기</TableHead>
+                <TableHead>Observation / detector</TableHead>
                 <TableHead className="text-right">λ (µm)</TableHead>
                 <TableHead className="text-right">Δλ</TableHead>
-                <TableHead className="text-right">플럭스 (mJy)</TableHead>
+                <TableHead className="text-right">Flux (mJy)</TableHead>
                 <TableHead className="text-right">S/N</TableHead>
-                <TableHead>품질</TableHead>
+                <TableHead>Quality</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -197,7 +197,7 @@ export function SpectrumExplorer({ onPick }: { onPick: () => void }) {
                   <TableCell className="text-right">{p.bandwidthUm?.toFixed(3)}</TableCell>
                   <TableCell className="text-right">{p.fluxMjy.toFixed(2)} ± {p.errorMjy.toFixed(2)}</TableCell>
                   <TableCell className="text-right">{p.snr.toFixed(1)}</TableCell>
-                  <TableCell>{p.reasons.map((r) => REASON_LABEL[r]).join(", ") || "양호"}</TableCell>
+                  <TableCell>{p.reasons.map((r) => REASON_LABEL[r]).join(", ") || "Good"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -212,9 +212,9 @@ function ApertureControls() {
   const { aperture, setAperture } = useCometState();
   return (
       <div className="flex flex-wrap items-end gap-4">
-        <RangeField label={`조리개 반경 ${aperture.rAp}px`} min={1} max={8} step={0.5} value={aperture.rAp} onChange={(v) => setAperture({ ...aperture, rAp: v })} />
+        <RangeField label={`Aperture radius ${aperture.rAp}px`} min={1} max={8} step={0.5} value={aperture.rAp} onChange={(v) => setAperture({ ...aperture, rAp: v })} />
         <RangeField
-          label={`배경 고리 ${aperture.rIn}–${aperture.rOut}px`}
+          label={`Background annulus ${aperture.rIn}–${aperture.rOut}px`}
           min={aperture.rAp + 2}
           max={34}
           step={1}
@@ -227,9 +227,9 @@ function ApertureControls() {
             checked={aperture.maskSourcesInAnnulus}
             onCheckedChange={(v) => setAperture({ ...aperture, maskSourcesInAnnulus: v })}
           />
-          배경에서 SOURCE 픽셀 제외 (L2b는 대부분 픽셀이 SOURCE라 기본 꺼짐)
+          Exclude SOURCE pixels from the background (off by default because most L2b pixels are flagged SOURCE)
         </Label>
-        <Badge variant="outline">논문 기준 2px · 1′–3′</Badge>
+        <Badge variant="outline">Paper setting: 2px · 1′–3′</Badge>
       </div>
   );
 }

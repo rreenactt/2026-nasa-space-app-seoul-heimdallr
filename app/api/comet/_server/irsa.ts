@@ -96,7 +96,7 @@ async function resolvePixelFileUncached(obsId: string, detector: string): Promis
   const datalinkUrl = `${DATALINK_URL}?ID=${encodeURIComponent(`ivo://irsa.ipac/${PIXEL_RELEASE}?${obsId}/${detector}`)}`;
   const rows = toRecords(parseVoTable(await api.get(datalinkUrl, { timeout: 30_000 }).text()));
   const self = rows.find((r) => r.semantics === "#this" && r.access_url);
-  if (!self) throw new NotFoundError(`${obsId} ${detector}: ${PIXEL_RELEASE}에 대응 파일이 없습니다`);
+  if (!self) throw new NotFoundError(`${obsId} ${detector}: no matching file in ${PIXEL_RELEASE}`);
   let cloudUrl: string | null = null;
   try {
     const aws = JSON.parse(self.cloud_access || "{}").aws as { bucket_name?: string; key?: string; region?: string } | undefined;
@@ -139,7 +139,7 @@ export async function fetchFrame(params: { obsId: string; detector: string; ra: 
     detector: params.detector,
     release: resolved.release,
     fileUrl: resolved.fileUrl,
-    pixelSource: `${source} — HTTP range: 행 ${cut.y0}–${cut.y0 + cut.height - 1}, 열 ${cut.x0}–${cut.x0 + cut.width - 1} (0-based)`,
+    pixelSource: `${source} — HTTP range: rows ${cut.y0}–${cut.y0 + cut.height - 1}, columns ${cut.x0}–${cut.x0 + cut.width - 1} (0-based)`,
     datalinkUrl: resolved.datalinkUrl,
     origin: [cut.x0, cut.y0],
     fullSize: [cut.fullWidth, cut.fullHeight],

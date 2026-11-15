@@ -8,7 +8,7 @@
 | 출력 종류 | overlay, text |
 | 최소 SPHEREx 방문 횟수 | 1 |
 | 적용 대상 | 모든 좌표 |
-| 화면 배치 | 추가 분석 목록 → "Download data" → "Open" |
+| 화면 배치 | 추가 분석 목록 → "Run" → 다 받으면 패널 왼쪽 탭으로 열림 (결정 #42) |
 | 데이터 | IRSA SPHEREx DR1, AWS L2b 바이트 범위, Gaia DR3 |
 
 ## 1. 무엇을 알려주나

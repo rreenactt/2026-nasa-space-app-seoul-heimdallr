@@ -20,7 +20,7 @@ export const MISSIONS: Record<MissionId, MissionConfig> = {
     id: "2mass",
     label: "2MASS",
     collections: ["twomass_allsky"],
-    product: "2MASS All-Sky Atlas Image (같은 밤 겹치는 타일은 함께 사용)",
+    product: "2MASS All-Sky Atlas Image (overlapping tiles from the same night used together)",
     bands: [
       { id: "J", label: "J", wavelength: "1.25 µm" },
       { id: "H", label: "H", wavelength: "1.65 µm" },
@@ -35,7 +35,7 @@ export const MISSIONS: Record<MissionId, MissionConfig> = {
     id: "wise",
     label: "WISE",
     collections: ["wise_allsky", "wise_3bandcryo", "wise_2bandcryo"],
-    product: "WISE L1b 단일 노출 → 관측 통과별 중앙값 합성 (이 도구에서 계산)",
+    product: "WISE L1b single exposures → median stack per visit (computed by this tool)",
     bands: [
       { id: "W1", label: "W1", wavelength: "3.4 µm" },
       { id: "W2", label: "W2", wavelength: "4.6 µm" },
@@ -49,7 +49,7 @@ export const MISSIONS: Record<MissionId, MissionConfig> = {
     id: "neowise",
     label: "NEOWISE",
     collections: ["neowiser"],
-    product: "NEOWISE-R L1b 단일 노출 → 관측 통과별 중앙값 합성 (이 도구에서 계산)",
+    product: "NEOWISE-R L1b single exposures → median stack per visit (computed by this tool)",
     bands: [
       { id: "W1", label: "W1", wavelength: "3.4 µm" },
       { id: "W2", label: "W2", wavelength: "4.6 µm" },
@@ -63,7 +63,7 @@ export const MISSIONS: Record<MissionId, MissionConfig> = {
     id: "spherex",
     label: "SPHEREx",
     collections: ["spherex_dr1"],
-    product: "SPHEREx L2b 분광 영상 (관측 통과마다 노출 1장, 파장은 위치마다 다름)",
+    product: "SPHEREx L2b spectral images (one exposure per visit; wavelength varies with position)",
     bands: [
       { id: "D1", label: "D1", wavelength: "0.75–1.1 µm" },
       { id: "D2", label: "D2", wavelength: "1.1–1.6 µm" },
@@ -104,7 +104,7 @@ export const EXAMPLES: SkyExample[] = [
     ra: 269.44850252544,
     dec: 4.73942005111,
     fovArcmin: 8,
-    note: "고유운동이 가장 큰 별 중 하나(Gaia DR3 약 10.4″/년, 북쪽). 25년이면 약 4′ 이동합니다. 밝아서 2MASS·WISE에서 포화될 수 있습니다.",
+    note: "One of the stars with the largest proper motion (Gaia DR3 about 10.4″/yr, northward). It moves about 4′ in 25 years. It is bright and may be saturated in 2MASS and WISE.",
     source: "Gaia DR3 4472832130942575872 (2016.0)",
   },
   {
@@ -113,7 +113,7 @@ export const EXAMPLES: SkyExample[] = [
     ra: 330.8724078796,
     dec: -56.79725466123,
     fovArcmin: 8,
-    note: "Gaia DR3 약 4.7″/년. 주성은 매우 밝아(G≈4.3) 포화됩니다. 갈색왜성 동반성 ε Indi Ba/Bb는 약 7′ 떨어져 있어 이 시야 밖일 수 있습니다.",
+    note: "Gaia DR3 about 4.7″/yr. The primary is very bright (G≈4.3) and saturates. The brown dwarf companions ε Indi Ba/Bb lie about 7′ away and may be outside this field.",
     source: "Gaia DR3 6412595290592307840 (2016.0)",
   },
   {
@@ -122,9 +122,9 @@ export const EXAMPLES: SkyExample[] = [
     ra: 133.795125,
     dec: -7.245139,
     fovArcmin: 5,
-    note: "매우 차가운 갈색왜성으로 W2에서 주로 보입니다. Gaia에 없어 예상 경로는 표시되지 않습니다. 2MASS·SPHEREx에서 보이지 않을 수 있으며, 이는 감도·파장 차이이지 '없던 천체가 생겼다'는 뜻이 아닙니다.",
-    source: "AllWISE 명칭 좌표 J085510.83−071442.5 (2010년경 위치)",
+    note: "A very cold brown dwarf, seen mainly in W2. It is not in Gaia, so no predicted path is shown. It may not be visible in 2MASS or SPHEREx; that reflects differences in sensitivity and wavelength, not an object that appeared out of nowhere.",
+    source: "AllWISE designation coordinates J085510.83−071442.5 (position around 2010)",
   },
 ];
 
-export const PROCESSING_VERSION = "stm-1: SIA2 검색 → IBE/S3 잘라 받기 → TAN 공통 격자 쌍선형 재투영 → 배경 중앙값 차감·MAGZP 22.5 정규화 → 중앙값 합성";
+export const PROCESSING_VERSION = "stm-1: SIA2 search → IBE/S3 cutout → bilinear reprojection onto a shared TAN grid → median background subtraction, MAGZP 22.5 normalization → median stack";

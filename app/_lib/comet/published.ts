@@ -11,7 +11,7 @@ export const PAPERS: PaperSource[] = [
     title: "SPHEREx Discovery of Strong Water Ice Absorption and an Extended Carbon Dioxide Coma in 3I/ATLAS",
     version: "arXiv:2508.15469v2 (2025-08-24) · RNAAS 9, 242",
     url: "https://arxiv.org/abs/2508.15469",
-    data: "2025년 8월 중순 SPHEREx 관측 (초기 분석, 정확한 일자는 초록에 없음)",
+    data: "SPHEREx observations from mid-August 2025 (initial analysis; exact dates not given in the abstract)",
   },
   {
     id: "lisse2025b",
@@ -23,7 +23,7 @@ export const PAPERS: PaperSource[] = [
   },
   {
     id: "lisse2026",
-    shortName: "Lisse+2026 (RNAAS, 12월)",
+    shortName: "Lisse+2026 (RNAAS, Dec)",
     title:
       "SPHEREx Re-Observation of Interstellar Object 3I/ATLAS in December 2025: Detection of Increased Post-Perihelion Activity, Refractory Coma Dust, and New Coma Gas Species",
     version: "arXiv:2601.06759v2 (2026-01-29)",
@@ -33,8 +33,8 @@ export const PAPERS: PaperSource[] = [
 ];
 
 const AUG_METHOD =
-  "2-px(12″) 원형 측광, 1′–3′ 배경 고리, 시뮬레이션 별 영상 차감 → 형광 모델 Q = 2π·v·ρ·N (v = 0.48 km/s)";
-const DEC_METHOD = "2-px 원형 측광, 주변 고리 배경 차감, 8월 갱신 방출률 기준 비교";
+  "2-px (12″) circular aperture photometry, 1′–3′ background annulus, simulated star image subtracted → fluorescence model Q = 2π·v·ρ·N (v = 0.48 km/s)";
+const DEC_METHOD = "2-px circular aperture photometry, surrounding-annulus background subtracted, compared against the updated August production rates";
 
 export const PUBLISHED_RATES: PublishedRate[] = [
   // Final August analysis (ApJL).
@@ -48,7 +48,7 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     uncertaintyNote: "±20% (1σ)",
     status: "detection",
     method: AUG_METHOD,
-    aperture: "2 px 반경 (12″)",
+    aperture: "2 px radius (12″)",
     sourceId: "lisse2025b",
     location: "Abstract, §IV.3 Gas Production Rates",
     superseded: false,
@@ -64,7 +64,7 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     uncertaintyNote: "±10% (1σ), ¹²CO₂",
     status: "detection",
     method: AUG_METHOD,
-    aperture: "2 px 반경 (12″)",
+    aperture: "2 px radius (12″)",
     sourceId: "lisse2025b",
     location: "Abstract, §IV.3",
     superseded: false,
@@ -80,9 +80,9 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     uncertaintyNote: "±25% (1σ)",
     status: "tentative",
     method: AUG_METHOD,
-    aperture: "2 px 반경 (12″)",
+    aperture: "2 px radius (12″)",
     sourceId: "lisse2025b",
-    location: "Abstract (잠정 검출), §IV.3",
+    location: "Abstract (tentative detection), §IV.3",
     superseded: false,
     provenance: "paper",
   },
@@ -96,9 +96,9 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     uncertaintyNote: "±25% (1σ)",
     status: "tentative",
     method: AUG_METHOD,
-    aperture: "2 px 반경 (12″)",
+    aperture: "2 px radius (12″)",
     sourceId: "lisse2025b",
-    location: "Abstract (잠정 검출), §IV.3",
+    location: "Abstract (tentative detection), §IV.3",
     superseded: false,
     provenance: "paper",
   },
@@ -110,10 +110,10 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     periodEnd: "2025-08-15",
     productionRate: 9.4e26,
     uncertainty: null,
-    uncertaintyNote: "오차 미기재",
+    uncertaintyNote: "Uncertainty not stated",
     status: "detection",
-    method: "초기 측광 (예비)",
-    aperture: "논문 초록에 미기재",
+    method: "Initial photometry (preliminary)",
+    aperture: "Not stated in the abstract",
     sourceId: "lisse2025a",
     location: "Abstract",
     superseded: true,
@@ -126,10 +126,10 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     periodEnd: "2025-08-15",
     productionRate: 1.5e26,
     uncertainty: null,
-    uncertaintyNote: "3σ 상한 (보수적·예비)",
+    uncertaintyNote: "3σ upper limit (conservative, preliminary)",
     status: "upper-limit",
-    method: "초기 측광 (예비)",
-    aperture: "논문 초록에 미기재",
+    method: "Initial photometry (preliminary)",
+    aperture: "Not stated in the abstract",
     sourceId: "lisse2025a",
     location: "Abstract",
     superseded: true,
@@ -142,10 +142,10 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     periodEnd: "2025-08-15",
     productionRate: 2.8e26,
     uncertainty: null,
-    uncertaintyNote: "3σ 상한 (보수적·예비)",
+    uncertaintyNote: "3σ upper limit (conservative, preliminary)",
     status: "upper-limit",
-    method: "초기 측광 (예비)",
-    aperture: "논문 초록에 미기재",
+    method: "Initial photometry (preliminary)",
+    aperture: "Not stated in the abstract",
     sourceId: "lisse2025a",
     location: "Abstract",
     superseded: true,
@@ -162,7 +162,7 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     uncertaintyNote: "±0.28×10²⁸ (1σ)",
     status: "detection",
     method: DEC_METHOD,
-    aperture: "2 px 반경 (논문: 16,500 km, 0.60 km/s)",
+    aperture: "2 px radius (paper: 16,500 km, 0.60 km/s)",
     sourceId: "lisse2026",
     location: "§2 Spectral Results, §5",
     superseded: false,
@@ -178,7 +178,7 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     uncertaintyNote: "±0.45×10²⁷ (1σ)",
     status: "detection",
     method: DEC_METHOD,
-    aperture: "2 px 반경",
+    aperture: "2 px radius",
     sourceId: "lisse2026",
     location: "§2 Spectral Results",
     superseded: false,
@@ -194,7 +194,7 @@ export const PUBLISHED_RATES: PublishedRate[] = [
     uncertaintyNote: "±1.5×10²⁷ (1σ)",
     status: "detection",
     method: DEC_METHOD,
-    aperture: "2 px 반경",
+    aperture: "2 px radius",
     sourceId: "lisse2026",
     location: "§2 Spectral Results",
     superseded: false,
@@ -202,15 +202,15 @@ export const PUBLISHED_RATES: PublishedRate[] = [
   },
   {
     id: "dec-ch",
-    species: "C-H 유기물",
+    species: "C-H organics",
     periodStart: "2025-12-08",
     periodEnd: "2025-12-15",
     productionRate: 2.0e27,
     uncertainty: 0.5e27,
-    uncertaintyNote: "±0.5×10²⁷ (1σ), g-factor 3×10⁻⁴ 가정",
+    uncertaintyNote: "±0.5×10²⁷ (1σ), assumes g-factor 3×10⁻⁴",
     status: "detection",
     method: DEC_METHOD,
-    aperture: "2 px 반경",
+    aperture: "2 px radius",
     sourceId: "lisse2026",
     location: "§2 Spectral Results, §5",
     superseded: false,
@@ -222,42 +222,42 @@ export const PUBLISHED_RATES: PublishedRate[] = [
 export const PAPER_STATEMENTS: { sourceId: string; text: string; location: string }[] = [
   {
     sourceId: "lisse2026",
-    text: "8월에 겨우 검출되던 H₂O 가스 특징이 12월에는 약 40배 강해졌다 (\"~40x stronger\").",
+    text: "The H₂O gas feature, barely detected in August, became about 40 times stronger in December (\"~40x stronger\").",
     location: "§2",
   },
   {
     sourceId: "lisse2026",
-    text: "CO₂ 방출 플럭스는 8월보다 약 2배 큰 수준 (\"only about 2x larger\").",
+    text: "The CO₂ emission flux was only about 2 times larger than in August (\"only about 2x larger\").",
     location: "§2",
   },
   {
     sourceId: "lisse2026",
-    text: "CO 방출 플럭스는 8월 이후 약 80배 증가 (\"markedly increased ~80x\").",
+    text: "The CO emission flux increased about 80 times since August (\"markedly increased ~80x\").",
     location: "§2",
   },
 ];
 
 export const PERIODS: Record<PeriodId, { label: string; start: string; end: string; note: string }> = {
-  "2025-08": { label: "2025년 8월 (근일점 전)", start: "2025-08-01", end: "2025-08-15", note: "rₕ ≈ 3.2 au" },
-  "2025-12": { label: "2025년 12월 (근일점 후)", start: "2025-12-08", end: "2025-12-15", note: "rₕ ≈ 2.0–2.2 au" },
+  "2025-08": { label: "August 2025 (pre-perihelion)", start: "2025-08-01", end: "2025-08-15", note: "rₕ ≈ 3.2 au" },
+  "2025-12": { label: "December 2025 (post-perihelion)", start: "2025-12-08", end: "2025-12-15", note: "rₕ ≈ 2.0–2.2 au" },
 };
 
 /** Spectral regions named in the papers (µm). */
 export const SPECTRAL_FEATURES: { id: string; label: string; min: number; max: number; note: string; periods: PeriodId[] }[] = [
-  { id: "cn", label: "CN", min: 0.91, max: 0.94, note: "12월 신규 (~0.925 µm)", periods: ["2025-12"] },
-  { id: "h2o", label: "H₂O 가스", min: 2.7, max: 2.8, note: "형광 2.7–2.8 µm", periods: ["2025-08", "2025-12"] },
-  { id: "ch", label: "C-H 유기물", min: 3.2, max: 3.6, note: "12월 신규", periods: ["2025-12"] },
+  { id: "cn", label: "CN", min: 0.91, max: 0.94, note: "New in December (~0.925 µm)", periods: ["2025-12"] },
+  { id: "h2o", label: "H₂O gas", min: 2.7, max: 2.8, note: "Fluorescence 2.7–2.8 µm", periods: ["2025-08", "2025-12"] },
+  { id: "ch", label: "C-H organics", min: 3.2, max: 3.6, note: "New in December", periods: ["2025-12"] },
   { id: "co2", label: "CO₂", min: 4.23, max: 4.27, note: "4.23–4.27 µm", periods: ["2025-08", "2025-12"] },
   { id: "co", label: "CO", min: 4.6, max: 4.8, note: "~4.7 µm", periods: ["2025-08", "2025-12"] },
 ];
 
 export const LIMITATIONS: string[] = [
-  "혜성 전용 관측 목록은 QR2를 가리키지만 QR2 DataLink는 현재 파일을 돌려주지 않습니다. 같은 obs_id·검출기를 DR1 DataLink로 조회해 과학 영상(#this)이 확인된 파일만 사용합니다. 관측 시각(t_min)은 두 릴리스에서 같음을 확인했지만, 처리 버전이 다르므로 화소값은 논문(QR2)과 다를 수 있습니다.",
-  "배경 별은 시뮬레이션 영상으로 차감하지 않았습니다. 배경 고리는 3σ 클리핑으로만 별을 걸러내며, 조리개 안의 별은 남아 있을 수 있습니다.",
-  "2 px 조리개는 확장된 코마 전체를 담지 못합니다 (CO₂ 코마는 수 arcmin까지 확장).",
-  "파장은 WCS-WAVE 근사 조회표(시각화용)로 계산합니다. 정밀 분석은 spectral_wcs 보정 제품이 필요합니다.",
-  "화소 입체각은 헤더의 OMEGA_MEDIAN 하나를 사용합니다 (화소별 입체각 맵 미적용).",
-  "측정 플럭스는 거리 보정(rₕ = Δ = 1 au)을 하지 않았습니다. 논문 그림과 절대값을 직접 비교할 수 없습니다.",
-  "여러 날짜의 측정을 모은 스펙트럼은 해당 기간의 합성 스펙트럼이며, 한 시점의 스펙트럼이 아닙니다.",
-  "논문 방출률은 논문이 분석한 기간에만 연결됩니다. 그 기간 밖의 날짜에는 값이 없습니다.",
+  "The comet-specific observation list points to QR2, but the QR2 DataLink does not currently return files. We look up the same obs_id and detector through the DR1 DataLink and use only files with a confirmed science image (#this). The observation time (t_min) was checked to match between the two releases, but the processing versions differ, so pixel values may differ from the paper (QR2).",
+  "Background stars were not subtracted with a simulated image. The background annulus removes stars only by 3σ clipping, and stars inside the aperture may remain.",
+  "A 2 px aperture does not capture the whole extended coma (the CO₂ coma extends to several arcmin).",
+  "Wavelengths come from the approximate WCS-WAVE lookup table (meant for visualization). Precise analysis needs the corrected spectral_wcs product.",
+  "Pixel solid angle uses the single OMEGA_MEDIAN header value (no per-pixel solid angle map applied).",
+  "Measured fluxes are not distance-corrected (to rₕ = Δ = 1 au). Absolute values cannot be compared directly with the paper figures.",
+  "A spectrum built from measurements on several dates is a composite for that period, not a spectrum of a single moment.",
+  "Published production rates apply only to the period each paper analyzed. Dates outside that period have no value.",
 ];

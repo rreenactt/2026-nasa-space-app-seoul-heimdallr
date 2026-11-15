@@ -87,6 +87,14 @@ export class SonataAudio {
     for (const dt of [0, 0.12]) this.note({ sourceId: null, x: 0.5, y: 1, start: dt, duration: 0.06, frequency: 110, pan: 0, gain: 0.25, wave: "square" }, t0);
   }
 
+  private stopListeners = new Set<() => void>();
+
+  /** Called on every stop, so a scheduled follow-up (the A → B scan) is cancelled too. Returns the unsubscribe. */
+  onStop(listener: () => void) {
+    this.stopListeners.add(listener);
+    return () => void this.stopListeners.delete(listener);
+  }
+
   stop() {
     for (const v of this.voices) {
       try {
@@ -96,6 +104,7 @@ export class SonataAudio {
       }
     }
     this.voices.clear();
+    for (const l of this.stopListeners) l();
   }
 
   async dispose() {

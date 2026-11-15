@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, LinkIcon, SquareIcon, Volume2Icon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -15,6 +14,7 @@ import type { FplExposure } from "@/app/_lib/fpl/types";
 import { DEFAULT_SETTINGS, sharedFluxRange, type SoundSettings } from "@/app/_lib/sonata/mapping";
 import { detectSources } from "@/app/_lib/sonata/sources";
 import type { SkyGrid } from "@/app/_lib/sky/types";
+import { useFixedTarget } from "../analyses/fixed-target";
 import { FPL_EXAMPLES, mjdIso, visitsOf, type FplTarget } from "../fake-planet-lab/fpl-state";
 import { toNative, useFrames, useSpherexSearch } from "../fake-planet-lab/use-fpl-data";
 import { SonataAudio } from "./audio";
@@ -26,32 +26,22 @@ export interface SonataShared {
   settings?: Partial<SoundSettings>;
 }
 
-/** Sky Sonata: SPHEREx observations turned into sound by fixed, explained rules. Keyboard-first. */
-export function SkySonataDialog({ trigger, shared, defaultOpen = false }: { trigger?: React.ReactElement; shared?: SonataShared; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger ?? <Button variant="outline">Sky Sonata</Button>} />
-      <DialogContent className="flex max-h-[94dvh] flex-col gap-3 overflow-hidden sm:max-w-6xl">
-        <DialogHeader>
-          <DialogTitle>Sky Sonata</DialogTitle>
-          <DialogDescription>
-            This sound is a rule-based conversion of the observed positions and brightness. It was not recorded in space.
-          </DialogDescription>
-        </DialogHeader>
-        {open && <Body shared={shared} />}
-      </DialogContent>
-    </Dialog>
-  );
+/**
+ * Sky Sonata, shown inside the analysis panel: SPHEREx observations turned into sound by fixed, explained rules.
+ * Keyboard-first. Switching to another tab stops the sound; closing the view unmounts it and releases the audio.
+ */
+export function SkySonataView({ shared, active = true }: { shared?: SonataShared; active?: boolean }) {
+  return <Body shared={shared} active={active} />;
 }
 
 export const GRID_FOV = 3;
 export const GRID_N = 120;
 
-function Body({ shared }: { shared?: SonataShared }) {
+function Body({ shared, active }: { shared?: SonataShared; active: boolean }) {
   const [target, setTarget] = useState<FplTarget>(shared?.target ?? FPL_EXAMPLES[1]);
   const [ra, setRa] = useState(target.ra.toFixed(5));
   const [dec, setDec] = useState(target.dec.toFixed(5));
+  const fixed = useFixedTarget();
   const search = useSpherexSearch(target.ra, target.dec);
   const exposures = useMemo(() => search.data?.exposures ?? [], [search.data]);
   const dets = [...new Set(exposures.map((e) => e.detector))].sort();
@@ -87,6 +77,10 @@ function Body({ shared }: { shared?: SonataShared }) {
   const [audioOn, setAudioOn] = useState(false);
   const [volume, setVolume] = useState(35);
   useEffect(() => () => void audioRef.current?.dispose(), []);
+  // Nobody should hear a tab they cannot see.
+  useEffect(() => {
+    if (!active) audioRef.current?.stop();
+  }, [active]);
   const audio = () => (audioRef.current ??= new SonataAudio());
   const startAudio = async () => {
     await audio().start();
@@ -152,6 +146,9 @@ function Body({ shared }: { shared?: SonataShared }) {
 
       <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
         <div className="flex flex-wrap items-end gap-2">
+          {/* In the analysis panel the point is already chosen; only its sound rules can change here. */}
+          {!fixed && (
+          <>
           <div className="grid gap-1">
             <Label className="text-xs" htmlFor="ss-ex">Example</Label>
             <NativeSelect
@@ -196,6 +193,8 @@ function Body({ shared }: { shared?: SonataShared }) {
           >
             Go
           </Button>
+          </>
+          )}
           <Button size="sm" variant="outline" onClick={share}>
             {copied ? <CheckIcon /> : <LinkIcon />} {copied ? "Link copied" : "Copy link (field + sound rules)"}
           </Button>

@@ -291,8 +291,8 @@ async function getBytesWithRetry(url: string, deadline: number): Promise<ArrayBu
 
 function shortReason(err: unknown): string {
   if (err instanceof HTTPError) return `IRSA ${err.response.status}`;
-  if (err instanceof TimeoutError) return "시간 초과";
-  const msg = err instanceof Error ? err.message : "실패";
+  if (err instanceof TimeoutError) return "timed out";
+  const msg = err instanceof Error ? err.message : "failed";
   return msg.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
 }
 
@@ -341,9 +341,9 @@ export async function buildEpochFrame(epoch: Epoch, grid: SkyGrid): Promise<Epoc
       const e = epoch.exposures[next++];
       try {
         if (e.source.kind === "ibe") {
-          if (Date.now() > deadline - 6_000) throw new Error("시간 예산 초과로 생략");
+          if (Date.now() > deadline - 6_000) throw new Error("skipped: time budget exceeded");
           const f = await archiveFrame(e.source.url, grid, deadline);
-          if (coverageOf(f.data) === 0) throw new UpstreamNotFound("격자와 겹치는 영역 없음");
+          if (coverageOf(f.data) === 0) throw new UpstreamNotFound("no overlap with the grid");
           frames.push(f.data);
           used.push({ id: e.id, url: e.source.url, mjd: f.mjd ?? (e.tStart + e.tEnd) / 2 });
         } else {
@@ -358,7 +358,7 @@ export async function buildEpochFrame(epoch: Epoch, grid: SkyGrid): Promise<Epoc
     }
   };
   await Promise.all(epoch.exposures.map(() => worker()));
-  if (!frames.length) throw new UpstreamNotFound(`이 시점의 영상을 하나도 읽지 못했습니다: ${failed.map((f) => f.reason).join("; ")}`);
+  if (!frames.length) throw new UpstreamNotFound(`Could not read any image for this date: ${failed.map((f) => f.reason).join("; ")}`);
 
   const stacked = medianStack(frames);
   const mjds = used.map((u) => u.mjd);
@@ -371,7 +371,7 @@ export async function buildEpochFrame(epoch: Epoch, grid: SkyGrid): Promise<Epoc
     timeStart: Math.min(...mjds),
     timeEnd: Math.max(...mjds),
     coverage: coverageOf(stacked),
-    combine: frames.length > 1 ? `${frames.length}장 중앙값 합성 (통과 내 노출 ${epoch.totalExposures}장 중)` : "단일 영상",
+    combine: frames.length > 1 ? `Median stack of ${frames.length} images (of ${epoch.totalExposures} exposures in the visit)` : "Single image",
     wavelengthUm,
     sourcePixelArcsec: pixelArcsec,
     processingVersion: PROCESSING_VERSION,

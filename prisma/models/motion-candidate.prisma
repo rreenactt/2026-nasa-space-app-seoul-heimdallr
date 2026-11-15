@@ -1,0 +1,109 @@
+// Feature A: movement candidates from the SPHEREx × 2MASS survey (PLAN.md chapter 7, decision #41).
+// Positions are always stored with the epoch they were measured at (absolute principle 6).
+
+/// How a candidate pair was explained after the Gaia DR3 check.
+enum MotionMatch {
+  /// A Gaia DR3 star moved by its own proper motion explains both ends (a known moving star).
+  KNOWN_MOVER
+  /// A Gaia DR3 star sits on the SPHEREx position but does not reach the 2MASS one: most likely a chance pair.
+  GAIA_STATIC
+  /// No Gaia DR3 star explains the pair: a candidate for people to check, not a detection.
+  UNIDENTIFIED
+}
+
+/// One survey run (a batch). Never edited after it finishes; rerunning makes a new row.
+model MotionSurvey {
+  id              String              @id
+  /// Method name, e.g. spherex-vs-2mass.
+  method          String
+  /// SPHEREx release the positions came from.
+  release         String
+  pipelineVersion String
+  /// Thresholds and sources used (detection σ, match radii, catalog tables).
+  params          Json
+  pointsPlanned   Int
+  createdAt       DateTime            @default(now())
+  points          MotionSurveyPoint[]
+  candidates      MotionCandidate[]
+}
+
+/// Every searched field, including those with no candidate or no data (absolute principle 5).
+model MotionSurveyPoint {
+  id                  String            @id @default(uuid()) @db.Uuid
+  surveyId            String
+  survey              MotionSurvey      @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  /// Why the point was chosen: random, control (known fast star), target.
+  kind                String
+  label               String
+  raDeg               Float
+  decDeg              Float
+  /// searched, no-observations, too-few-visits, failed.
+  status              String
+  error               String?
+  detector            String?
+  wavelengthUm        Float?
+  spherexVisits       Int?
+  /// Mean MJD of the SPHEREx frames used.
+  spherexMjd          Float?
+  spherexSources      Int?
+  tmassSources        Int?
+  /// Sources matched between SPHEREx and 2MASS, and their offset scatter (90th percentile).
+  matchedSources      Int?
+  scatterArcsec       Float?
+  /// Smallest separation counted as motion in this field.
+  minSeparationArcsec Float?
+  /// Expected number of chance pairs in this field from source density alone.
+  expectedChancePairs Float?
+  candidateCount      Int               @default(0)
+  seconds             Float?
+  createdAt           DateTime          @default(now())
+  candidates          MotionCandidate[]
+
+  @@index([surveyId])
+}
+
+/// A SPHEREx source with no 2MASS counterpart in place, paired with a 2MASS source with none either.
+model MotionCandidate {
+  id                    String            @id @default(uuid()) @db.Uuid
+  surveyId              String
+  survey                MotionSurvey      @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  pointId               String            @db.Uuid
+  point                 MotionSurveyPoint @relation(fields: [pointId], references: [id], onDelete: Cascade)
+  release               String
+  /// HEALPix order-11 NESTED cell of the SPHEREx position, the same grid as Rating.
+  hpxIndex              Int
+  match                 MotionMatch
+  /// SPHEREx position and the epoch it was measured at.
+  raDeg                 Float
+  decDeg                Float
+  epochMjd              Float
+  /// 2MASS position, its measurement epoch and designation.
+  tmassRaDeg            Float
+  tmassDecDeg           Float
+  tmassMjd              Float
+  tmassDesignation      String
+  tmassKsMag            Float?
+  separationArcsec      Float
+  baselineYears         Float
+  /// Motion implied by the pair (from 2MASS to SPHEREx), mas/yr.
+  pmRaMasYr             Float
+  pmDecMasYr            Float
+  pmTotalMasYr          Float
+  snr                   Float
+  fluxMjy               Float
+  detector              String
+  wavelengthUm          Float
+  /// SPHEREx visits the source was found in, and the spread of those positions.
+  spherexVisits         Int
+  positionScatterArcsec Float?
+  obsIds                String[]
+  gaiaSourceId          String?
+  gaiaPmMasYr           Float?
+  gaiaSepArcsec         Float?
+  isSynthetic           Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+
+  @@index([release, hpxIndex])
+  @@index([match])
+  @@index([surveyId])
+}

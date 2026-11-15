@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { BoxIcon, DatabaseIcon, GlobeIcon, TelescopeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
@@ -22,24 +21,15 @@ import { SpherexTab } from "./spherex-tab";
 // three.js touches browser APIs on load.
 const Map3D = dynamic(() => import("./map-3d"), { ssr: false });
 
-/** Neighborhood in Motion: nearby stars and brown dwarfs placed in 3D from measured distance and motion. */
-export function NeighborhoodDialog({ trigger, focus }: { trigger?: React.ReactElement; focus?: NimFocus }) {
-  const [open, setOpen] = useState(false);
+/**
+ * Neighborhood in Motion, shown inside the analysis panel: nearby stars and brown dwarfs placed in 3D from measured
+ * distance and motion.
+ */
+export function NeighborhoodView({ focus }: { focus?: NimFocus }) {
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger ?? <Button variant="outline">Neighborhood in Motion</Button>} />
-      <DialogContent className="flex max-h-[94dvh] flex-col gap-3 overflow-hidden sm:max-w-6xl">
-        <DialogHeader>
-          <DialogTitle>Neighborhood in Motion</DialogTitle>
-          <DialogDescription>Our nearest neighbours placed in 3D from measured distance and motion — past and future positions come from a model, not observations.</DialogDescription>
-        </DialogHeader>
-        {open && (
-          <NimStateProvider focus={focus}>
-            <Body />
-          </NimStateProvider>
-        )}
-      </DialogContent>
-    </Dialog>
+    <NimStateProvider focus={focus}>
+      <Body />
+    </NimStateProvider>
   );
 }
 

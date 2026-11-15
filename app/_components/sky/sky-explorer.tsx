@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { AutoOpenAnalysis } from "../analyses/additional-analyses";
+import type { AutoOpenAnalysis } from "../analyses/analyses-context";
 import { AnalysisPanel } from "./analysis-panel";
 import { AIM_FOV, CLICK_ZOOM_FOV, INITIAL_VIEW, MAX_FOV, MIN_FOV, SKY_SURVEY, TARGET_FOV } from "./constants";
 import { setCursor, useCursor } from "./cursor-store";

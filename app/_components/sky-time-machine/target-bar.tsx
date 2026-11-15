@@ -9,6 +9,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { EXAMPLES, MISSION_ORDER, MISSIONS } from "@/app/_lib/sky/missions";
+import { useFixedTarget } from "../analyses/fixed-target";
 import { TARGET_FOV } from "../sky/constants";
 import { selectionUrl } from "../sky/sky-selection";
 import { exampleTarget, MISSION_COLOR, useStm } from "./stm-state";
@@ -21,12 +22,13 @@ export function TargetBar() {
   const [decText, setDecText] = useState(target.dec.toFixed(5));
   const [copied, setCopied] = useState(false);
   const example = EXAMPLES.find((e) => e.name === target.name);
+  const fixed = useFixedTarget();
 
   const apply = () => {
     const ra = Number(raText);
     const dec = Number(decText);
     if (Number.isFinite(ra) && Number.isFinite(dec) && ra >= 0 && ra < 360 && Math.abs(dec) <= 90) {
-      setTarget({ name: "사용자 좌표", ra, dec, fovArcmin: target.fovArcmin, source: "직접 입력" });
+      setTarget({ name: "Custom coordinates", ra, dec, fovArcmin: target.fovArcmin, source: "entered by user" });
     }
   };
   const share = async () => {
@@ -44,8 +46,10 @@ export function TargetBar() {
   return (
     <div className="grid gap-3 rounded-lg border bg-muted/30 p-3">
       <div className="flex flex-wrap items-end gap-2">
+        {!fixed && (
+        <>
         <div className="grid gap-1">
-          <Label className="text-xs">예제</Label>
+          <Label className="text-xs">Example</Label>
           <NativeSelect
             size="sm"
             value={example?.id ?? ""}
@@ -57,7 +61,7 @@ export function TargetBar() {
               setDecText(t.dec.toFixed(5));
             }}
           >
-            <NativeSelectOption value="">직접 입력한 좌표</NativeSelectOption>
+            <NativeSelectOption value="">Custom coordinates</NativeSelectOption>
             {EXAMPLES.map((e) => (
               <NativeSelectOption key={e.id} value={e.id}>
                 {e.name}
@@ -73,9 +77,11 @@ export function TargetBar() {
           <Label htmlFor="stm-dec" className="text-xs">Dec (deg)</Label>
           <Input id="stm-dec" className="h-8 w-28 font-mono" value={decText} onChange={(e) => setDecText(e.target.value)} inputMode="decimal" />
         </div>
-        <Button size="sm" onClick={apply}>이 좌표 보기</Button>
+        <Button size="sm" onClick={apply}>View these coordinates</Button>
+        </>
+        )}
         <div className="grid gap-1">
-          <Label className="text-xs">시야</Label>
+          <Label className="text-xs">Field</Label>
           <NativeSelect size="sm" value={String(target.fovArcmin)} onChange={(e) => setTarget({ ...target, fovArcmin: Number(e.target.value) })}>
             {FOVS.map((f) => (
               <NativeSelectOption key={f} value={f}>
@@ -84,11 +90,14 @@ export function TargetBar() {
             ))}
           </NativeSelect>
         </div>
-        <Button size="sm" variant="outline" onClick={share} aria-label="이 시야의 링크 복사">
-          {copied ? <CheckIcon /> : <LinkIcon />} {copied ? "복사됨" : "링크"}
-        </Button>
+        {/* In the panel, the header's "Copy link" already links to this point. */}
+        {!fixed && (
+          <Button size="sm" variant="outline" onClick={share} aria-label="Copy a link to this field">
+            {copied ? <CheckIcon /> : <LinkIcon />} {copied ? "Copied" : "Link"}
+          </Button>
+        )}
       </div>
-      {example && <p className="text-xs text-muted-foreground">{example.note} <span className="opacity-70">좌표: {example.source}</span></p>}
+      {example && !fixed && <p className="text-xs text-muted-foreground">{example.note} <span className="opacity-70">Coordinates: {example.source}</span></p>}
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {MISSION_ORDER.map((m, i) => {
@@ -97,10 +106,10 @@ export function TargetBar() {
           const count = q.data?.epochs.filter((e) => e.band === bands[m]).length;
           return (
             <div key={m} className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-xs">
-              <Switch size="sm" checked={enabled[m]} onCheckedChange={(v) => setEnabled(m, v)} aria-label={`${cfg.label} 표시`} />
+              <Switch size="sm" checked={enabled[m]} onCheckedChange={(v) => setEnabled(m, v)} aria-label={`Show ${cfg.label}`} />
               <span className="size-2 shrink-0 rounded-full" style={{ background: MISSION_COLOR[m] }} />
               <span className="font-medium">{cfg.label}</span>
-              <NativeSelect size="sm" className="ml-auto" value={bands[m]} onChange={(e) => setBand(m, e.target.value)} aria-label={`${cfg.label} 대역`}>
+              <NativeSelect size="sm" className="ml-auto" value={bands[m]} onChange={(e) => setBand(m, e.target.value)} aria-label={`${cfg.label} band`}>
                 {cfg.bands.map((b) => (
                   <NativeSelectOption key={b.id} value={b.id}>
                     {b.label}
@@ -112,10 +121,10 @@ export function TargetBar() {
                   <Spinner className="ml-auto size-3" />
                 ) : q.isError ? (
                   <span className="inline-flex items-center gap-1 text-destructive" title={q.error.message}>
-                    <AlertCircleIcon className="size-3" /> 실패
+                    <AlertCircleIcon className="size-3" /> Failed
                   </span>
                 ) : (
-                  `${count}시점`
+                  `${count} dates`
                 )}
               </span>
             </div>
