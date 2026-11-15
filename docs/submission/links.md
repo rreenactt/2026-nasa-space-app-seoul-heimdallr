@@ -1,6 +1,7 @@
 # NASA Data · Space Agency Partner & Other Data (제출 칸 원고)
 
 > 제출 페이지의 두 칸은 "Link Text + Link Url" 줄 단위다. 한 줄에 하나씩 "Add New Link"로 넣는다.
+> 한 칸에 최대 25줄까지 들어간다(2026-11-15 입력하며 확인). 그래서 Partner 칸에서 Shiki를 뺐다. Shiki는 프로덕션에서 닫혀 있는 `/design-system` 화면에서만 쓴다.
 > 2026-11-15 17시 기준. 코드에서 실제로 쓰는 외부 자료를 grep으로 확인하고, 모든 URL이 열리는지 curl로 확인했다 (ESA Gaia Archive는 이 컴퓨터에서 응답 시간 초과라 ESA Gaia DR3 소개 페이지로 대신함).
 > 맨 아래 "Confirm All Work is Original" 체크는 바깥 자료를 이 두 칸에 모두 적었다는 뜻이다. 감사 문구는 Project Details 끝의 Acknowledgments에 넣는다.
 > `references.md`, `data.md`는 이 파일의 근거(용도·라이선스 설명)로 남긴다.
@@ -47,7 +48,6 @@
 | Tailwind CSS (MIT) | https://github.com/tailwindlabs/tailwindcss |
 | Lucide icons (ISC) | https://github.com/lucide-icons/lucide |
 | Recharts (MIT) | https://github.com/recharts/recharts |
-| Shiki (MIT) | https://github.com/shikijs/shiki |
 | Claude Code, Anthropic (SI coding and writing assistant) | https://claude.com/claude-code |
 
 ## Acknowledgments (Project Details 끝에 붙임)
