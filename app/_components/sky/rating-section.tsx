@@ -33,6 +33,9 @@ export function RatingSection() {
 
   return (
     <div className="grid gap-2">
+      <p className="text-xs text-muted-foreground">
+        You can rate from the blink alone. Additional analyses are optional, and you can change your rating after them.
+      </p>
       {visitCount < 2 && (
         <p className="text-xs text-muted-foreground">
           Only one SPHEREx visit here. Rating after the additional analyses is more accurate.
