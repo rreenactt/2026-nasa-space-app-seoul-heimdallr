@@ -39,6 +39,7 @@ export function MethodNav({ sections }: { sections: { id: string; title: string 
             <a
               href={`#${section.id}`}
               onClick={() => {
+                setActive(section.id);
                 // Jumping to a section opens its full explanation and closes the one that was open.
                 for (const details of document.querySelectorAll<HTMLDetailsElement>("details[name='method-detail']")) {
                   details.open = details.closest("section")?.id === section.id;
