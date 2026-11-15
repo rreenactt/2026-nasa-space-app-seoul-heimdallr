@@ -6,7 +6,7 @@ import { cn } from "cn";
 import { type Translate, useLocale, useT } from "@/app/_i18n/i18n-provider";
 import type { MessageKey } from "@/app/_i18n/message-keys";
 import { MOST_RATED_LIMIT, RATING_KEYS, type MostRatedPlace, type RatingState } from "@/app/_lib/ratings/types";
-import { ratingSummary } from "./rating-section";
+import { RatedSummary } from "./rating-section";
 import { clearPlaces, type PlaceVisit, samePlace, usePlaceHistory } from "./place-history";
 import { useCandidateBatch, useCandidates } from "./candidates-context";
 import {
@@ -17,6 +17,7 @@ import {
   type ReviewEntry,
 } from "./review-queue";
 import { angularDistance, type EquatorialCoordinates, formatDec, formatRa } from "./sky-coordinates";
+import { STATUS_RULES } from "@/app/_lib/ratings/status";
 import { MARK_LABEL_KEYS, type MarkKind, StatusMark } from "./status-mark";
 import { findTestTarget } from "./test-targets";
 import { useMostRated, useRatingSummary } from "./use-ratings";
@@ -407,9 +408,7 @@ function RatedRow({
 }) {
   const candidate = entry.kind === "candidate" ? entry.candidate : null;
   const match = candidate?.match ?? place.candidate?.match;
-  // "You rated 🌠 Moving · 3 ratings · …", only where this browser rated (decision #6).
   const t = useT();
-  const rated = ratingSummary(place.state, t);
   return (
     <li className="relative after:absolute after:right-5 after:bottom-0 after:left-[50px] after:h-px after:bg-rule last:after:hidden">
       <button
@@ -433,7 +432,12 @@ function RatedRow({
           <span className="block font-data text-[10.5px] text-bone/80">
             {formatRa(entry.point.ra)}&nbsp;&nbsp;{formatDec(entry.point.dec)}
           </span>
-          {rated && <span className="mt-0.5 block truncate text-[11px] text-paper">{rated}</span>}
+          {/* "You rated [icon] Moving · 3 ratings · …", only where this browser rated (decision #6). */}
+          {place.state?.mine && (
+            <span className="mt-0.5 block truncate text-[11px] text-paper">
+              <RatedSummary state={place.state} />
+            </span>
+          )}
         </span>
         <span className="text-right text-sm font-medium text-paper">{count(place.total)}</span>
       </button>
@@ -731,6 +735,30 @@ const RATING_GUIDE: { label: MessageKey; body: MessageKey; drawing: ReactNode }[
  * "How to rate" (decision #38): a button at the top right of the frame while reviewing; the guide opens in its place,
  * 316px wide, above the tool column.
  */
+const percent = (share: number) => `${Math.round(share * 100)}%`;
+
+/** How ratings become a status (decision #57); the numbers come from STATUS_RULES so the guide follows the rules. */
+const RATING_NOTES: { key: MessageKey; values?: Record<string, string | number> }[] = [
+  { key: "review.guideOnePerBrowser" },
+  { key: "review.guidePooled" },
+  { key: "review.guideHidden" },
+  { key: "review.guideStatus", values: { n: STATUS_RULES.minRatings } },
+];
+
+/** What each mark on the sky and in the lists means (Figma "I · Review, rating guide open · ratings and marks"). */
+const MARK_NOTES: { kind: MarkKind; key: MessageKey; values?: Record<string, string | number> }[] = [
+  { kind: "needs-ratings", key: "review.guideMarkNeeds", values: { n: STATUS_RULES.minRatings } },
+  { kind: "recommended", key: "review.guideMarkRecommended", values: { n: STATUS_RULES.minRatings } },
+  {
+    kind: "noteworthy",
+    key: "review.guideMarkNoteworthy",
+    values: { n: STATUS_RULES.noteworthyRatings, pct: percent(STATUS_RULES.noteworthyMoving) },
+  },
+  // Known movers keep their own mark whatever their status (decision #39).
+  { kind: "known", key: "review.guideMarkKnown" },
+  { kind: "test", key: "review.guideMarkTest" },
+];
+
 export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT();
   if (!open) {
@@ -750,7 +778,7 @@ export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChang
     <section
       aria-label={t("review.howToRate")}
       onKeyDown={(event) => event.key === "Escape" && onOpenChange(false)}
-      className="w-[316px] rounded-[2px] bg-ink/86 px-[18px] pt-4 pb-3.5 text-bone backdrop-blur-sm"
+      className="max-h-[calc(100dvh-8rem)] w-[316px] overflow-y-auto rounded-[2px] bg-ink/86 px-[18px] pt-4 pb-3.5 text-bone backdrop-blur-sm"
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-paper">{t("review.guideTitle")}</h2>
@@ -769,6 +797,34 @@ export function RatingGuide({ open, onOpenChange }: { open: boolean; onOpenChang
           </div>
         ))}
       </dl>
+      <h3 className="mt-3 border-t border-rule pt-3 text-[10.5px] font-medium tracking-wide text-smoke uppercase">
+        {t("review.guideRatingsHeading")}
+      </h3>
+      <ul className="mt-1.5 grid gap-0.5 text-[11px] leading-4 text-ash">
+        {RATING_NOTES.map(({ key, values }) => (
+          <li key={key} className="flex gap-1.5">
+            <span aria-hidden>·</span>
+            {t(key, values)}
+          </li>
+        ))}
+      </ul>
+      <h3 className="mt-3 border-t border-rule pt-3 text-[10.5px] font-medium tracking-wide text-smoke uppercase">
+        {t("review.guideMarksHeading")}
+      </h3>
+      <dl className="mt-2 grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">
+        {MARK_NOTES.map(({ kind, key, values }) => (
+          <div key={kind} className="col-span-3 grid grid-cols-subgrid items-center">
+            <StatusMark kind={kind} className="size-2.5" />
+            <dt className={cn("pr-2 text-xs font-medium", kind === "noteworthy" ? "text-signal" : "text-paper")}>
+              {t(MARK_LABEL_KEYS[kind])}
+            </dt>
+            <dd className="text-[11px] text-ash">{t(key, values)}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2.5 text-[10.5px] leading-[14px] text-smoke">
+        {t("review.guideLeavesQueue", { pct: percent(STATUS_RULES.recommendMoving) })}
+      </p>
     </section>
   );
 }

@@ -682,18 +682,25 @@ panel.unidentifiedPair,"A SPHEREx source with no 2MASS star in place, paired wit
 panel.visitsApart,"The SPHEREx visits are months apart, so the blink may show little motion. Compare with the 2MASS image in Sky Time Machine below.",SPHEREx 방문은 몇 달 간격이라 블링크에서는 움직임이 작게 보일 수 있어요. 아래 Sky Time Machine의 2MASS 이미지와 비교해 보세요.,"Analysis panel footnote under a candidate's note; Sky Time Machine is an analysis name, kept in English"
 panel.yourAssessment,Your assessment,Your assessment,"Analysis panel section heading above the rating buttons. Title, kept in English"
 rating.agreementNote,"This shows agreement among raters, not a confirmed discovery.",확인된 결과가 아닌 평가자 합의도,"Analysis panel, under the rating shares: agreement is not a scientific confirmation"
+rating.arrivedSince,+{n} since you rated,내 평가 뒤 +{n},Your assessment status line: ratings from other browsers that arrived after this browser rated (decision #57)
 rating.countOne,{n} rating,평가 {n}개,"Rating count, count is 1 (rating summary, Most rated tab)"
 rating.countOther,{n} ratings,평가 {n}개,"Rating count, count other than 1"
+rating.excludedNote,Most raters see no motion or an artifact. It still opens from its coordinates.,대부분이 움직임 없음이나 잡음·결함으로 봤어요. 좌표로는 계속 열 수 있어요.,Your assessment: note when the ratings take an unidentified candidate out of the queue
 rating.failed,Rating failed.,평가 실패,"Analysis panel, Your assessment section: error when saving the rating failed and the server gave no message"
 rating.hiddenUntilRated,"Others' ratings appear after you rate, so they do not sway you.",다른 사람의 평가는 내가 평가한 뒤에 공개 (판단에 영향을 주지 않도록),"Analysis panel, Your assessment section: shown before this browser has rated (decision #6)"
+rating.knownNote,Answer key: Gaia DR3 says it moves. {moving} of {total} raters saw it move.,정답지: Gaia DR3로는 움직이는 별이에요. 평가 {total}개 중 {moving}개가 움직인다고 봤어요.,Your assessment: note for a known mover once it has enough ratings
+rating.leftOut,Left out of the queue,검토 목록에서 빠짐,Your assessment status line: the ratings took an unidentified candidate out of the queue
+rating.moreOne,1 more rating gives it a status.,평가가 1개 더 모이면 상태가 정해져요.,Your assessment: one rating short of a status
+rating.moreOther,{n} more ratings give it a status.,평가가 {n}개 더 모이면 상태가 정해져요.,Your assessment: several ratings short of a status
 rating.movingShare,{pct}% Moving,움직인다 {pct}%,Panel header badge and Most rated places row: share of Moving ratings (the agreement)
+rating.nOfMin,{n} of {min},{min}개 중 {n}개,Your assessment status line after Needs ratings: ratings so far of those needed
 rating.noImages,No SPHEREx images to rate at this point.,평가할 SPHEREx 이미지 없음,"Analysis panel, Your assessment section: shown instead of the buttons where SPHEREx has no observation"
 rating.notRatedYet,Not rated yet,아직 평가 안 함,Analysis panel header badge before this browser rates the point
 rating.oneVisit,Only one SPHEREx visit here. Rating after the additional analyses is more accurate.,이곳은 SPHEREx 방문이 1회뿐이에요. 추가 분석을 본 뒤에 평가하면 더 정확해요.,"Analysis panel, Your assessment section: note when the point has one SPHEREx visit"
 rating.optionalAnalyses,"You can rate from the blink alone. Additional analyses are optional, and you can change your rating after them.","블링크만 보고도 평가할 수 있어요. 추가 분석은 선택이고, 분석을 본 뒤에 평가를 바꿀 수 있어요.","Analysis panel, Your assessment section: note above the three rating buttons"
 rating.pooled,Ratings are pooled over a fixed sky cell about 1.7′ across. One rating per browser; you can change it.,"평가는 약 1.7′ 크기의 고정된 하늘 칸 단위로 모아요. 브라우저마다 평가는 하나이고, 언제든 바꿀 수 있어요.","Analysis panel, Your assessment section: footnote on how ratings are counted"
 rating.tooFew,Too few ratings,평가 수 부족,"Rating tally and panel header badge: fewer than 5 ratings, so no share is shown"
-rating.youRated,You rated {emoji} {rating},내 평가: {emoji} {rating},"Panel header badge and Most rated places row: this browser's rating; {emoji} is decorative, {rating} is Moving / Not moving / Noise or artifact"
+rating.youRated,You rated,내 평가:,Panel header badge and Most rated places row: comes before the drawn rating icon and the rating name
 review.answerKey,Answer key: Gaia DR3 explains it,정답지: Gaia DR3로 설명됨,Review queue: note beside the Known mover count
 review.batchEmpty,No candidates in the batch yet,이번 조사 후보 없음,Review queue summary line when the latest survey run has no candidates
 review.batchSummary,{total} in the batch · {searched} places searched,이번 조사 후보 {total}개 · 찾아본 곳 {searched}곳,Review queue summary line: candidates in the latest survey run and places it searched
@@ -701,9 +708,21 @@ review.clear,Clear,지우기,Recent tab button: clears the place history
 review.clickedPoint,Clicked point,클릭한 곳,Recent tab row name for a place opened by clicking the sky
 review.columnCandidate,"Candidate, RA Dec","후보, RA Dec",Review queue: column header over candidate ID and coordinates
 review.goToPlace,Go to place,그곳으로 이동,Recent tab button: flies to the picked place and opens it
+review.guideHidden,Other people's ratings show after you rate.,다른 사람의 평가는 내가 평가한 뒤에 보여요.,"How to rate guide, How ratings add up (decision #6)"
+review.guideLeavesQueue,"Under {pct} Moving, or half Noise or artifact: leaves the queue.",움직인다가 {pct} 미만이거나 잡음·결함이 절반 이상이면 목록에서 빠져요.,How to rate guide footnote under Marks
+review.guideMarkKnown,Answer key; keeps its mark,"정답지, 기호가 바뀌지 않음","How to rate guide, Marks: the known mover mark never changes with ratings (decision #39)"
+review.guideMarkNeeds,Under {n} ratings,평가 {n}개 미만,"How to rate guide, Marks: Needs ratings"
+review.guideMarkNoteworthy,"{n}+ ratings, {pct}+ Moving","평가 {n}개+, 움직인다 {pct}+","How to rate guide, Marks: Noteworthy"
+review.guideMarkRecommended,{n} or more ratings,평가 {n}개 이상,"How to rate guide, Marks: Recommended"
+review.guideMarkTest,A known object to practise on,연습용으로 고른 천체,"How to rate guide, Marks: Test target"
+review.guideMarksHeading,Marks,기호,How to rate guide: heading of the mark list
 review.guideMoving,A dot shifts between visits,방문마다 점의 위치가 바뀜,Rating guide: what Moving looks like
 review.guideNoise,"One visit only, streak or ghost",한 방문에만 보이거나 줄무늬·잔상,Rating guide: what Noise or artifact looks like
 review.guideNotMoving,Stays put; brightness may change,"제자리에 있음, 밝기는 바뀔 수 있음",Rating guide: what Not moving looks like
+review.guideOnePerBrowser,One rating per browser; you can change it.,"브라우저마다 평가 하나, 언제든 바꿀 수 있어요.","How to rate guide, How ratings add up"
+review.guidePooled,Ratings are pooled over a sky cell about 1.7′ across.,평가는 약 1.7′ 크기의 하늘 칸 단위로 모여요.,"How to rate guide, How ratings add up"
+review.guideRatingsHeading,How ratings add up,평가가 모이는 방식,How to rate guide: heading of the rating notes
+review.guideStatus,"{n} ratings give a status: agreement, not a discovery.",평가가 {n}개 모이면 상태가 정해져요. 발견이 아니라 합의예요.,"How to rate guide, How ratings add up (absolute principle 1)"
 review.guideTitle,What does a moving object look like?,움직이는 천체는 어떻게 보일까요?,Rating guide heading
 review.heading,Review queue,Review queue,"Heading of the review queue panel. Title, kept in English (buttons and aria say 검토 목록)"
 review.hide,Hide,접기,Review queue: button that collapses the panel
