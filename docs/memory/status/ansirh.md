@@ -1,7 +1,7 @@
 # 허한결 (`ansirh`) 현재 상태
 
 > 본인 또는 본인의 AI만 고친다. 지난 작업은 쌓지 말고 최근 상태만 남긴다.
-> 최종 갱신: 2026-11-15
+> 최종 갱신: 2026-11-18
 
 ## 담당
 
@@ -9,15 +9,16 @@
 - 3D 하늘 화면 (`app/_components/sky/`)
 - 하늘 화면 UI 개편 (분석 패널 바깥, 디자인 정본 Figma "HEIMDALLR UI")
 
-## 진행 중
+## 현재
 
-- 콘셉트 문장 변경 (결정 #64, PR #30 `main` 병합): "개발진이 후보를 분석해 주기적으로 업데이트하고, 사용자는 그 후보를 확인한다". AGENTS.md, direction.md, PLAN 1장, README, 제출 설명, About, 튜토리얼 검토 목록 단계
-- 발표 슬라이드 제출 완료 (2026-11-15): Figma "Sky screen · Directions"의 MERGED DECK 7장(흐름 "HEIMDALLR merged deck"). 제목·문제·해결·데이터 흐름(김재현 아키텍처)·분석 6개·결과·영향과 다음, 실제 사이트 캡처와 GIF 2개
-- 제출: 약관 동의 체크와 Submit for Judging은 직접 누름. 배너 이미지 교체 남음
-- 제안만 함(승인 대기): 깊이 확대(0.5° 이하)에서 후보의 2MASS 위치 → SPHEREx 위치 화살표와 양 끝 연도 표시
+대회 종료. 11/15 Submit for Judging 완료.
 
 ## 완료
 
+- 제출 (2026-11-15): 약관 동의와 Submit for Judging. 배너는 기존 이미지로 제출
+- 발표 슬라이드 (2026-11-15): Figma "Sky screen · Directions"의 MERGED DECK 7장(흐름 "HEIMDALLR merged deck"). 제목·문제·해결·데이터 흐름(김재현 아키텍처)·분석 6개(실제 사이트 화면)·결과·영향과 다음, GIF 2개. 옛 시안은 "Old slide drafts (not submitted)" 섹션으로 묶음
+- 콘셉트 문장 변경 (결정 #64, PR #30): "개발진이 후보를 분석해 주기적으로 업데이트하고, 사용자는 그 후보를 확인한다". AGENTS.md, direction.md, PLAN 1장, README, 제출 설명, About, 튜토리얼 검토 목록 단계
+- 테스트 대상 검증 결과 표 (`docs/submission/test-targets.md`). 이슈 #12 종료
 - 30초 시연 영상 (`docs/presentation/video-30s.md`): 구성·대사 확정, 앱 화면 녹화(실제 사이트·미리 계산된 좌표), 카드 A/B 시안 비교, 음악 선택, TTS 대사 타임코드, 유튜브 업로드와 설명란(데이터·음악·AI 사용 표기). 평가 장면용 Moving 1건을 프로덕션 후보 J174146.9-293330에 실제로 넣음
 - 제출 페이지 입력: Summary, Project Details, NASA Data 9줄, Partner 25줄(칸 한도 25줄이라 Shiki 제외, `links.md`에 기록), Use of SI 7개, 프로젝트 이름 "HEIMDALLR – Sky Explorer Community for SPHEREx", 프로젝트 링크
 - PR #29 (`feat/method-ko`) `main` 병합
@@ -60,32 +61,23 @@
   - 클릭 지점으로 확대 이동 (PR #6)
   - "분석할 곳" 목록과 Next 버튼 ([결정 #32](../../decisions.md))
   - 지금 보는 하늘 링크 `?view=` ([결정 #34](../../decisions.md), PR #8)
-- 방문 번호 불일치 원인 분석 → GitHub 이슈 #7 (김재현이 `fa6d16e`로 수정, 이슈는 열려 있음)
+- 방문 번호 불일치 원인 분석 → GitHub 이슈 #7 (김재현이 `fa6d16e`로 수정)
 - 타일 프록시 로컬 실험 기록: [`docs/experiments/2026-11-14-sky-tile-proxy/`](../../experiments/2026-11-14-sky-tile-proxy/README.md)
 
-## 막힘
+## 제출 범위에서 제외한 것
 
-- `/api/ratings`는 빌드할 때 `DATABASE_URL`이 필요하다. 로컬은 `.env`로 해결. Vercel에 이 변수가 있는지 이순형 확인 필요
-- CDS 장애로 하늘 배경은 SPHEREx가 아닌 2MASS 임시 배경이다 ([결정 #25](../../decisions.md), 안내는 This view 패널에만 #60). 11/15 오후에도 CDS 하늘 이미지는 404, 미러 없음
-- 타일 프록시 적용은 배포 담당(이순형) 확인 필요 (`PLAN.md` 14장)
-- 팀 결정 대기: 컷아웃 크기(#19, 챌린지 선택 4 "시야 크기 선택"과 직결), 추가 분석 결과 요약 줄, 3I/ATLAS 진입 위치, 이름 검색 대체(J 이름은 #54로 해결, 일반 천체 이름은 여전히 SIMBAD 필요)
+- 깊이 확대(0.5° 이하)에서 후보의 2MASS 위치 → SPHEREx 위치 화살표: 제안으로 남김
+- 호버 이름표, 접힌 하단 막대: 만들지 않기로 함(결정 #39). 액자가 켜졌을 때 도구 열 옆 FOV 숫자도 넣지 않음
+- 블링크 컷아웃 크기 선택: 3′ 고정으로 제출
+- 하늘 배경: 외부 서비스(CDS) 장애로 SPHEREx 컬러 대신 IRSA의 2MASS 컬러를 씀(결정 #25). This view 패널과 Method에 이유를 밝힘. 블링크와 모든 분석은 SPHEREx 이미지
+- 타일 프록시: 로컬 실험까지 하고 적용하지 않음 (`docs/experiments/2026-11-14-sky-tile-proxy/`)
 
-## 다음 할 일
+## 대회 뒤 계획
 
-- 아직 영어인 화면 번역: Star guide 카드와 하늘 위 설명(이름 정한 뒤), About 본문(문단 단위 키), `app/_lib/`와 서버가 만드는 문장(논문 인용·점검 결과 문장·예시 대상 설명, 김재현과 협의). 김재현의 새 Method 내용(SPHEREx 밴드 설명)과 평가 가이드 문구도 확인
-- 한국어 번역 검토: Comet Breath 용어(생성률, 화학종, 상한) 등 서브에이전트가 옮긴 642개 키. 외래어·용어 통일은 PR #29에서 한 번 훑음(전체 문장 자연스러움은 아직)
-- PR #29 병합 뒤 Figma 한국어 프레임을 합니다체 문구로 다시 만들기
-- 1920px 화면 점검: 어긋나는 곳만 Figma에 1920 프레임을 만들어 고친 뒤 웹 반영
-- 블링크가 후보를 찾은 검출기(예: D3)가 아닌 D1로 열리는 문제 확인 (분석 패널 담당과 협의)
-- 같은 2MASS 광원을 공유하는 중복 후보(Known mover 262개 중 2MASS 259개) 처리를 파이프라인 담당과 협의
-- 후보가 크게 늘면 `tmassDesignation` DB 인덱스 (스키마 변경이라 파이프라인 담당과 협의)
-- 시야 눈금의 "30°" 눈금을 80°로 바꿀지 결정
-- UI 개편에서 남은 것:
-  - 호버 이름표
-  - 접힌 하단 막대
-  - 액자가 켜졌을 때 도구 열 옆 FOV 숫자
-- About 페이지의 SPHEREx 수치(발사 시기, 102색, 0.75–5 µm, 약 6개월 재방문)를 NASA·IRSA 자료로 확인
-- 테스트 대상 검증 결과 표 확정 (초안 `docs/submission/test-targets.md`, 실패 원인은 이슈 #12)
-- 프로덕션에서 Star guide 확인 (토글, 빠른 이동, 10° 넘게 축소 후 다시 확대, 카드 행 클릭)
-- `AGENTS.md` 구조 표에 `public/`(정적 데이터) 추가를 팀에 제안
-- CDS 복구 시 `SKY_SURVEY`를 SPHEREx 컬러로 되돌리기
+- 남은 화면 문구 한국어 번역: Star guide 카드, About 본문, 서버가 만드는 문장. 한국어 번역 전체 문장 검토
+- Figma 한국어 프레임을 합니다체 문구로 맞추기, 1920px 화면 점검
+- 블링크가 후보를 찾은 검출기로 열리게 하기 (분석 패널 담당과 협의)
+- 같은 2MASS 광원을 공유하는 중복 후보 정리, 후보가 늘면 `tmassDesignation` 인덱스 (파이프라인 담당과 협의)
+- About의 SPHEREx 수치를 NASA·IRSA 자료로 다시 확인
+- 일반 천체 이름 검색 (SIMBAD)
+- CDS가 복구되면 `SKY_SURVEY`를 SPHEREx 컬러로 되돌리기
